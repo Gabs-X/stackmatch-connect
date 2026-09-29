@@ -10,33 +10,79 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CreateProfileRouteImport } from './routes/create-profile'
+import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as SavedRouteImport } from './routes/saved'
+import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreateProfileRoute = CreateProfileRouteImport.update({
+  id: '/create-profile',
+  path: '/create-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SavedRoute = SavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeveloperIdRoute = DeveloperIdRouteImport.update({
+  id: '/developer/$id',
+  path: '/developer/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/create-profile': typeof CreateProfileRoute
+  '/discover': typeof DiscoverRoute
+  '/saved': typeof SavedRoute
+  '/developer/$id': typeof DeveloperIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create-profile': typeof CreateProfileRoute
+  '/discover': typeof DiscoverRoute
+  '/saved': typeof SavedRoute
+  '/developer/$id': typeof DeveloperIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/create-profile': typeof CreateProfileRoute
+  '/discover': typeof DiscoverRoute
+  '/saved': typeof SavedRoute
+  '/developer/$id': typeof DeveloperIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/create-profile' | '/discover' | '/saved' | '/developer/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/create-profile' | '/discover' | '/saved' | '/developer/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/create-profile'
+    | '/discover'
+    | '/saved'
+    | '/developer/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CreateProfileRoute: typeof CreateProfileRoute
+  DiscoverRoute: typeof DiscoverRoute
+  SavedRoute: typeof SavedRoute
+  DeveloperIdRoute: typeof DeveloperIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +94,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/create-profile': {
+      id: '/create-profile'
+      path: '/create-profile'
+      fullPath: '/create-profile'
+      preLoaderRoute: typeof CreateProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saved': {
+      id: '/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof SavedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developer/$id': {
+      id: '/developer/$id'
+      path: '/developer/$id'
+      fullPath: '/developer/$id'
+      preLoaderRoute: typeof DeveloperIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateProfileRoute: CreateProfileRoute,
+  DiscoverRoute: DiscoverRoute,
+  SavedRoute: SavedRoute,
+  DeveloperIdRoute: DeveloperIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

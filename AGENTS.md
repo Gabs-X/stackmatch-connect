@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep mock product data in `src/lib/developers.ts` and shared client-only favorites in `app-context.tsx`, so replacing mocks later stays isolated.
