@@ -15,7 +15,7 @@ export const Route = createFileRoute("/discover")({ head:()=>({meta:[{title:"Dis
 function DiscoverPage(){
   const [filters,setFilters]=useState<Filters>(defaultFilters); const [index,setIndex]=useState(0); const {saved,toggleSaved}=useApp();
   const x=useMotionValue(0); const rotate=useTransform(x,[-220,220],[-8,8]); const yesOpacity=useTransform(x,[30,120],[0,1]); const noOpacity=useTransform(x,[-120,-30],[1,0]);
-  const filtered=useMemo(()=>developers.filter(d=>(!filters.skills.length||filters.skills.some(s=>d.skills.includes(s)))&&(!filters.seniority.length||filters.seniority.includes(d.seniority))&&(!filters.mode.length||filters.mode.includes(d.workMode))&&d.rate<=filters.rate[0]),[filters]);
+  const filtered=useMemo(()=>developers.filter(d=>(!filters.skills.length||filters.skills.some(s=>d.skills.includes(s)))&&(!filters.seniority.length||filters.seniority.includes(d.seniority))&&(!filters.mode.length||filters.mode.includes(d.workMode))&&d.rate<=(filters.rate[0] ?? 300)),[filters]);
   const current=filtered[index%Math.max(filtered.length,1)]; const active=[...filters.skills,...filters.seniority,...filters.mode];
   const next=(action:"pass"|"save"|"interest")=>{ if(!current)return; if(action!=="pass"&&!saved.includes(current.id))toggleSaved(current.id); toast(action==="pass"?"Perfil ignorado":action==="save"?"Talento salvo na sua lista":"Interesse registrado",{description:current.name}); setIndex(i=>i+1); };
   return <main className="min-h-[calc(100vh-4rem)]"><div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">

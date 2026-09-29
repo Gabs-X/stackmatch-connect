@@ -48,5 +48,5 @@ export const developers: Developer[] = base.map((d, index) => ({
   id: d[0], name: d[1], role: d[2], seniority: d[3], location: d[4], workMode: d[5],
   availability: d[6], skills: [...d[7]], experience: d[8], image: d[9], rate: d[10],
   bio: "Transformo desafios de produto em experiências digitais simples, confiáveis e orientadas a resultados. Gosto de trabalhar próximo ao negócio e colaborar com times multidisciplinares.",
-  projects: projectSets[index % projectSets.length],
+  projects: projectSets[index % projectSets.length] ?? [],
 }));
