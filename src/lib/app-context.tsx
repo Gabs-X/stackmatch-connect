@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type Appointment = {
@@ -17,7 +18,9 @@ type AppState = {
   toggleSaved: (id: string) => void;
   scheduleAppointment: (appointment: Appointment) => void;
 };
-const AppContext = createContext<AppState | null>(null);
+// Keep a single context instance across hot reloads so provider/consumers never diverge.
+const globalStore = globalThis as unknown as { __stackmatchAppContext?: React.Context<AppState | null> };
+const AppContext = (globalStore.__stackmatchAppContext ??= createContext<AppState | null>(null));
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<string[]>([]);
