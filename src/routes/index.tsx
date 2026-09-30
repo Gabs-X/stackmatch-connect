@@ -80,14 +80,14 @@ function Index() {
           </div>
           {featuredDeveloper && (
             <div className="relative mx-auto w-full max-w-md animate-scale-in">
-              <div className="absolute -left-7 top-16 hidden rounded-lg border bg-card p-3 shadow-soft sm:block">
-                <p className="text-xs text-muted-foreground">{featuredDeveloper.role}</p>
+              <div className="absolute -left-7 top-16 z-10 hidden rounded-lg border bg-card p-3 shadow-soft sm:block">
+                <p className="text-xs text-muted-foreground">{t.profile.experience}</p>
                 <p className="font-display text-2xl font-bold text-primary">
-                  {tv(featuredDeveloper.seniority)}
+                  {tv(featuredDeveloper.experience)}
                 </p>
               </div>
               <DeveloperCard developer={featuredDeveloper} />
-              <div className="absolute -bottom-5 -right-5 rounded-lg border bg-card p-3 shadow-soft">
+              <div className="absolute -bottom-5 -right-5 z-10 rounded-lg border bg-card p-3 shadow-soft">
                 <p className="flex items-center gap-2 text-sm font-semibold">
                   <span className="status-dot" />
                   {tv(featuredDeveloper.availability)}
