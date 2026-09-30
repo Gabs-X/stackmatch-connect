@@ -1,5 +1,15 @@
 # Talent Matcher
 
+## Idiomas
+
+Use o seletor no cabeçalho para alternar entre **PT-BR** (padrão) e **EN**.
+A preferência é salva no navegador em `stackmatch-lang`. Os textos ficam em
+`src/lib/i18n.tsx`, com dicionários tipados e acesso pelo hook `useI18n()`.
+Ao adicionar textos, inclua as versões nos dois dicionários. Os dados mockados
+continuam em `src/lib/developers.ts`; `tv()` traduz seus valores apenas na exibição,
+preservando os valores usados pelos filtros. Datas seguem o idioma selecionado e
+os preços usam `formatCurrency()`, sempre em BRL.
+
 Crie um projeto front-end completo e moderno chamado StackMatch, uma plataforma de descoberta rápida de desenvolvedores e freelancers.
 
 A proposta do produto é permitir que empresas, recrutadores ou contratantes encontrem profissionais de tecnologia de forma rápida e visual, utilizando filtros por stack, senioridade, disponibilidade, localização e tipo de contratação.
