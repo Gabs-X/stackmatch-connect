@@ -1,6 +1,12 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
-import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  useMotionValue,
+  useTransform,
+} from "framer-motion";
 import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -53,6 +59,7 @@ function DiscoverPage() {
     historyRef.current = next;
     setHistory(next);
   };
+  const reduceMotion = useReducedMotion();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-8, 8]);
   const yesOpacity = useTransform(x, [30, 120], [0, 1]);
@@ -260,25 +267,28 @@ function DiscoverPage() {
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`${current.id}-${index}`}
-                    drag="x"
+                    drag={reduceMotion ? false : "x"}
                     dragConstraints={{ left: 0, right: 0 }}
-                    style={{ x, rotate }}
+                    style={reduceMotion ? {} : { x, rotate }}
                     onDragEnd={(_, info) => {
                       if (info.offset.x > 100) next("interest");
                       else if (info.offset.x < -100) next("pass");
                     }}
-                    initial={{ opacity: 0, scale: 0.98 }}
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
+                    exit={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96 }}
+                    transition={reduceMotion ? { duration: 0 } : {}}
                     className="cursor-grab active:cursor-grabbing"
                   >
                     <motion.div
+                      aria-hidden="true"
                       style={{ opacity: yesOpacity }}
                       className="pointer-events-none absolute right-5 top-24 z-20 rotate-6 rounded-md border-2 border-positive bg-positive-soft px-4 py-2 font-display text-xl font-extrabold text-positive"
                     >
                       {t.discover.stampYes}
                     </motion.div>
                     <motion.div
+                      aria-hidden="true"
                       style={{ opacity: noOpacity }}
                       className="pointer-events-none absolute left-5 top-24 z-20 -rotate-6 rounded-md border-2 border-destructive bg-danger-soft px-4 py-2 font-display text-xl font-extrabold text-destructive"
                     >
