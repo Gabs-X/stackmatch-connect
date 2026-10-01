@@ -354,7 +354,7 @@ function CreateProfile() {
         </Button>
       </div>
       <div className="mt-9 grid gap-10 lg:grid-cols-[240px_1fr]">
-        <aside>
+        <aside className="stagger-item">
           <div className="space-y-1">
             {steps.map((name, i) => (
               <button
@@ -372,7 +372,7 @@ function CreateProfile() {
             ))}
           </div>
         </aside>
-        <section className="rounded-xl border bg-card p-6 shadow-soft sm:p-8">
+        <section className="stagger-item stagger-1 rounded-xl border bg-card p-6 shadow-soft sm:p-8">
           <div className="mb-8">
             <p className="text-xs font-bold text-primary">{t.create.stepOf(step)}</p>
             <h2 className="mt-1 text-2xl font-bold">{steps[step - 1]}</h2>

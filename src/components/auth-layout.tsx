@@ -19,7 +19,7 @@ export function AuthLayout({
   const { t } = useI18n();
   return (
     <main className="grid min-h-[calc(100dvh-4rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-      <section className="flex items-center justify-center px-4 py-10 sm:px-6">
+      <section className="stagger-item flex items-center justify-center px-4 py-10 sm:px-6">
         <div className="w-full max-w-md">
           <h1 className="font-display text-3xl font-extrabold">{title}</h1>
           <p className="mt-2 text-muted-foreground">{subtitle}</p>
@@ -31,7 +31,7 @@ export function AuthLayout({
           </p>
         </div>
       </section>
-      <aside className="auth-panel hidden items-center px-12 py-16 lg:flex">
+      <aside className="stagger-item stagger-2 auth-panel hidden items-center px-12 py-16 lg:flex">
         <div className="max-w-md">
           <p className="font-display text-3xl font-extrabold leading-tight text-balance">
             {t.auth.brandTitle}

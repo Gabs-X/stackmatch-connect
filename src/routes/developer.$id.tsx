@@ -46,7 +46,7 @@ function DeveloperPage() {
   const isSaved = saved.includes(d.id);
   return (
     <main className="pb-20">
-      <section className="border-b bg-card">
+      <section className="stagger-item border-b bg-card">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <Link
             to="/discover"
@@ -96,7 +96,7 @@ function DeveloperPage() {
           </div>
         </div>
       </section>
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_300px] lg:px-8">
+      <div className="stagger-item stagger-1 mx-auto grid max-w-6xl gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_300px] lg:px-8">
         <div className="space-y-12">
           <section>
             <h2 className="text-xl font-bold">{t.profile.about}</h2>

@@ -128,7 +128,7 @@ function DiscoverPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)]">
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-end justify-between gap-4 sm:flex-nowrap">
+        <div className="stagger-item flex flex-wrap items-end justify-between gap-4 sm:flex-nowrap">
           <div>
             <span className="section-kicker">{t.discover.kicker}</span>
             <h1 className="mt-1 font-display text-3xl font-extrabold">{t.discover.title}</h1>
@@ -179,10 +179,10 @@ function DiscoverPage() {
           </div>
         )}
         <div className="mt-7 grid items-start gap-8 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,500px)_1fr]">
-          <aside className="sticky top-24 hidden rounded-lg border bg-card p-5 lg:block">
+          <aside className="stagger-item stagger-1 sticky top-24 hidden rounded-lg border bg-card p-5 lg:block">
             <FilterPanel value={filters} onChange={changeFilters} />
           </aside>
-          <section className="mx-auto min-w-0 w-full max-w-[500px]">
+          <section className="stagger-item stagger-2 mx-auto min-w-0 w-full max-w-[500px]">
             <div className="mb-3 flex items-center justify-between text-xs font-semibold text-muted-foreground">
               <span>
                 {loading ? (
@@ -350,7 +350,7 @@ function DiscoverPage() {
               </div>
             )}
           </section>
-          <aside className="sticky top-24 hidden space-y-4 xl:block">
+          <aside className="stagger-item stagger-3 sticky top-24 hidden space-y-4 xl:block">
             {loading && (
               <div className="space-y-5 rounded-lg border bg-card p-5" aria-hidden="true">
                 <Skeleton className="h-3 w-28" />
