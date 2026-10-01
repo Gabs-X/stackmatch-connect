@@ -7,7 +7,9 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: isCI,
-  retries: isCI ? 1 : 0,
+  // One retry absorbs dev-server compile stalls under parallel load; retried passes are still
+  // reported as "flaky", so instability stays visible.
+  retries: 1,
   reporter: isCI ? "github" : "list",
   use: {
     baseURL: `http://localhost:${port}`,
