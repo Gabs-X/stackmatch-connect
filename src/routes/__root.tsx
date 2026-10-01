@@ -4,11 +4,13 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { AppHeader } from "@/components/app-header";
+import { AssistantWidget } from "@/components/assistant-widget";
 import { Toaster } from "@/components/ui/sonner";
 import { AppProvider } from "@/lib/app-context";
 import { I18nProvider, useI18n } from "@/lib/i18n";
@@ -122,13 +124,21 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // Discover pins its action bar to the bottom on phones; lift floating UI above it there.
+  const raised = useRouterState({ select: (state) => state.location.pathname === "/discover" });
 
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <AppHeader />
         <Outlet />
-        <Toaster richColors position="bottom-right" />
+        <Toaster
+          richColors
+          position="bottom-right"
+          offset={{ bottom: 96, right: 24 }}
+          mobileOffset={{ bottom: raised ? 176 : 80 }}
+        />
+        <AssistantWidget raised={raised} />
       </AppProvider>
     </QueryClientProvider>
   );

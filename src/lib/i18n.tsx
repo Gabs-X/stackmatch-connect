@@ -221,6 +221,34 @@ const pt = {
     finish: "Concluir",
     dateFormat: "EEEE, d 'de' MMMM",
   },
+  assistant: {
+    open: "Abrir assistente",
+    close: "Fechar assistente",
+    title: "Assistente StackMatch",
+    status: "Prévia · IA em breve",
+    badge: "Beta",
+    greetingTitle: "Olá! Como posso ajudar?",
+    greetingSub:
+      "Tire dúvidas sobre como encontrar talentos, montar seu perfil de desenvolvedor ou agendar uma conversa.",
+    suggestionsLabel: "Sugestões",
+    suggestions: [
+      "Como funciona o Discover?",
+      "Como criar meu perfil de desenvolvedor?",
+      "Como agendar uma conversa?",
+    ],
+    inputLabel: "Mensagem para o assistente",
+    placeholder: "Escreva sua mensagem...",
+    send: "Enviar",
+    stop: "Parar resposta",
+    reset: "Nova conversa",
+    typing: "Assistente digitando",
+    you: "Você",
+    disclaimer: "Prévia: a IA ainda não está conectada e as respostas são simuladas.",
+    error: "Não foi possível obter uma resposta. Tente novamente.",
+    retry: "Tentar novamente",
+    previewReply:
+      "Obrigado pela mensagem! Ainda estou em modo de prévia: a integração com IA será conectada junto com o backend do StackMatch. Em breve vou poder tirar dúvidas sobre o Discover, filtros, perfis e agendamentos.",
+  },
 };
 
 type Dict = typeof pt;
@@ -436,6 +464,34 @@ const en: Dict = {
     confirmSent: "No email was sent. Contact saved locally:",
     finish: "Done",
     dateFormat: "EEEE, MMMM d",
+  },
+  assistant: {
+    open: "Open assistant",
+    close: "Close assistant",
+    title: "StackMatch Assistant",
+    status: "Preview · AI coming soon",
+    badge: "Beta",
+    greetingTitle: "Hi! How can I help?",
+    greetingSub:
+      "Ask about finding talent, building your developer profile or scheduling a conversation.",
+    suggestionsLabel: "Suggestions",
+    suggestions: [
+      "How does Discover work?",
+      "How do I create my developer profile?",
+      "How do I schedule a conversation?",
+    ],
+    inputLabel: "Message to the assistant",
+    placeholder: "Type your message...",
+    send: "Send",
+    stop: "Stop reply",
+    reset: "New conversation",
+    typing: "Assistant is typing",
+    you: "You",
+    disclaimer: "Preview: the AI isn't connected yet, so replies are simulated.",
+    error: "Couldn't get a reply. Please try again.",
+    retry: "Try again",
+    previewReply:
+      "Thanks for your message! I'm still in preview mode: the AI integration will be connected together with the StackMatch backend. Soon I'll be able to answer questions about Discover, filters, profiles and scheduling.",
   },
 };
 
