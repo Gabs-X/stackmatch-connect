@@ -61,8 +61,11 @@ Acesse o endereço informado pelo Vite no terminal. Os fluxos mockados não exig
 npm run lint
 npx tsc --noEmit
 npm test
+npm run test:e2e
 npm run build
 ```
+
+Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos e usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem Discover (ações, desfazer, filtros), perfil (links reais e de demonstração, avatar do GitHub e fallback), criação de perfil até o Discover, idioma e tema, assistente e o layout em celular.
 
 Para visualizar o build localmente:
 
@@ -159,12 +162,12 @@ Sem essa variável, o componente não é incluído no build.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
 - Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.
-- Os testes automatizados (Vitest, `npm test`) cobrem a lógica: filtros, desfazer, agendamento, perfil local e o contrato do assistente. Ainda não há testes de interface ou ponta a ponta.
+- Os testes automatizados cobrem a lógica (Vitest, `npm test`) e os principais fluxos no navegador (Playwright, `npm run test:e2e`). O fluxo de agendamento ainda não tem teste de interface.
 
 ## Próximos passos
 
 1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
-2. Adicionar testes de interface e ponta a ponta dos fluxos de descoberta, criação de perfil e agendamento.
+2. Adicionar o teste de interface do agendamento e rodar as suítes automaticamente a cada push (CI).
 3. Refinar validações do formulário e ampliar o cadastro de projetos, conforme feedback de uso.
 4. Em uma etapa com backend, definir contratos de API, autenticação, publicação de perfis e persistência por usuário.
 5. Integrar GitHub e calendário apenas após definir permissões, privacidade e tratamento de conflitos de agenda.

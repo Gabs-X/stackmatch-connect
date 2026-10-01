@@ -136,6 +136,10 @@ function RootComponent() {
   const { resolved } = useTheme();
   // Discover pins its action bar to the bottom on phones; lift floating UI above it there.
   const raised = useRouterState({ select: (state) => state.location.pathname === "/discover" });
+  // Marks when client handlers are attached; e2e tests wait for it before interacting.
+  useEffect(() => {
+    document.documentElement.dataset["hydrated"] = "";
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
