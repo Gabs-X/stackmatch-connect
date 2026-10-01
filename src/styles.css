@@ -364,3 +364,15 @@ a {
     transform: translateY(-3px);
   }
 }
+@utility own-profile-badge {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: var(--elevation-soft);
+}

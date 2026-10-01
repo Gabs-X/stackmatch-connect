@@ -3,8 +3,14 @@ import marina from "@/assets/developer-marina.jpg";
 import rafael from "@/assets/developer-rafael.jpg";
 import juliana from "@/assets/developer-juliana.jpg";
 
+// Catalog values double as filter keys; tv() translates them for display.
+export const seniorityOptions = ["Júnior", "Pleno", "Sênior"] as const;
+export const workModeOptions = ["Remoto", "Híbrido", "Presencial"] as const;
+export const hiringOptions = ["Freelancer", "Contrato", "CLT", "PJ"] as const;
+export const availabilityOptions = ["Disponível agora", "Em 15 dias", "Em 30 dias"] as const;
+
 type ProjectSeed = { name: string; description: string; tech: string[]; color: string };
-export type Project = ProjectSeed & { links: { github: string; demo: string } };
+export type Project = ProjectSeed & { links: { github: string; demo: string }; image?: string };
 export type ProfessionalLinks = { github: string; linkedin: string };
 export type Developer = {
   id: string;
@@ -22,6 +28,8 @@ export type Developer = {
   rate: number;
   projects: Project[];
   links: ProfessionalLinks;
+  /** Profile created in this browser; it has no server page, so it links to its preview. */
+  isLocal?: true;
 };
 
 const projectSets: ProjectSeed[][] = [

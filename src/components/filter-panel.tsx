@@ -2,6 +2,12 @@ import { useI18n } from "@/lib/i18n";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import {
+  availabilityOptions,
+  hiringOptions,
+  seniorityOptions,
+  workModeOptions,
+} from "@/lib/developers";
 
 export type Filters = {
   skills: string[];
@@ -40,10 +46,10 @@ const groups = [
     ],
     "skills",
   ],
-  ["seniority", ["Júnior", "Pleno", "Sênior"], "seniority"],
-  ["location", ["Remoto", "Híbrido", "Presencial"], "mode"],
-  ["hiring", ["Freelancer", "Contrato", "CLT", "PJ"], "hiring"],
-  ["availability", ["Disponível agora", "Em 15 dias", "Em 30 dias"], "availability"],
+  ["seniority", seniorityOptions, "seniority"],
+  ["location", workModeOptions, "mode"],
+  ["hiring", hiringOptions, "hiring"],
+  ["availability", availabilityOptions, "availability"],
 ] as const;
 
 export function FilterPanel({

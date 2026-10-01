@@ -152,7 +152,7 @@ Sem essa variável, o componente não é incluído no build.
 
 - Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
 - Reservas não representam disponibilidade real e não têm garantia de concorrência entre usuários ou dispositivos.
-- O perfil criado fica no navegador e não é publicado nem incorporado ao catálogo do Discover. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
+- O perfil criado fica no navegador e não é publicado: ele aparece no Discover e nos salvos apenas neste navegador, com o selo "Seu perfil". Como o formulário não coleta valor por hora nem tipo de contratação, ele sai da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.

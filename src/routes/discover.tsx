@@ -8,7 +8,6 @@ import {
   useTransform,
 } from "framer-motion";
 import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
@@ -22,9 +21,9 @@ import {
 } from "@/components/filter-panel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { developersQuery } from "@/lib/api";
 import type { Developer } from "@/lib/developers";
 import { useApp } from "@/lib/app-context";
+import { useDevelopers } from "@/lib/use-developers";
 
 export const Route = createFileRoute("/discover")({
   head: () => ({
@@ -50,12 +49,7 @@ function DiscoverPage() {
   const { t, tv, formatCurrency } = useI18n();
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
-  const {
-    data: developers = noDevelopers,
-    isPending,
-    isError,
-    refetch,
-  } = useQuery(developersQuery);
+  const { developers = noDevelopers, isPending, isError, refetch } = useDevelopers();
   const loading = isPending && !isError;
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [index, setIndex] = useState(0);
@@ -84,7 +78,10 @@ function DiscoverPage() {
           (!filters.mode.length || filters.mode.includes(d.workMode)) &&
           (!filters.hiring.length || filters.hiring.some((type) => d.hiringTypes.includes(type))) &&
           (!filters.availability.length || filters.availability.includes(d.availability)) &&
-          d.rate <= (filters.rate[0] ?? 300),
+          // Profiles without a rate only show while the rate filter is untouched.
+          (Number.isFinite(d.rate)
+            ? d.rate <= (filters.rate[0] ?? 300)
+            : filters.rate[0] === defaultFilters.rate[0]),
       ),
     [filters, developers],
   );
@@ -379,14 +376,15 @@ function DiscoverPage() {
                     {t.discover.compat}
                   </p>
                   <div className="mt-5 space-y-3">
-                    {[tv(current.seniority), tv(current.workMode), tv(current.availability)].map(
-                      (x) => (
+                    {[current.seniority, current.workMode, current.availability]
+                      .filter(Boolean)
+                      .map(tv)
+                      .map((x) => (
                         <p className="flex items-center gap-2 text-sm" key={x}>
                           <Check className="size-4 text-positive" />
                           {x}
                         </p>
-                      ),
-                    )}
+                      ))}
                   </div>
                 </div>
               </>

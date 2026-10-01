@@ -1,5 +1,5 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ChevronLeft,
@@ -39,6 +39,7 @@ import {
   type LocalProfile,
   type LocalProject,
 } from "@/lib/local-profile";
+import { availabilityOptions, seniorityOptions, workModeOptions } from "@/lib/developers";
 
 export const Route = createFileRoute("/create-profile")({
   head: () => ({
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/create-profile")({
   component: CreateProfile,
 });
 function CreateProfile() {
-  const { t } = useI18n();
+  const { t, tv } = useI18n();
   useLocalizedMeta(t.create.title + " — Stack Match", t.create.sub);
   const [step, setStep] = useState(1);
   const [preview, setPreview] = useState(false);
@@ -166,10 +167,20 @@ function CreateProfile() {
   if (preview)
     return (
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        <Button variant="outline" onClick={() => setPreview(false)}>
-          <ChevronLeft />
-          {t.create.backEdit}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setPreview(false)}>
+            <ChevronLeft />
+            {t.create.backEdit}
+          </Button>
+          {completed && (
+            <Button asChild>
+              <Link to="/discover">
+                {t.create.viewInDiscover}
+                <ChevronRight />
+              </Link>
+            </Button>
+          )}
+        </div>
         {completed && (
           <p role="status" className="mt-4 text-sm text-positive">
             {t.create.finishToast} {t.create.finishDesc}
@@ -183,9 +194,16 @@ function CreateProfile() {
               {profile.name || t.create.yourName}
             </h1>
             <p className="mt-1 font-semibold text-primary">{profile.role || t.create.yourRole}</p>
-            {[profile.location, profile.seniority, profile.availability].some(Boolean) && (
+            {[profile.location, profile.seniority, profile.workMode, profile.availability].some(
+              Boolean,
+            ) && (
               <p className="mt-3 text-sm text-muted-foreground">
-                {[profile.location, profile.seniority, profile.availability]
+                {[
+                  profile.location,
+                  tv(profile.seniority),
+                  tv(profile.workMode),
+                  tv(profile.availability),
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
@@ -356,16 +374,22 @@ function CreateProfile() {
                 value={profile.location}
                 onChange={(value) => updateField("location", value)}
               />
-              <Field
+              <SelectField
                 label={t.create.seniority}
-                placeholder={t.create.seniorityPh}
                 value={profile.seniority}
+                options={seniorityOptions}
                 onChange={(value) => updateField("seniority", value)}
               />
-              <Field
+              <SelectField
+                label={t.create.workMode}
+                value={profile.workMode}
+                options={workModeOptions}
+                onChange={(value) => updateField("workMode", value)}
+              />
+              <SelectField
                 label={t.create.availability}
-                placeholder={t.create.availabilityPh}
                 value={profile.availability}
+                options={availabilityOptions}
                 onChange={(value) => updateField("availability", value)}
               />
               <div className="sm:col-span-2">
@@ -598,6 +622,41 @@ function CreateProfile() {
         </section>
       </div>
     </main>
+  );
+}
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  onChange: (value: string) => void;
+}) {
+  const { t, tv } = useI18n();
+  const id = useId();
+  // Older profiles stored free text; keep an unmatched value selectable instead of dropping it.
+  const legacy = value && !options.includes(value) ? value : "";
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+      >
+        <option value="">{t.create.selectPh}</option>
+        {legacy && <option value={legacy}>{legacy}</option>}
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {tv(option)}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 function Field({

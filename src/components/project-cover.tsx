@@ -8,11 +8,14 @@ export function ProjectCover({
   image,
   className,
   size = "lg",
+  label,
 }: {
   name: string;
+  /** Text shown on the gradient; defaults to the first two letters of name. */
+  label?: string;
   image: string;
   className?: string;
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "xl";
 }) {
   if (image)
     return <img src={image} alt="" className={cn("w-full bg-muted object-cover", className)} />;
@@ -25,10 +28,10 @@ export function ProjectCover({
       <span
         className={cn(
           "font-display font-extrabold text-white",
-          size === "lg" ? "text-4xl" : "text-base",
+          size === "lg" ? "text-4xl" : size === "xl" ? "text-6xl" : "text-base",
         )}
       >
-        {name.slice(0, 2).toUpperCase() || "··"}
+        {label ?? (name.slice(0, 2).toUpperCase() || "··")}
       </span>
     </div>
   );

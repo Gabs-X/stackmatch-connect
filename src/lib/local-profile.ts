@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  availabilityOptions,
+  seniorityOptions,
+  workModeOptions,
+  type Developer,
+} from "./developers";
 
 const projectSchema = z.object({
   id: z.string(),
@@ -31,12 +37,23 @@ export function newProject(fields: Partial<LocalProject> = {}): LocalProject {
   };
 }
 
+/** Maps free text from older profiles ("pleno", "remoto") onto catalog values used by filters. */
+function matchOption(value: string, options: readonly string[]) {
+  const normalized = value.trim().toLowerCase();
+  return options.find((option) => option.toLowerCase() === normalized) ?? value.trim();
+}
+
 const profileSchema = z.object({
   name: z.string(),
   role: z.string(),
   location: z.string(),
-  seniority: z.string(),
-  availability: z.string(),
+  seniority: z.string().transform((value) => matchOption(value, seniorityOptions)),
+  availability: z.string().transform((value) => matchOption(value, availabilityOptions)),
+  // Added after the first release; older saved profiles don't have it.
+  workMode: z
+    .string()
+    .default("")
+    .transform((value) => matchOption(value, workModeOptions)),
   bio: z.string(),
   github: z.string(),
   linkedin: z.string(),
@@ -54,6 +71,7 @@ export const emptyProfile: LocalProfile = {
   location: "",
   seniority: "",
   availability: "",
+  workMode: "",
   bio: "",
   github: "",
   linkedin: "",
@@ -62,11 +80,11 @@ export const emptyProfile: LocalProfile = {
   projects: [],
 };
 
-const storageKey = "stackmatch-profile";
+export const localProfileStorageKey = "stackmatch-profile";
 
 export function loadLocalProfile(): LocalProfile | null {
   try {
-    const stored = window.localStorage.getItem(storageKey);
+    const stored = window.localStorage.getItem(localProfileStorageKey);
     if (!stored) return null;
     const result = profileSchema.safeParse(JSON.parse(stored));
     return result.success ? result.data : null;
@@ -77,7 +95,7 @@ export function loadLocalProfile(): LocalProfile | null {
 
 export function saveLocalProfile(profile: LocalProfile): LocalProfile {
   const saved = profileSchema.parse(profile);
-  window.localStorage.setItem(storageKey, JSON.stringify(saved));
+  window.localStorage.setItem(localProfileStorageKey, JSON.stringify(saved));
   return saved;
 }
 
@@ -130,4 +148,44 @@ export function readProjectImage(file: File): Promise<string> {
     };
     image.src = url;
   });
+}
+
+export const localDeveloperId = "local-profile";
+
+const projectColors = ["project-blue", "project-green", "project-violet", "project-ink"];
+
+/**
+ * Presents the browser-saved profile as a catalog entry. Fields the form doesn't collect stay
+ * empty (rate is NaN), so filters on them exclude this profile instead of guessing.
+ */
+export function localProfileToDeveloper(profile: LocalProfile): Developer {
+  return {
+    id: localDeveloperId,
+    isLocal: true,
+    name: profile.name.trim(),
+    role: profile.role.trim(),
+    // loadLocalProfile already mapped these onto catalog values.
+    seniority: profile.seniority,
+    location: profile.location.trim(),
+    workMode: profile.workMode,
+    availability: profile.availability,
+    bio: profile.bio.trim(),
+    skills: profile.skills,
+    experience: "",
+    image: "",
+    rate: Number.NaN,
+    hiringTypes: [],
+    links: {
+      github: profileLink(profile.github) ?? "",
+      linkedin: profileLink(profile.linkedin) ?? "",
+    },
+    projects: profile.projects.map((project, index) => ({
+      name: project.name,
+      description: project.description,
+      tech: project.tech,
+      color: projectColors[index % projectColors.length] ?? "project-blue",
+      image: project.image,
+      links: { github: profileLink(project.github) ?? "", demo: profileLink(project.demo) ?? "" },
+    })),
+  };
 }
