@@ -87,7 +87,7 @@ function Index() {
                 </p>
               </div>
               <DeveloperCard developer={featuredDeveloper} />
-              <div className="absolute -bottom-5 -right-5 z-10 rounded-lg border bg-card p-3 shadow-soft">
+              <div className="absolute -bottom-5 right-3 z-10 rounded-lg border bg-card p-3 shadow-soft sm:-right-5">
                 <p className="flex items-center gap-2 text-sm font-semibold">
                   <span className="status-dot" />
                   {tv(featuredDeveloper.availability)}
