@@ -25,6 +25,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Criação de perfil:** formulário em etapas, skills, inclusão de projetos pelo nome, links, preview e salvamento local ao concluir.
 - **Importação simulada do GitHub:** seleção de projetos fictícios para o perfil.
 - **Agendamento local:** escolha de data e horário, dados do contratante e confirmação. Horários passados ou já reservados para o mesmo profissional ficam indisponíveis.
+- **Assistente (prévia):** chat flutuante com sugestões, digitação em streaming e opção de parar a resposta, pronto para conectar a um backend de IA.
 - **PT-BR e EN**, interface responsiva e ajustes de acessibilidade, incluindo labels, estados de seleção e respeito à preferência por movimento reduzido nos cards.
 
 ## Stack utilizada
@@ -100,8 +101,31 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
 - A agenda é uma **simulação local**: grava reservas neste navegador, sem Google Calendar, envio de e-mails ou geração de links de videochamada.
 - O interesse é um registro local, sem notificação, chat ou contato externo.
+- O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Links externos sem destino nos perfis mockados ficam indisponíveis. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
+
+## Assistente com IA (preparado para backend)
+
+O botão no canto inferior direito abre o chat do assistente. Sem backend, ele usa respostas simuladas e avisa que a IA ainda não está conectada.
+
+Para conectar, defina a URL do serviço em um arquivo `.env.local`:
+
+```sh
+VITE_ASSISTANT_API_URL=https://api.exemplo.com/assistant
+```
+
+O front envia um `POST` com JSON:
+
+```json
+{
+  "messages": [{ "role": "user", "content": "Como funciona o Discover?" }],
+  "locale": "pt-BR",
+  "context": { "pathname": "/discover" }
+}
+```
+
+A resposta pode ser texto em streaming (`text/plain`, exibido conforme chega) ou JSON no formato `{ "reply": "..." }`. O botão de parar cancela a requisição via `AbortSignal`. O contrato e os transports ficam em `src/lib/assistant.ts`; a interface, em `src/components/assistant-widget.tsx`.
 
 ## Decisões técnicas
 
