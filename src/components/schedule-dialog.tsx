@@ -1,8 +1,19 @@
 import { useI18n } from "@/lib/i18n";
 import { useEffect, useState } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
 import { addDays, format, isBefore, isWeekend, startOfDay } from "date-fns";
 import { ptBR, enUS } from "react-day-picker/locale";
-import { ArrowLeft, CalendarDays, Check, Clock3, Mail, Video } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  Clock3,
+  Info,
+  Loader2,
+  Mail,
+  Send,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,12 +25,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MeetingRequestError, sendMeetingRequest } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
-
-import { appointmentTimes, isSlotAvailable } from "@/lib/appointments";
+import { useAuth } from "@/lib/auth-context";
+import { isProposedTimeValid, lastRequestTo, meetingTimes } from "@/lib/meeting-requests";
 
 type ScheduleDialogProps = {
   developerId: string;
@@ -27,21 +38,25 @@ type ScheduleDialogProps = {
   triggerClassName?: string;
 };
 
+/**
+ * Lets a company propose one time for a call. StackMatch only delivers the proposal by e-mail;
+ * the developer replies to the company and the meeting is arranged outside the app.
+ */
 export function ScheduleDialog({
   developerId,
   developerName,
   triggerClassName,
 }: ScheduleDialogProps) {
   const { t, lang } = useI18n();
-
-  const { scheduleAppointment, appointments } = useApp();
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const { meetingRequests, recordMeetingRequest } = useApp();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"schedule" | "details" | "success">("schedule");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
-  const [company, setCompany] = useState("");
-  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!open) return;
@@ -58,15 +73,15 @@ export function ScheduleDialog({
       }).format(now) + "T12:00:00",
     ),
   );
-  const slotAvailable = (slot: string) =>
-    !!date && isSlotAvailable(appointments, developerId, format(date, "yyyy-MM-dd"), slot, now);
+  const locale = lang === "pt" ? ptBR : enUS;
+  const firstName = developerName.split(" ")[0] ?? developerName;
+  const timeValid = (slot: string) =>
+    !!date && isProposedTimeValid(format(date, "yyyy-MM-dd"), slot, now);
 
   const reset = () => {
     setStep("schedule");
     setDate(undefined);
     setTime("");
-    setCompany("");
-    setEmail("");
     setMessage("");
   };
 
@@ -78,40 +93,84 @@ export function ScheduleDialog({
     setOpen(nextOpen);
   };
 
-  const formattedDate = date
-    ? format(date, t.schedule.dateFormat, { locale: lang === "pt" ? ptBR : enUS })
+  const formattedDate = date ? format(date, t.schedule.dateFormat, { locale }) : "";
+  const when = `${formattedDate}, ${t.schedule.at} ${time}`;
+  const previous = user ? lastRequestTo(meetingRequests, developerId, user.email) : undefined;
+  const previousWhen = previous
+    ? `${format(new Date(`${previous.date}T12:00:00`), t.schedule.dateFormat, { locale })}, ${t.schedule.at} ${previous.time}`
     : "";
 
-  const confirmAppointment = (event: React.FormEvent<HTMLFormElement>) => {
+  const sendProposal = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!date || !time || !company.trim() || !email.trim()) return;
-    const result = scheduleAppointment({
-      id: `${developerId}-${date.toISOString()}-${time}`,
-      developerId,
-      developerName,
-      date: format(date, "yyyy-MM-dd"),
-      time,
-      company: company.trim(),
-      email: email.trim(),
-      message: message.trim(),
-    });
-    if (result !== "success") {
-      toast.error(result === "unavailable" ? t.schedule.unavailable : t.schedule.storageError);
-      if (result === "unavailable") {
+    if (!user || !date || !time || sending) return;
+    setSending(true);
+    try {
+      const request = await sendMeetingRequest({
+        developerId,
+        developerName,
+        date: format(date, "yyyy-MM-dd"),
+        time,
+        company: user.company,
+        contactName: user.name,
+        email: user.email,
+        message: message.trim(),
+      });
+      recordMeetingRequest(request);
+      setStep("success");
+      toast.success(t.schedule.done, { description: when });
+    } catch (caught) {
+      if (caught instanceof MeetingRequestError) {
+        toast.error(t.schedule.timePassed);
+        setNow(Date.now());
         setTime("");
         setStep("schedule");
+      } else {
+        toast.error(t.schedule.sendError);
       }
-      return;
+    } finally {
+      setSending(false);
     }
-    setStep("success");
-    toast.success(t.schedule.done, { description: `${formattedDate}, ${t.schedule.at} ${time}.` });
   };
+
+  const gate = !user ? (
+    <div className="px-6 py-10 text-center sm:px-12">
+      <div className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+        <UserRound className="size-6" />
+      </div>
+      <h3 className="mt-4 text-lg font-bold">{t.schedule.signInTitle}</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+        {t.schedule.signInDesc}
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <Button asChild>
+          <Link to="/login" search={{ redirect: pathname }}>
+            {t.schedule.signIn}
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/register" search={{ type: "company", redirect: pathname }}>
+            {t.schedule.signUp}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  ) : user.accountType !== "company" ? (
+    <div className="px-6 py-10 text-center sm:px-12">
+      <div className="mx-auto grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+        <Info className="size-6" />
+      </div>
+      <h3 className="mt-4 text-lg font-bold">{t.schedule.companyOnlyTitle}</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+        {t.schedule.companyOnlyDesc}
+      </p>
+    </div>
+  ) : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className={triggerClassName}>
-          <CalendarDays />
+          <Send />
           {t.schedule.trigger}
         </Button>
       </DialogTrigger>
@@ -119,106 +178,85 @@ export function ScheduleDialog({
         <div className="border-b px-5 py-5 sm:px-7">
           <DialogHeader>
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-primary">
-              <Video className="size-4" /> {t.schedule.duration}{" "}
+              <Mail className="size-4" /> {t.schedule.duration}
             </div>
             <DialogTitle className="font-display text-2xl">
-              {t.schedule.talkWith} {developerName.split(" ")[0]}
+              {t.schedule.talkWith} {firstName}
             </DialogTitle>
             <DialogDescription>{t.schedule.desc}</DialogDescription>
           </DialogHeader>
         </div>
 
-        {step === "schedule" && (
-          <div className="grid gap-0 md:grid-cols-[1fr_220px]">
-            <div className="border-b p-4 md:border-b-0 md:border-r sm:p-6">
-              <p className="mb-3 text-sm font-bold">{t.schedule.pickDate}</p>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(selected) => {
-                  setDate(selected);
-                  setTime("");
-                }}
-                disabled={(day) => isBefore(day, today) || isWeekend(day)}
-                fromMonth={today}
-                toMonth={addDays(today, 90)}
-                locale={lang === "pt" ? ptBR : enUS}
-                className="pointer-events-auto mx-auto w-full bg-transparent [--cell-size:2.45rem]"
-              />
-            </div>
-            <div className="p-5 sm:p-6">
-              <p className="text-sm font-bold">{t.schedule.times}</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {date ? formattedDate : t.schedule.selectDate}
+        {gate}
+
+        {!gate && step === "schedule" && (
+          <>
+            {previous && (
+              <p className="mx-5 mt-5 flex gap-2 rounded-lg border bg-muted/60 p-3 text-sm text-muted-foreground sm:mx-7">
+                <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                {t.schedule.alreadySent(previousWhen)}
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-1">
-                {appointmentTimes.map((slot) => (
-                  <Button
-                    key={slot}
-                    type="button"
-                    variant={time === slot ? "default" : "outline"}
-                    disabled={!slotAvailable(slot)}
-                    aria-pressed={time === slot}
-                    onClick={() => setTime(slot)}
-                    className="justify-center"
-                  >
-                    <Clock3 />
-                    {slot}
-                  </Button>
-                ))}
-              </div>
-              <Button
-                className="mt-5 w-full"
-                disabled={!time || !slotAvailable(time)}
-                onClick={() => {
-                  if (
-                    !date ||
-                    !isSlotAvailable(appointments, developerId, format(date, "yyyy-MM-dd"), time)
-                  ) {
-                    setNow(Date.now());
+            )}
+            <div className="grid gap-0 md:grid-cols-[1fr_220px]">
+              <div className="border-b p-4 md:border-b-0 md:border-r sm:p-6">
+                <p className="mb-3 text-sm font-bold">{t.schedule.pickDate}</p>
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(selected) => {
+                    setDate(selected);
                     setTime("");
-                    toast.error(t.schedule.unavailable);
-                    return;
-                  }
-                  setStep("details");
-                }}
-              >
-                {t.schedule.next}{" "}
-              </Button>
-              <p className="mt-3 text-center text-xs text-muted-foreground">{t.schedule.tz}</p>
+                  }}
+                  disabled={(day) => isBefore(day, today) || isWeekend(day)}
+                  fromMonth={today}
+                  toMonth={addDays(today, 90)}
+                  locale={locale}
+                  className="pointer-events-auto mx-auto w-full bg-transparent [--cell-size:2.45rem]"
+                />
+              </div>
+              <div className="p-5 sm:p-6">
+                <p className="text-sm font-bold">{t.schedule.times}</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {date ? formattedDate : t.schedule.selectDate}
+                </p>
+                <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-1">
+                  {meetingTimes.map((slot) => (
+                    <Button
+                      key={slot}
+                      type="button"
+                      variant={time === slot ? "default" : "outline"}
+                      disabled={!timeValid(slot)}
+                      aria-pressed={time === slot}
+                      onClick={() => setTime(slot)}
+                      className="justify-center"
+                    >
+                      <Clock3 />
+                      {slot}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  className="mt-5 w-full"
+                  disabled={!time || !timeValid(time)}
+                  onClick={() => setStep("details")}
+                >
+                  {t.schedule.next}
+                </Button>
+                <p className="mt-3 text-center text-xs text-muted-foreground">{t.schedule.tz}</p>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
-        {step === "details" && (
-          <form
-            onSubmit={confirmAppointment}
-            className="grid gap-6 p-5 md:grid-cols-[1fr_260px] sm:p-7"
-          >
-            <div className="space-y-5">
-              <div>
-                <Label htmlFor="schedule-company">{t.schedule.company}</Label>
-                <Input
-                  id="schedule-company"
-                  value={company}
-                  onChange={(event) => setCompany(event.target.value)}
-                  placeholder={t.schedule.companyPh}
-                  className="mt-2 h-11"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="schedule-email">{t.schedule.email}</Label>
-                <Input
-                  id="schedule-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder={t.schedule.emailPh}
-                  className="mt-2 h-11"
-                  required
-                />
-              </div>
+        {!gate && user && step === "details" && (
+          <form onSubmit={sendProposal} className="grid gap-6 p-5 md:grid-cols-[1fr_260px] sm:p-7">
+            <div className="min-w-0 space-y-5">
+              <p className="text-sm text-muted-foreground">
+                {t.schedule.sender}{" "}
+                <span className="font-semibold text-foreground">
+                  {user.name} · {user.company}
+                </span>
+              </p>
               <div>
                 <Label htmlFor="schedule-message">
                   {t.schedule.about}{" "}
@@ -232,14 +270,39 @@ export function ScheduleDialog({
                   className="mt-2 min-h-24 resize-none"
                 />
               </div>
+              <section aria-label={t.schedule.emailPreview} className="rounded-lg border">
+                <p className="border-b px-4 py-2 text-xs font-bold uppercase text-muted-foreground">
+                  {t.schedule.emailPreview}
+                </p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-b px-4 py-3 text-xs">
+                  <dt className="text-muted-foreground">{t.schedule.emailTo}</dt>
+                  <dd className="min-w-0 break-words">{t.schedule.emailToValue(developerName)}</dd>
+                  <dt className="text-muted-foreground">{t.schedule.emailReplyTo}</dt>
+                  <dd className="min-w-0 break-words">{user.email}</dd>
+                  <dt className="text-muted-foreground">{t.schedule.emailSubject}</dt>
+                  <dd className="min-w-0 break-words font-semibold">
+                    {t.schedule.subject(user.company)}
+                  </dd>
+                </dl>
+                <div className="space-y-3 px-4 py-3 text-sm leading-6">
+                  <p>{t.schedule.greeting(firstName)}</p>
+                  <p>{t.schedule.intro(user.name, user.company, when)}</p>
+                  {message.trim() && (
+                    <p className="whitespace-pre-line border-l-2 pl-3 text-muted-foreground">
+                      {message.trim()}
+                    </p>
+                  )}
+                  <p>{t.schedule.closing}</p>
+                </div>
+              </section>
             </div>
-            <aside className="rounded-lg border bg-muted/60 p-5">
+            <aside className="h-fit rounded-lg border bg-muted/60 p-5">
               <p className="text-xs font-bold uppercase text-muted-foreground">
                 {t.schedule.summary}
               </p>
               <div className="mt-4 space-y-4 text-sm">
                 <div className="flex gap-3">
-                  <CalendarDays className="mt-0.5 size-4 text-primary" />
+                  <CalendarDays className="mt-0.5 size-4 shrink-0 text-primary" />
                   <div>
                     <p className="font-bold first-letter:uppercase">{formattedDate}</p>
                     <p className="text-muted-foreground">
@@ -248,28 +311,29 @@ export function ScheduleDialog({
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Clock3 className="mt-0.5 size-4 text-primary" />
+                  <Clock3 className="mt-0.5 size-4 shrink-0 text-primary" />
                   <div>
                     <p className="font-bold">{t.schedule.minutes}</p>
                     <p className="text-muted-foreground">{t.schedule.tzShort}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Video className="mt-0.5 size-4 text-primary" />
+                  <Mail className="mt-0.5 size-4 shrink-0 text-primary" />
                   <div>
-                    <p className="font-bold">{t.schedule.video}</p>
-                    <p className="text-muted-foreground">{t.schedule.videoSub}</p>
+                    <p className="font-bold">{t.schedule.byEmail}</p>
+                    <p className="text-muted-foreground">{t.schedule.byEmailSub}</p>
                   </div>
                 </div>
               </div>
-              <Button type="submit" className="mt-6 w-full">
-                <Check />
-                {t.schedule.confirm}
+              <Button type="submit" className="mt-6 w-full" disabled={sending}>
+                {sending ? <Loader2 className="animate-spin" /> : <Send />}
+                {sending ? t.schedule.sending : t.schedule.send}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 className="mt-2 w-full"
+                disabled={sending}
                 onClick={() => setStep("schedule")}
               >
                 <ArrowLeft />
@@ -279,25 +343,24 @@ export function ScheduleDialog({
           </form>
         )}
 
-        {step === "success" && (
+        {!gate && user && step === "success" && (
           <div className="px-6 py-10 text-center sm:px-12 sm:py-14">
             <div className="mx-auto grid size-14 place-items-center rounded-full bg-positive-soft text-positive">
               <Check className="size-7" />
             </div>
             <h3 className="mt-5 font-display text-2xl font-bold">{t.schedule.done}</h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              {t.schedule.reservedA} {developerName} {t.schedule.reservedB}{" "}
-              <span className="font-semibold text-foreground first-letter:uppercase">
-                {formattedDate}, {t.schedule.at} {time}
-              </span>
-              .
+              {t.schedule.doneDesc(developerName, when)}
             </p>
             <div className="mx-auto mt-6 flex max-w-sm items-center gap-3 rounded-lg border bg-muted/60 p-4 text-left text-sm">
               <Mail className="size-5 shrink-0 text-primary" />
               <span>
-                {t.schedule.confirmSent} <strong>{email}</strong>.
+                {t.schedule.replyNote} <strong className="break-all">{user.email}</strong>.
               </span>
             </div>
+            <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
+              {t.schedule.demoNote}
+            </p>
             <Button className="mt-7" onClick={() => handleOpenChange(false)}>
               {t.schedule.finish}
             </Button>

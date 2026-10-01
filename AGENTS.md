@@ -10,4 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep mock product data in `src/lib/developers.ts` and shared client-only favorites in `app-context.tsx`, so replacing mocks later stays isolated.
-- Keep mock appointments in shared client state and browser storage, because StackMatch remains a front-end-only prototype.
+- Meetings are not managed in the app: a company proposes one time and the developer gets it by e-mail, replying to the company directly. Keep the mocked send in `src/lib/api.ts` and the local history of sent proposals in shared client state and browser storage, because StackMatch remains a front-end-only prototype.

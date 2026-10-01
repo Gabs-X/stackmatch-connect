@@ -25,7 +25,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist.
 - **Criação de perfil:** formulário em etapas, skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview e salvamento local ao concluir.
 - **Importação simulada do GitHub:** seleção de projetos fictícios para o perfil.
-- **Agendamento local:** escolha de data e horário, dados do contratante e confirmação. Horários passados ou já reservados para o mesmo profissional ficam indisponíveis.
+- **Proposta de reunião:** uma conta de empresa sugere um horário (data e hora, em GMT−3) e escreve uma mensagem opcional. O profissional recebe a proposta por e-mail e responde direto para a empresa: o StackMatch não gerencia a reunião nem bloqueia horários. O diálogo mostra uma prévia do e-mail e avisa quando já houve proposta para o mesmo profissional. Visitantes são levados ao login; contas de desenvolvedor não enviam propostas.
 - **Assistente (prévia):** chat flutuante com sugestões, digitação em streaming e opção de parar a resposta, pronto para conectar a um backend de IA.
 - **PT-BR e EN**, interface responsiva e ajustes de acessibilidade, incluindo labels, estados de seleção e respeito à preferência por movimento reduzido nos cards.
 
@@ -66,7 +66,7 @@ npm run test:e2e
 npm run build
 ```
 
-Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos e usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem Discover (ações, desfazer, filtros), perfil (links reais e de demonstração, avatar do GitHub e fallback), criação de perfil até o Discover, idioma e tema, assistente e o layout em celular.
+Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos e usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem Discover (ações, desfazer, filtros), perfil (links reais e de demonstração, avatar do GitHub e fallback), criação de perfil até o Discover, idioma e tema, assistente, proposta de reunião e o layout em celular.
 
 Para visualizar o build localmente:
 
@@ -78,19 +78,19 @@ O lint pode apresentar avisos de `react-refresh/only-export-components` em módu
 
 ## Arquitetura em alto nível
 
-| Local                      | Responsabilidade                                                                 |
-| -------------------------- | -------------------------------------------------------------------------------- |
-| `src/routes/`              | Páginas: início, Discover, perfil, talentos salvos e criação de perfil.          |
-| `src/components/`          | Componentes de produto, como cards, filtros, cabeçalho e diálogo de agendamento. |
-| `src/components/ui/`       | Primitivas reutilizáveis de interface.                                           |
-| `src/lib/developers.ts`    | Tipos e catálogo mockado de profissionais e projetos.                            |
-| `src/lib/app-context.tsx`  | Estado compartilhado de shortlist, interesses e agendamentos.                    |
-| `src/lib/appointments.ts`  | Leitura das reservas locais e regras de disponibilidade dos horários.            |
-| `src/lib/local-profile.ts` | Estrutura, validação e persistência do perfil criado no navegador.               |
-| `src/lib/i18n.tsx`         | Dicionários, idioma ativo e formatação de valores.                               |
-| `src/styles.css`           | Estilos globais e tokens visuais.                                                |
+| Local                         | Responsabilidade                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `src/routes/`                 | Páginas: início, Discover, perfil, talentos salvos e criação de perfil.          |
+| `src/components/`             | Componentes de produto, como cards, filtros, cabeçalho e proposta de reunião.    |
+| `src/components/ui/`          | Primitivas reutilizáveis de interface.                                           |
+| `src/lib/developers.ts`       | Tipos e catálogo mockado de profissionais e projetos.                            |
+| `src/lib/app-context.tsx`     | Estado compartilhado de shortlist, interesses e propostas de reunião enviadas.   |
+| `src/lib/meeting-requests.ts` | Formato das propostas de reunião, horários aceitos e leitura do histórico local. |
+| `src/lib/local-profile.ts`    | Estrutura, validação e persistência do perfil criado no navegador.               |
+| `src/lib/i18n.tsx`            | Dicionários, idioma ativo e formatação de valores.                               |
+| `src/styles.css`              | Estilos globais e tokens visuais.                                                |
 
-Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist, interesses, reservas, perfil concluído e preferência de idioma usam `localStorage`.
+Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist, interesses, propostas enviadas, perfil concluído e preferência de idioma usam `localStorage`.
 
 Embora TanStack Start tenha infraestrutura de renderização no servidor, não há backend de negócio, banco de dados ou API de contratação implementados.
 
@@ -98,13 +98,13 @@ Embora TanStack Start tenha infraestrutura de renderização no servidor, não h
 
 O seletor no cabeçalho alterna entre português brasileiro e inglês e guarda a preferência no navegador. Os textos ficam em dicionários tipados em `src/lib/i18n.tsx`.
 
-Os valores dos mocks são traduzidos na apresentação, preservando os dados usados pelos filtros. Datas seguem o idioma selecionado; preços permanecem em **BRL**, sem conversão cambial. A agenda utiliza o horário de Brasília (GMT−3).
+Os valores dos mocks são traduzidos na apresentação, preservando os dados usados pelos filtros. Datas seguem o idioma selecionado; preços permanecem em **BRL**, sem conversão cambial. Os horários propostos usam o horário de Brasília (GMT−3).
 
 ## O que está mockado
 
 - Os oito profissionais, suas bios, projetos, valores, experiências e disponibilidades são fictícios. Números e alegações da apresentação do produto não representam uma base real de usuários ou verificações.
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
-- A agenda é uma **simulação local**: grava reservas neste navegador, sem Google Calendar, envio de e-mails ou geração de links de videochamada.
+- O envio da proposta de reunião é **simulado**: `sendMeetingRequest` em `src/lib/api.ts` faz o papel do futuro `POST /meeting-requests`, que enviará o e-mail ao profissional com `Reply-To` da empresa. Nenhum e-mail é enviado; a proposta fica registrada neste navegador para a empresa lembrar com quem já falou.
 - O interesse é um registro local, sem notificação, chat ou contato externo.
 - **Contas e login são simulados.** Cadastro, entrada e recuperação de senha funcionam só neste navegador: as contas ficam no `localStorage` com a senha guardada como hash SHA-256 (o que evita texto puro, mas não é segurança real), e nenhum e-mail é enviado. Há dois tipos de conta: **empresa** (com nome da empresa; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido). As funções ficam em `src/lib/auth.ts` e podem ser trocadas por chamadas à API sem mudar as telas.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
@@ -158,21 +158,21 @@ Sem essa variável, o componente não é incluído no build.
 ## Limitações conhecidas
 
 - Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
-- Reservas não representam disponibilidade real e não têm garantia de concorrência entre usuários ou dispositivos.
+- A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
 - O perfil criado fica no navegador e não é publicado: ele aparece no Discover e nos salvos apenas neste navegador, com o selo "Seu perfil". Como o formulário não coleta valor por hora nem tipo de contratação, ele sai da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
 - Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.
-- Os testes automatizados cobrem a lógica (Vitest, `npm test`) e os principais fluxos no navegador (Playwright, `npm run test:e2e`). O fluxo de agendamento ainda não tem teste de interface.
+- Os testes automatizados cobrem a lógica (Vitest, `npm test`) e os principais fluxos no navegador (Playwright, `npm run test:e2e`).
 
 ## Próximos passos
 
 1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
-2. Adicionar o teste de interface do agendamento e rodar as suítes automaticamente a cada push (CI).
+2. Rodar as suítes automaticamente a cada push (CI).
 3. Refinar validações do formulário e ampliar o cadastro de projetos, conforme feedback de uso.
 4. Em uma etapa com backend, definir contratos de API, autenticação, publicação de perfis e persistência por usuário.
-5. Integrar GitHub e calendário apenas após definir permissões, privacidade e tratamento de conflitos de agenda.
+5. Integrar o GitHub e o envio de e-mails apenas após definir permissões, privacidade e limites contra spam nas propostas de reunião.
 
 ## Lovable
 

@@ -9,7 +9,7 @@ test("the assistant answers a suggestion with the preview reply", async ({ page 
 
   await expect(chat.getByText("Como funciona o Discover?")).toBeVisible();
   await expect(chat.getByText(/Ainda estou em modo de prévia/)).toBeVisible();
-  await expect(chat.getByText(/agendamentos\.$/)).toBeVisible();
+  await expect(chat.getByText(/propostas de reunião\.$/)).toBeVisible();
 });
 
 test("stopping a reply halts the text and Escape closes the chat", async ({ page }) => {

@@ -1,13 +1,12 @@
 import type React from "react";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import {
-  type Appointment,
-  appointmentStorageKey,
-  isSlotAvailable,
-  readAppointments,
-} from "./appointments";
-export type { Appointment } from "./appointments";
+  type MeetingRequest,
+  meetingRequestStorageKey,
+  readMeetingRequests,
+} from "./meeting-requests";
+export type { MeetingRequest } from "./meeting-requests";
 
 type AppState = {
   /** False until browser storage has been read; lists should show loading, not empty, before. */
@@ -18,9 +17,10 @@ type AppState = {
   registerInterest: (id: string) => void;
   removeSaved: (id: string) => void;
   removeInterest: (id: string) => void;
-  appointments: Appointment[];
+  /** Meeting proposals sent from this browser, kept so a company remembers whom it contacted. */
+  meetingRequests: MeetingRequest[];
   toggleSaved: (id: string) => void;
-  scheduleAppointment: (appointment: Appointment) => "success" | "unavailable" | "storage-error";
+  recordMeetingRequest: (request: MeetingRequest) => void;
 };
 // Keep a single context instance across hot reloads so provider/consumers never diverge.
 const globalStore = globalThis as unknown as {
@@ -31,8 +31,7 @@ const AppContext = (globalStore.__stackmatchAppContext ??= createContext<AppStat
 export function AppProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const appointmentsRef = useRef<Appointment[]>([]);
+  const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     try {
@@ -52,17 +51,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       /* Keep session state if storage is unavailable or corrupted. */
     }
     try {
-      appointmentsRef.current = readAppointments();
-      setAppointments(appointmentsRef.current);
+      setMeetingRequests(readMeetingRequests());
     } catch {
       /* Keep the local list empty if storage cannot be read. */
     }
     setHydrated(true);
     const sync = (event: StorageEvent) => {
-      if (event.key !== appointmentStorageKey && event.key !== null) return;
+      if (event.key !== meetingRequestStorageKey && event.key !== null) return;
       try {
-        appointmentsRef.current = readAppointments();
-        setAppointments(appointmentsRef.current);
+        setMeetingRequests(readMeetingRequests());
       } catch {
         /* Preserve current state. */
       }
@@ -124,30 +121,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return next;
     });
-  const scheduleAppointment: AppState["scheduleAppointment"] = (appointment) => {
+  const recordMeetingRequest = (request: MeetingRequest) => {
+    let next = [...meetingRequests, request];
     try {
-      const current = readAppointments();
-      if (
-        !isSlotAvailable(current, appointment.developerId, appointment.date, appointment.time) ||
-        !isSlotAvailable(
-          appointmentsRef.current,
-          appointment.developerId,
-          appointment.date,
-          appointment.time,
-        )
-      ) {
-        appointmentsRef.current = current;
-        setAppointments(current);
-        return "unavailable";
-      }
-      const next = [...current, appointment];
-      window.localStorage.setItem(appointmentStorageKey, JSON.stringify(next));
-      appointmentsRef.current = next;
-      setAppointments(next);
-      return "success";
+      // Re-read so proposals sent from another tab aren't overwritten.
+      next = [...readMeetingRequests(), request];
+      window.localStorage.setItem(meetingRequestStorageKey, JSON.stringify(next));
     } catch {
-      return "storage-error";
+      /* The proposal was already sent; keep the record for this session only. */
     }
+    setMeetingRequests(next);
   };
   return (
     <AppContext.Provider
@@ -159,9 +142,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         registerInterest,
         removeSaved,
         removeInterest,
-        appointments,
+        meetingRequests,
         toggleSaved,
-        scheduleAppointment,
+        recordMeetingRequest,
       }}
     >
       {children}
