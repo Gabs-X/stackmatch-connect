@@ -13,15 +13,23 @@ import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  FilterPanel,
-  defaultFilters,
-  type Filters,
-  type FilterGroup,
-} from "@/components/filter-panel";
+import { FilterPanel } from "@/components/filter-panel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { Developer } from "@/lib/developers";
+import {
+  canUndo,
+  createHistoryEntry,
+  type DiscoverAction,
+  type HistoryEntry,
+} from "@/lib/discover-history";
+import {
+  defaultFilters,
+  matchesFilters,
+  maxRate,
+  type FilterGroup,
+  type Filters,
+} from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
 import { useDevelopers } from "@/lib/use-developers";
 
@@ -70,19 +78,7 @@ function DiscoverPage() {
   const yesOpacity = useTransform(x, [30, 120], [0, 1]);
   const noOpacity = useTransform(x, [-120, -30], [1, 0]);
   const filtered = useMemo(
-    () =>
-      developers.filter(
-        (d) =>
-          (!filters.skills.length || filters.skills.some((s) => d.skills.includes(s))) &&
-          (!filters.seniority.length || filters.seniority.includes(d.seniority)) &&
-          (!filters.mode.length || filters.mode.includes(d.workMode)) &&
-          (!filters.hiring.length || filters.hiring.some((type) => d.hiringTypes.includes(type))) &&
-          (!filters.availability.length || filters.availability.includes(d.availability)) &&
-          // Profiles without a rate only show while the rate filter is untouched.
-          (Number.isFinite(d.rate)
-            ? d.rate <= (filters.rate[0] ?? 300)
-            : filters.rate[0] === defaultFilters.rate[0]),
-      ),
+    () => developers.filter((developer) => matchesFilters(developer, filters)),
     [filters, developers],
   );
   const current = filtered[index];
@@ -99,7 +95,7 @@ function DiscoverPage() {
   const finished = filtered.length > 0 && index >= filtered.length;
   const progress = filtered.length ? Math.min(index / filtered.length, 1) * 100 : 0;
   const undo = (entry = historyRef.current.at(-1)) => {
-    if (!entry || historyRef.current.at(-1) !== entry) return;
+    if (!entry || !canUndo(entry, historyRef.current)) return;
     if (entry.addedSaved) removeSaved(entry.id);
     if (entry.addedInterest) removeInterest(entry.id);
     updateHistory(historyRef.current.slice(0, -1));
@@ -107,15 +103,9 @@ function DiscoverPage() {
     setIndex(entry.index);
     toast(t.discover.undone, { description: entry.name });
   };
-  const next = (action: "pass" | "save" | "interest") => {
+  const next = (action: DiscoverAction) => {
     if (!current) return;
-    const entry: HistoryEntry = {
-      id: current.id,
-      name: current.name,
-      index,
-      addedSaved: action !== "pass" && !saved.includes(current.id),
-      addedInterest: action === "interest" && !interests.includes(current.id),
-    };
+    const entry = createHistoryEntry(current, action, index, saved, interests);
     updateHistory([...historyRef.current, entry]);
     if (action !== "pass") {
       addSaved(current.id);
@@ -182,7 +172,7 @@ function DiscoverPage() {
                 aria-label={t.filters.remove + ": " + t.filters.maxRate}
                 onClick={() => changeFilters({ ...filters, rate: defaultFilters.rate })}
               >
-                {t.filters.maxRate}: {formatCurrency(filters.rate[0] ?? 300)}{" "}
+                {t.filters.maxRate}: {formatCurrency(filters.rate[0] ?? maxRate)}{" "}
                 <span aria-hidden="true">×</span>
               </button>
             )}
@@ -396,14 +386,6 @@ function DiscoverPage() {
   );
 }
 const noDevelopers: Developer[] = [];
-
-type HistoryEntry = {
-  id: string;
-  name: string;
-  index: number;
-  addedSaved: boolean;
-  addedInterest: boolean;
-};
 
 function SearchOff() {
   return (

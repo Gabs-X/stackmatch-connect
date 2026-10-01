@@ -8,24 +8,8 @@ import {
   seniorityOptions,
   workModeOptions,
 } from "@/lib/developers";
+import { defaultFilters, maxRate, type FilterGroup, type Filters } from "@/lib/filters";
 
-export type Filters = {
-  skills: string[];
-  seniority: string[];
-  mode: string[];
-  hiring: string[];
-  availability: string[];
-  rate: number[];
-};
-export type FilterGroup = Exclude<keyof Filters, "rate">;
-export const defaultFilters: Filters = {
-  skills: [],
-  seniority: [],
-  mode: [],
-  hiring: [],
-  availability: [],
-  rate: [300],
-};
 const groups = [
   [
     "tech",
@@ -103,13 +87,13 @@ export function FilterPanel({
       <section>
         <div className="mb-4 flex justify-between text-sm font-semibold">
           <span>{t.filters.maxRate}</span>
-          <span>{formatCurrency(value.rate[0] ?? 300)}</span>
+          <span>{formatCurrency(value.rate[0] ?? maxRate)}</span>
         </div>
         <Slider
           aria-label={t.filters.maxRate}
-          aria-valuetext={formatCurrency(value.rate[0] ?? 300)}
+          aria-valuetext={formatCurrency(value.rate[0] ?? maxRate)}
           min={60}
-          max={300}
+          max={maxRate}
           step={10}
           value={value.rate}
           onValueChange={(rate) => onChange({ ...value, rate })}
