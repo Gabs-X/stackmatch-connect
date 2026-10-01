@@ -10,6 +10,8 @@ import {
 export type { Appointment } from "./appointments";
 
 type AppState = {
+  /** False until browser storage has been read; lists should show loading, not empty, before. */
+  hydrated: boolean;
   saved: string[];
   interests: string[];
   addSaved: (id: string) => void;
@@ -31,6 +33,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [interests, setInterests] = useState<string[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const appointmentsRef = useRef<Appointment[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     try {
       const value: unknown = JSON.parse(
@@ -54,6 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       /* Keep the local list empty if storage cannot be read. */
     }
+    setHydrated(true);
     const sync = (event: StorageEvent) => {
       if (event.key !== appointmentStorageKey && event.key !== null) return;
       try {
@@ -148,6 +152,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
+        hydrated,
         saved,
         interests,
         addSaved,

@@ -1,9 +1,11 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bookmark, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Bookmark, RotateCcw, Trash2 } from "lucide-react";
 import { DeveloperCard } from "@/components/developer-card";
+import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
 import { Button } from "@/components/ui/button";
-import { developers } from "@/lib/developers";
+import { developersQuery } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
 export const Route = createFileRoute("/saved")({
   head: () => ({
@@ -21,15 +23,40 @@ export const Route = createFileRoute("/saved")({
 function SavedPage() {
   const { t } = useI18n();
   useLocalizedMeta(t.saved.title + " — Stack Match", t.saved.sub);
-  const { saved, toggleSaved } = useApp();
-  const items = developers.filter((d) => saved.includes(d.id));
+  const { hydrated, saved, toggleSaved } = useApp();
+  const { data: developers, isPending, isError, refetch } = useQuery(developersQuery);
+  const items = developers?.filter((d) => saved.includes(d.id)) ?? [];
+  // Before storage is read the count is unknown, so show one row; after, match the saved count.
+  const loading = !hydrated || (saved.length > 0 && isPending && !isError);
+  const skeletonCount = hydrated ? Math.min(saved.length, 8) : 4;
+  const grid = "mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
   return (
     <main className="mx-auto min-h-[calc(100vh-4rem)] max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <span className="section-kicker">{t.saved.kicker}</span>
       <h1 className="mt-1 font-display text-3xl font-extrabold">{t.saved.title}</h1>
       <p className="mt-2 text-muted-foreground">{t.saved.sub}</p>
-      {items.length ? (
-        <div className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {loading ? (
+        <div className={grid} aria-busy="true">
+          <span role="status" className="sr-only">
+            {t.common.loading}
+          </span>
+          {Array.from({ length: skeletonCount }, (_, i) => (
+            <DeveloperCardSkeleton key={i} compact />
+          ))}
+        </div>
+      ) : isError && saved.length > 0 ? (
+        <div className="mt-16 grid min-h-80 place-items-center rounded-xl border border-dashed bg-card p-8 text-center">
+          <div role="alert">
+            <h2 className="text-xl font-bold">{t.discover.loadError}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{t.discover.loadErrorSub}</p>
+            <Button className="mt-5" onClick={() => void refetch()}>
+              <RotateCcw />
+              {t.common.retry}
+            </Button>
+          </div>
+        </div>
+      ) : items.length ? (
+        <div className={grid}>
           {items.map((d) => (
             <div className="relative" key={d.id}>
               <DeveloperCard developer={d} compact />

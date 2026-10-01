@@ -20,10 +20,10 @@ export function DeveloperCard({
       <div
         className={
           compact
-            ? "relative h-52 overflow-hidden"
+            ? "relative h-52 overflow-hidden bg-muted"
             : showProfile
-              ? "relative h-44 overflow-hidden sm:h-72"
-              : "relative h-64 overflow-hidden sm:h-72"
+              ? "relative h-44 overflow-hidden bg-muted sm:h-72"
+              : "relative h-64 overflow-hidden bg-muted sm:h-72"
         }
       >
         <img

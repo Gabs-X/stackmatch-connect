@@ -12,6 +12,7 @@ const pt = {
     error: "Não foi possível carregar esta página",
     errorDescription: "Ocorreu um erro. Tente novamente ou volte ao início.",
     retry: "Tentar novamente",
+    loading: "Carregando...",
   },
   nav: {
     discover: "Discover",
@@ -100,6 +101,8 @@ const pt = {
     toastInterest: "Interesse registrado",
     undo: "Desfazer",
     undone: "Ação desfeita",
+    loadError: "Não foi possível carregar os talentos",
+    loadErrorSub: "Verifique sua conexão e tente novamente.",
     saveFeedback: "salvo na shortlist.",
     interestFeedback: "interesse registrado localmente e perfil salvo. Nenhum contato foi enviado.",
     finishedTitle: "Você chegou ao fim da lista",
@@ -266,6 +269,7 @@ const en: Dict = {
     error: "This page didn't load",
     errorDescription: "Something went wrong. Try again or head back home.",
     retry: "Try again",
+    loading: "Loading...",
   },
   nav: {
     discover: "Discover",
@@ -349,6 +353,8 @@ const en: Dict = {
     toastInterest: "Interest registered",
     undo: "Undo",
     undone: "Action undone",
+    loadError: "Couldn't load talent",
+    loadErrorSub: "Check your connection and try again.",
     saveFeedback: "saved to your shortlist.",
     interestFeedback: "interest recorded locally and profile saved. No contact was sent.",
     finishedTitle: "You reached the end of the list",
