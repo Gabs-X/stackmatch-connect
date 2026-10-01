@@ -14,6 +14,7 @@ import { AssistantWidget } from "@/components/assistant-widget";
 import { Toaster } from "@/components/ui/sonner";
 import { AppProvider } from "@/lib/app-context";
 import { I18nProvider, useI18n } from "@/lib/i18n";
+import { ThemeProvider, themeInitScript, useTheme } from "@/lib/theme";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -112,10 +113,14 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        {/* Applies the saved or system theme before first paint to avoid a light flash. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body>
-        <I18nProvider>{children}</I18nProvider>
+        <ThemeProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>
@@ -124,6 +129,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { resolved } = useTheme();
   // Discover pins its action bar to the bottom on phones; lift floating UI above it there.
   const raised = useRouterState({ select: (state) => state.location.pathname === "/discover" });
 
@@ -134,6 +140,7 @@ function RootComponent() {
         <Outlet />
         <Toaster
           richColors
+          theme={resolved}
           position="bottom-right"
           offset={{ bottom: 96, right: 24 }}
           mobileOffset={{ bottom: raised ? 176 : 80 }}

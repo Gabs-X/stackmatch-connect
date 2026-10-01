@@ -2,6 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: "DM Sans", sans-serif;
   --font-display: "Manrope", sans-serif;
@@ -31,8 +33,8 @@
   --radius-md: 0.5rem;
   --radius-lg: 0.65rem;
   --radius-xl: 0.8rem;
-  --shadow-soft: 0 12px 40px -18px oklch(0.24 0.04 255 / 0.2);
-  --shadow-card: 0 20px 70px -28px oklch(0.2 0.05 255 / 0.28);
+  --shadow-soft: var(--elevation-soft);
+  --shadow-card: var(--elevation-card);
   --animate-fade-in: fade-in 0.45s ease-out both;
   --animate-scale-in: scale-in 0.4s ease-out both;
 }
@@ -51,6 +53,34 @@
   --positive-soft: oklch(0.94 0.04 158);
   --danger-soft: oklch(0.95 0.035 25);
   --border: oklch(0.9 0.018 250);
+  --elevation-soft: 0 12px 40px -18px oklch(0.24 0.04 255 / 0.2);
+  --elevation-card: 0 20px 70px -28px oklch(0.2 0.05 255 / 0.28);
+  --cta-background: var(--foreground);
+  --cta-foreground: oklch(0.99 0 0);
+  color-scheme: light;
+}
+/* Graphite with a blue bias keeps the brand; primary gets lighter so it reads as text on dark
+   surfaces, so text on primary fills switches to dark ink. */
+.dark {
+  --background: oklch(0.17 0.02 260);
+  --foreground: oklch(0.95 0.01 250);
+  --card: oklch(0.21 0.022 260);
+  --primary: oklch(0.7 0.15 262);
+  --primary-foreground: oklch(0.17 0.03 262);
+  --secondary: oklch(0.27 0.03 260);
+  --muted: oklch(0.25 0.022 260);
+  --muted-foreground: oklch(0.73 0.02 255);
+  --accent: oklch(0.29 0.04 260);
+  --destructive: oklch(0.68 0.19 25);
+  --positive: oklch(0.76 0.14 158);
+  --positive-soft: oklch(0.3 0.06 158);
+  --danger-soft: oklch(0.3 0.07 25);
+  --border: oklch(0.3 0.022 260);
+  --elevation-soft: 0 12px 40px -18px oklch(0 0 0 / 0.6);
+  --elevation-card: 0 20px 70px -28px oklch(0 0 0 / 0.75);
+  --cta-background: oklch(0.24 0.06 262);
+  --cta-foreground: var(--foreground);
+  color-scheme: dark;
 }
 * {
   border-color: var(--border);
@@ -89,10 +119,10 @@ a {
   }
 }
 @utility shadow-soft {
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--elevation-soft);
 }
 @utility shadow-card {
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--elevation-card);
 }
 @utility nav-link {
   display: flex;
@@ -157,7 +187,7 @@ a {
   border: 1px solid var(--border);
   border-radius: 0.8rem;
   background: var(--card);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--elevation-card);
 }
 @utility talent-card {
   overflow: hidden;
@@ -167,7 +197,7 @@ a {
   transition: 0.25s;
   &:hover {
     transform: translateY(-3px);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--elevation-soft);
   }
 }
 @utility availability-badge {
@@ -249,8 +279,8 @@ a {
   padding-top: 1.5rem;
 }
 @utility cta-band {
-  background: var(--foreground);
-  color: var(--primary-foreground);
+  background: var(--cta-background);
+  color: var(--cta-foreground);
 }
 @utility project-blue {
   background: linear-gradient(135deg, oklch(0.45 0.16 255), oklch(0.68 0.14 235));
@@ -288,7 +318,7 @@ a {
   background: linear-gradient(135deg, var(--primary), oklch(0.5 0.2 275));
   color: var(--primary-foreground);
   box-shadow:
-    var(--shadow-card),
+    var(--elevation-card),
     0 8px 24px -8px color-mix(in oklab, var(--primary) 60%, transparent);
   cursor: pointer;
   transition:

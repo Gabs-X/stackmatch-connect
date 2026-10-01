@@ -127,7 +127,7 @@ function DeveloperPage() {
               {d.projects.map((p) => (
                 <article className="overflow-hidden rounded-lg border bg-card" key={p.name}>
                   <div className={`grid aspect-[16/10] place-items-center ${p.color}`}>
-                    <span className="font-display text-4xl font-extrabold text-primary-foreground">
+                    <span className="font-display text-4xl font-extrabold text-white">
                       {p.name.slice(0, 2).toUpperCase()}
                     </span>
                   </div>

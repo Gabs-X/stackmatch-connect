@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Bookmark, BriefcaseBusiness, Menu, Search, UserRoundPlus, X } from "lucide-react";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/app-context";
 import { useI18n, type Lang } from "@/lib/i18n";
@@ -51,6 +52,7 @@ export function AppHeader() {
               EN
             </option>
           </select>
+          <ThemeToggle />
           <Button
             size="icon"
             variant="ghost"
