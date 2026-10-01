@@ -1,647 +1,142 @@
-# Talent Matcher
+# StackMatch
 
-## Idiomas
+Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo. O projeto utilizou **Lovable conforme orientação do teste**, com ajustes no código para completar fluxos e revisar comportamento, acessibilidade e consistência dos dados.
 
-Use o seletor no cabeçalho para alternar entre **PT-BR** (padrão) e **EN**.
-A preferência é salva no navegador em `stackmatch-lang`. Os textos ficam em
-`src/lib/i18n.tsx`, com dicionários tipados e acesso pelo hook `useI18n()`.
-Ao adicionar textos, inclua as versões nos dois dicionários. Os dados mockados
-continuam em `src/lib/developers.ts`; `tv()` traduz seus valores apenas na exibição,
-preservando os valores usados pelos filtros. Datas seguem o idioma selecionado e
-os preços usam `formatCurrency()`, sempre em BRL.
+**Backend não fazia parte do escopo.** Os fluxos de produto usam dados fictícios e estado no navegador.
 
-Crie um projeto front-end completo e moderno chamado StackMatch, uma plataforma de descoberta rápida de desenvolvedores e freelancers.
+## Problema e proposta
 
-A proposta do produto é permitir que empresas, recrutadores ou contratantes encontrem profissionais de tecnologia de forma rápida e visual, utilizando filtros por stack, senioridade, disponibilidade, localização e tipo de contratação.
+Comparar profissionais exige reunir informações sobre tecnologias, experiência, projetos, disponibilidade e contratação. O StackMatch concentra esses dados em perfis e permite uma primeira seleção por cards, seguida de análise do perfil completo e organização de uma shortlist.
 
-O conceito pode lembrar a dinâmica de descoberta do Tinder, mas o produto deve ter aparência profissional de SaaS B2B, e não de aplicativo de namoro.
+A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplicada a um contexto profissional/B2B. O objetivo é facilitar a triagem inicial; o protótipo não avalia automaticamente a qualidade dos profissionais.
 
-Objetivo do projeto
+## Público inicial
 
-Criar apenas o front-end funcional e navegável, utilizando dados mockados.
+- Pequenas empresas, recrutadores e responsáveis técnicos procurando profissionais para projetos ou contratação.
+- Desenvolvedores e freelancers que precisam apresentar habilidades e um mini portfólio.
 
-Não criar backend real, banco de dados, autenticação real ou integrações externas neste momento.
+## Principais funcionalidades
 
-O projeto será utilizado como MVP e demonstração de produto.
+- **Discover:** filtros por tecnologias, senioridade, modelo de trabalho, contratação, disponibilidade e valor máximo por hora. Chips permitem remover seleções.
+- **Ações distintas:** passar avança; salvar adiciona à shortlist; interessado registra interesse separadamente e também salva o perfil. Nenhuma ação envia contato ao profissional.
+- **Navegação por cards:** botões e arraste, opção de desfazer e encerramento explícito da lista, com reinício manual.
+- **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
+- **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist.
+- **Criação de perfil:** formulário em etapas, skills, inclusão de projetos pelo nome, links, preview e salvamento local ao concluir.
+- **Importação simulada do GitHub:** seleção de projetos fictícios para o perfil.
+- **Agendamento local:** escolha de data e horário, dados do contratante e confirmação. Horários passados ou já reservados para o mesmo profissional ficam indisponíveis.
+- **PT-BR e EN**, interface responsiva e ajustes de acessibilidade, incluindo labels, estados de seleção e respeito à preferência por movimento reduzido nos cards.
 
-Tecnologias
+## Stack utilizada
 
-Utilizar preferencialmente:
+- React 19 e TypeScript em modo estrito.
+- TanStack Start e TanStack Router para estrutura da aplicação e rotas por arquivos.
+- Vite 8, com configuração fornecida pelo Lovable.
+- Tailwind CSS 4 e componentes baseados em Radix UI.
+- Framer Motion para animações e arraste dos cards.
+- Lucide para ícones e Sonner para notificações.
+- date-fns e React DayPicker para datas e calendário.
+- Zod para validação da estrutura do perfil local.
+- ESLint e Prettier para verificação e formatação.
 
-React
+TanStack Query está configurado na base do projeto, mas os fluxos atuais não dependem de consultas a uma API de produto.
 
-TypeScript
+## Como executar
 
-TailwindCSS
+Pré-requisitos: Node.js 22.12 ou superior e npm.
 
-Lucide Icons
-
-Framer Motion para animações
-
-Se o ambiente do Lovable utilizar Vite por padrão, manter Vite.
-
-Criar componentes reutilizáveis e manter uma arquitetura organizada.
-
-Identidade visual
-
-Criar uma identidade moderna de startup/SaaS.
-
-Visual:
-
-clean
-
-moderno
-
-profissional
-
-minimalista
-
-tecnológico
-
-premium
-
-Evitar estética infantil ou exageradamente colorida.
-
-Sugestão de paleta:
-
-fundo principal claro ou off-white
-
-tons escuros de grafite
-
-azul/índigo como cor principal
-
-verde suave para disponibilidade e ações positivas
-
-vermelho apenas para ações como "passar"
-
-Utilizar:
-
-cards com bordas arredondadas
-
-sombras discretas
-
-bastante espaçamento
-
-tipografia moderna
-
-microinterações
-
-animações suaves
-
-layout totalmente responsivo
-
-Estrutura do produto
-
-Criar as seguintes páginas:
-
-1. Landing Page
-
-Página inicial apresentando o produto.
-
-Header com:
-
-logo StackMatch
-
-Discover
-
-Talentos
-
-Para Desenvolvedores
-
-botão "Começar agora"
-
-Hero principal com headline semelhante a:
-
-"Encontre o desenvolvedor certo para o seu próximo projeto."
-
-Subheadline:
-
-"Descubra profissionais com as tecnologias, experiência e disponibilidade que sua empresa precisa."
-
-Botões:
-
-Encontrar talentos
-
-Criar meu perfil
-
-Criar ao lado do Hero uma prévia visual de um Developer Card.
-
-Adicionar uma seção explicando como funciona em 3 passos:
-
-Defina o que procura
-
-Descubra profissionais compatíveis
-
-Salve seus favoritos
-
-Criar também uma seção de benefícios:
-
-busca mais rápida
-
-filtros inteligentes
-
-análise por projetos
-
-disponibilidade visível
-
-mini portfólio profissional
-
-Adicionar CTA final.
-
-2. Discover
-
-Esta deve ser a principal tela do produto.
-
-Criar uma experiência de descoberta de desenvolvedores baseada em cards.
-
-Layout desktop:
-
-sidebar ou botão de filtros
-
-área central com Developer Card grande
-
-painel lateral opcional com informações adicionais
-
-Developer Card deve conter:
-
-foto/avatar
-
-nome
-
-cargo
-
-senioridade
-
-localização
-
-remoto/presencial
-
-disponibilidade
-
-breve descrição
-
-principais skills
-
-experiência
-
-2 ou 3 projetos em destaque
-
-botão "Ver perfil"
-
-Criar ações:
-
-Passar
-
-Salvar
-
-Interessado
-
-Adicionar suporte visual para swipe.
-
-Se possível, utilizar Framer Motion para permitir arrastar o card.
-
-Ao arrastar para a direita mostrar uma indicação visual:
-
-"INTERESSADO"
-
-Ao arrastar para a esquerda:
-
-"PASSAR"
-
-Adicionar botões abaixo do card para executar as mesmas ações sem swipe.
-
-Ao passar ou salvar um perfil, mostrar o próximo profissional da lista mockada.
-
-3. Filtros
-
-Criar um drawer, modal ou sidebar contendo filtros.
-
-Filtros:
-
-Tecnologias:
-
-React
-
-Next.js
-
-Angular
-
-Vue
-
-Node.js
-
-NestJS
-
-C#
-
-.NET
-
-Java
-
-Python
-
-PostgreSQL
-
-MySQL
-
-MongoDB
-
-AWS
-
-Docker
-
-Senioridade:
-
-Júnior
-
-Pleno
-
-Sênior
-
-Tipo de contratação:
-
-Freelancer
-
-Contrato
-
-CLT
-
-PJ
-
-Disponibilidade:
-
-Imediata
-
-15 dias
-
-30 dias
-
-Localização:
-
-Remoto
-
-Híbrido
-
-Presencial
-
-Faixa de valor:
-criar slider visual.
-
-Adicionar chips de filtros ativos no topo da página Discover.
-
-Exemplo:
-
-React ×
-Pleno ×
-Remoto ×
-
-4. Perfil completo do desenvolvedor
-
-Criar rota individual de perfil.
-
-Exemplo:
-
-/developer/
-
-Tela contendo:
-
-avatar grande
-
-nome
-
-cargo
-
-senioridade
-
-localização
-
-disponibilidade
-
-botão "Salvar"
-
-botão "Entrar em contato"
-
-Seções:
-
-Sobre mim
-
-Skills
-
-Experiência
-
-Projetos
-
-Links profissionais
-
-Criar cards de projetos contendo:
-
-imagem
-
-nome
-
-descrição
-
-tecnologias
-
-GitHub
-
-Demo
-
-Criar 3 projetos mockados por desenvolvedor.
-
-5. Talentos salvos
-
-Criar uma página de shortlist.
-
-Mostrar todos os perfis que o usuário marcou como interessado ou salvou.
-
-Formato:
-
-grid de cards.
-
-Cada card deve mostrar:
-
-avatar
-
-nome
-
-cargo
-
-skills
-
-disponibilidade
-
-botão "Ver perfil"
-
-botão para remover dos salvos
-
-Adicionar empty state caso nenhum candidato tenha sido salvo.
-
-Mensagem:
-
-"Você ainda não salvou nenhum talento."
-
-6. Criar perfil de desenvolvedor
-
-Criar uma página onde o desenvolvedor possa montar seu mini portfólio.
-
-Dividir em etapas.
-
-Etapa 1 — Informações pessoais
-
-nome
-
-cargo
-
-localização
-
-bio
-
-senioridade
-
-disponibilidade
-
-Etapa 2 — Skills
-
-Criar campo para adicionar tecnologias como tags.
-
-Etapa 3 — Projetos
-
-Permitir adicionar projetos com:
-
-nome
-
-descrição
-
-tecnologias
-
-imagem
-
-GitHub
-
-link de demonstração
-
-Etapa 4 — Links
-
-GitHub
-
-LinkedIn
-
-site pessoal
-
-Adicionar botão:
-
-"Importar projetos do GitHub"
-
-Este botão não precisa integrar de verdade.
-
-Ao clicar, abrir um modal mockado contendo alguns repositórios:
-
-Ecommerce API
-
-Portfolio
-
-Task Manager
-
-Finance Dashboard
-
-Permitir selecionar projetos e clicar:
-
-"Importar selecionados"
-
-Depois adicionar esses projetos ao formulário.
-
-7. Preview do perfil
-
-Durante a criação do perfil, adicionar opção:
-
-"Visualizar perfil"
-
-Mostrar uma prévia de como o contratante verá o perfil.
-
-Dados mockados
-
-Criar pelo menos 8 desenvolvedores fictícios.
-
-Variar:
-
-foto/avatar
-
-stack
-
-senioridade
-
-localização
-
-disponibilidade
-
-experiência
-
-projetos
-
-Exemplo:
-
-Gabriel Botelho
-Full Stack Developer
-Pleno
-Uberaba, MG
-Remoto
-Disponível agora
-
-Skills:
-React
-Next.js
-Node.js
-NestJS
-C#
-PostgreSQL
-
-Outro exemplo:
-
-Marina Costa
-Frontend Developer
-Sênior
-São Paulo, SP
-Remoto
-
-Skills:
-React
-Next.js
-TypeScript
-Tailwind
-GraphQL
-
-Criar diversidade de perfis e stacks.
-
-Navegação
-
-Criar header persistente com:
-
-StackMatch
-
-Discover
-
-Talentos salvos
-
-Criar perfil
-
-No mobile utilizar menu responsivo.
-
-Estados da interface
-
-Criar estados visuais para:
-
-loading
-
-nenhum resultado
-
-nenhum talento salvo
-
-filtros sem resultado
-
-Adicionar skeleton loading em alguns componentes.
-
-Responsividade
-
-O projeto precisa funcionar bem em:
-
-desktop
-
-tablet
-
-mobile
-
-No mobile, o card de descoberta deve ocupar quase toda a largura da tela.
-
-Filtros devem abrir como drawer ou modal.
-
-Experiência do usuário
-
-Adicionar:
-
-animações suaves
-
-hover states
-
-transições
-
-tooltips quando necessário
-
-feedback ao salvar candidato
-
-toast quando perfil for salvo
-
-toast ao importar projeto mockado
-
-Importante
-
-Este projeto deve ser SOMENTE FRONT-END.
-
-Não implementar:
-
-Supabase
-
-Firebase
-
-banco de dados
-
-API
-
-autenticação real
-
-login real
-
-pagamentos
-
-chat real
-
-integração real com GitHub
-
-Utilizar arrays e objetos locais para simular os dados.
-
-Estruturar o código de maneira que futuramente seja fácil substituir os mocks por uma API.
-
-Resultado esperado
-
-Quero que o projeto pareça um MVP real de uma startup pronta para ser apresentada a investidores ou clientes.
-
-Priorizar principalmente:
-
-experiência de descoberta
-
-qualidade visual
-
-animação dos cards
-
-filtros
-
-perfil profissional
-
-portfólio dos desenvolvedores
-
-responsividade
-
-A página Discover deve ser o principal destaque visual do produto.
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://stackmatch-connect.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/eaaacb72-e979-5df1-babb-b0232a2fdea4).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Na pasta do repositório:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+Acesse o endereço informado pelo Vite no terminal. Os fluxos mockados não exigem credenciais de GitHub, Google Calendar ou banco de dados.
+
+### Verificações
+
+```sh
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+Para visualizar o build localmente:
+
+```sh
+npm run preview
+```
+
+O lint pode apresentar avisos de `react-refresh/only-export-components` em módulos que exportam componentes junto com funções ou constantes. Eles se referem ao Fast Refresh em desenvolvimento.
+
+## Arquitetura em alto nível
+
+| Local                      | Responsabilidade                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| `src/routes/`              | Páginas: início, Discover, perfil, talentos salvos e criação de perfil.          |
+| `src/components/`          | Componentes de produto, como cards, filtros, cabeçalho e diálogo de agendamento. |
+| `src/components/ui/`       | Primitivas reutilizáveis de interface.                                           |
+| `src/lib/developers.ts`    | Tipos e catálogo mockado de profissionais e projetos.                            |
+| `src/lib/app-context.tsx`  | Estado compartilhado de shortlist, interesses e agendamentos.                    |
+| `src/lib/appointments.ts`  | Leitura das reservas locais e regras de disponibilidade dos horários.            |
+| `src/lib/local-profile.ts` | Estrutura, validação e persistência do perfil criado no navegador.               |
+| `src/lib/i18n.tsx`         | Dicionários, idioma ativo e formatação de valores.                               |
+| `src/styles.css`           | Estilos globais e tokens visuais.                                                |
+
+Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist, interesses, reservas, perfil concluído e preferência de idioma usam `localStorage`.
+
+Embora TanStack Start tenha infraestrutura de renderização no servidor, não há backend de negócio, banco de dados ou API de contratação implementados.
+
+## PT-BR / EN
+
+O seletor no cabeçalho alterna entre português brasileiro e inglês e guarda a preferência no navegador. Os textos ficam em dicionários tipados em `src/lib/i18n.tsx`.
+
+Os valores dos mocks são traduzidos na apresentação, preservando os dados usados pelos filtros. Datas seguem o idioma selecionado; preços permanecem em **BRL**, sem conversão cambial. A agenda utiliza o horário de Brasília (GMT−3).
+
+## O que está mockado
+
+- Os oito profissionais, suas bios, projetos, valores, experiências e disponibilidades são fictícios. Números e alegações da apresentação do produto não representam uma base real de usuários ou verificações.
+- A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
+- A agenda é uma **simulação local**: grava reservas neste navegador, sem Google Calendar, envio de e-mails ou geração de links de videochamada.
+- O interesse é um registro local, sem notificação, chat ou contato externo.
+- Links externos sem destino nos perfis mockados ficam indisponíveis. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
+- O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
+
+## Decisões técnicas
+
+- **Mocks centralizados:** manter o catálogo em um módulo reduz os pontos de alteração quando houver uma fonte real de dados.
+- **Context e estado local:** atendem ao volume e ao escopo do protótipo sem introduzir uma camada adicional de gerenciamento de estado.
+- **Persistência no navegador:** permite demonstrar continuidade entre visitas sem infraestrutura externa.
+- **Filtros determinísticos:** opções do mesmo grupo usam OU; grupos diferentes usam E. O filtro de disponibilidade corresponde ao status selecionado.
+- **Ações separadas:** shortlist e interesse têm registros distintos, evitando confundir organização de candidatos com intenção de contato.
+- **Componentes compartilhados:** cards, controles e diálogos mantêm padrões de interação entre telas.
+- **Escopo explícito:** integrações ausentes são apresentadas como simulações ou ações indisponíveis.
+
+## Limitações conhecidas
+
+- Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
+- Reservas não representam disponibilidade real e não têm garantia de concorrência entre usuários ou dispositivos.
+- O perfil criado fica no navegador e não é publicado nem incorporado ao catálogo do Discover. O cadastro de projetos armazena apenas seus nomes.
+- O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
+- As imagens de perfil incluem reutilizações entre personagens fictícios.
+- Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
+- Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.
+- Não há uma suíte automatizada abrangente de testes de interface.
+
+## Próximos passos
+
+1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
+2. Ampliar testes automatizados dos fluxos de descoberta, criação de perfil, persistência e agendamento.
+3. Refinar validações do formulário e ampliar o cadastro de projetos, conforme feedback de uso.
+4. Em uma etapa com backend, definir contratos de API, autenticação, publicação de perfis e persistência por usuário.
+5. Integrar GitHub e calendário apenas após definir permissões, privacidade e tratamento de conflitos de agenda.
+
+## Lovable
+
+O uso do Lovable integrou o desenvolvimento conforme a orientação do teste. O repositório permanece conectado à ferramenta.
+
+- [Aplicação publicada](https://stackmatch-connect.lovable.app)
+- [Projeto no Lovable](https://lovable.dev/projects/eaaacb72-e979-5df1-babb-b0232a2fdea4)
+
+Ao colaborar, preserve o histórico publicado: evite force push ou reescrita de commits já enviados, pois isso interfere na sincronização com o Lovable.
