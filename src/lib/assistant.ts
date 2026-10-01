@@ -29,6 +29,11 @@ export type ChatStatus = "idle" | "streaming";
 
 const wait = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
+    // An abort that happened between waits fires no event, so check before listening.
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
     const timer = window.setTimeout(resolve, ms);
     signal.addEventListener(
       "abort",
