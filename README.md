@@ -102,7 +102,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - A agenda é uma **simulação local**: grava reservas neste navegador, sem Google Calendar, envio de e-mails ou geração de links de videochamada.
 - O interesse é um registro local, sem notificação, chat ou contato externo.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
-- Links externos sem destino nos perfis mockados ficam indisponíveis. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
+- Os links de GitHub, LinkedIn e demos dos perfis mockados usam endereços de exemplo: ao clicar, um aviso mostra o endereço sem navegar, já que essas URLs podem pertencer a pessoas reais. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
 
 ## Assistente com IA (preparado para backend)

@@ -2,6 +2,7 @@ import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { DemoLink } from "@/components/demo-link";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
 import { developers } from "@/lib/developers";
@@ -144,28 +145,9 @@ function DeveloperPage() {
                       ))}
                     </div>
                     <div className="mt-5 flex gap-4 text-xs font-bold">
-                      <button
-                        type="button"
-                        disabled
-                        title={t.profile.unavailableLinks}
-                        className="flex items-center gap-1 opacity-50"
-                      >
-                        <Github className="size-4" />
-                        GitHub
-                      </button>
-                      <button
-                        type="button"
-                        disabled
-                        title={t.profile.unavailableLinks}
-                        className="flex items-center gap-1 opacity-50"
-                      >
-                        <ExternalLink className="size-4" />
-                        Demo
-                      </button>
+                      <DemoLink url={p.links.github} label="GitHub" icon={Github} />
+                      <DemoLink url={p.links.demo} label="Demo" icon={ExternalLink} />
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {t.profile.unavailableLinks}
-                    </p>
                   </div>
                 </article>
               ))}
@@ -190,21 +172,15 @@ function DeveloperPage() {
             <div className="my-5 border-t" />
             <p className="text-xs font-bold uppercase text-muted-foreground">{t.profile.links}</p>
             <div className="mt-3 space-y-2">
-              <Button disabled variant="outline" className="w-full justify-start">
-                <Github />
-                GitHub
-              </Button>
-              <Button disabled variant="outline" className="w-full justify-start">
-                <Linkedin />
-                LinkedIn
-              </Button>
-              <p className="text-xs text-muted-foreground">{t.profile.unavailableLinks}</p>
+              <DemoLink url={d.links.github} label="GitHub" icon={Github} variant="block" />
+              <DemoLink url={d.links.linkedin} label="LinkedIn" icon={Linkedin} variant="block" />
               <Button asChild variant="outline" className="w-full justify-start">
                 <a href="#portfolio">
                   <ExternalLink />
                   {t.profile.portfolioLink}
                 </a>
               </Button>
+              <p className="pt-1 text-xs text-muted-foreground">{t.profile.demoNote}</p>
             </div>
           </div>
         </aside>

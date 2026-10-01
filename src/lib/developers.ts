@@ -3,7 +3,9 @@ import marina from "@/assets/developer-marina.jpg";
 import rafael from "@/assets/developer-rafael.jpg";
 import juliana from "@/assets/developer-juliana.jpg";
 
-export type Project = { name: string; description: string; tech: string[]; color: string };
+type ProjectSeed = { name: string; description: string; tech: string[]; color: string };
+export type Project = ProjectSeed & { links: { github: string; demo: string } };
+export type ProfessionalLinks = { github: string; linkedin: string };
 export type Developer = {
   id: string;
   name: string;
@@ -19,9 +21,10 @@ export type Developer = {
   image: string;
   rate: number;
   projects: Project[];
+  links: ProfessionalLinks;
 };
 
-const projectSets: Project[][] = [
+const projectSets: ProjectSeed[][] = [
   [
     {
       name: "Pulse Commerce",
@@ -303,5 +306,28 @@ export const developers: Developer[] = base.map((d, index) => ({
   rate: d[10],
   hiringTypes: [...d[11]],
   bio: bios[index] ?? "",
-  projects: projectSets[index] ?? [],
+  // Example addresses for fictional people; the profile page shows them without navigating.
+  links: {
+    github: `https://github.com/${d[0]}`,
+    linkedin: `https://www.linkedin.com/in/${d[0]}`,
+  },
+  projects: (projectSets[index] ?? []).map((project) => {
+    const slug = slugify(project.name);
+    return {
+      ...project,
+      links: {
+        github: `https://github.com/${d[0]}/${slug}`,
+        demo: `https://${slug}.vercel.app`,
+      },
+    };
+  }),
 }));
+
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}

@@ -139,7 +139,11 @@ const pt = {
     rate: "Valor por hora",
     links: "Links profissionais",
     portfolioLink: "Portfólio",
-    unavailableLinks: "Links não disponíveis neste perfil de demonstração.",
+    demoNote: "Perfil fictício: os links mostram endereços de exemplo.",
+    demoLinkTitle: "Link de demonstração",
+    demoLinkDesc: (url: string) =>
+      `Este perfil é fictício. Em um perfil real, este link abriria ${url}.`,
+    openLink: (label: string, url: string) => `${label}: ${url} (demonstração)`,
   },
   create: {
     steps: ["Informações pessoais", "Skills", "Projetos", "Links"],
@@ -391,7 +395,11 @@ const en: Dict = {
     rate: "Hourly rate",
     links: "Professional links",
     portfolioLink: "Portfolio",
-    unavailableLinks: "Links unavailable in this demo profile.",
+    demoNote: "Fictional profile: links show example addresses.",
+    demoLinkTitle: "Demo link",
+    demoLinkDesc: (url: string) =>
+      `This profile is fictional. On a real profile, this link would open ${url}.`,
+    openLink: (label: string, url: string) => `${label}: ${url} (demo)`,
   },
   create: {
     steps: ["Personal info", "Skills", "Projects", "Links"],
