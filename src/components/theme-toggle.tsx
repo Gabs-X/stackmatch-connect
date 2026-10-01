@@ -14,7 +14,7 @@ import { useTheme, type ThemePreference } from "@/lib/theme";
 
 export function ThemeToggle() {
   const { t } = useI18n();
-  const { preference, resolved, setPreference } = useTheme();
+  const { preference, setPreference } = useTheme();
   const options = [
     { value: "system", label: t.nav.themeSystem, icon: Monitor },
     { value: "light", label: t.nav.themeLight, icon: Sun },
@@ -31,7 +31,9 @@ export function ThemeToggle() {
           aria-label={`${t.nav.theme}: ${current.label}`}
           title={`${t.nav.theme}: ${current.label}`}
         >
-          {resolved === "dark" ? <Moon /> : <Sun />}
+          {/* CSS picks the icon so it matches the head script before React hydrates. */}
+          <Sun className="dark:hidden" />
+          <Moon className="hidden dark:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-36">
