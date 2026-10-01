@@ -8,6 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { Analytics } from "@vercel/analytics/react";
 import { useEffect, type ReactNode } from "react";
 import { AppHeader } from "@/components/app-header";
 import { AssistantWidget } from "@/components/assistant-widget";
@@ -18,6 +19,9 @@ import { ThemeProvider, themeInitScript, useTheme } from "@/lib/theme";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+
+// Vercel Analytics only collects on Vercel hosting; elsewhere its script 404s, so opt in per deploy.
+const vercelAnalyticsEnabled = import.meta.env.VITE_VERCEL_ANALYTICS === "true";
 
 function NotFoundComponent() {
   const { t } = useI18n();
@@ -146,6 +150,7 @@ function RootComponent() {
           mobileOffset={{ bottom: raised ? 176 : 80 }}
         />
         <AssistantWidget raised={raised} />
+        {vercelAnalyticsEnabled && <Analytics />}
       </AppProvider>
     </QueryClientProvider>
   );

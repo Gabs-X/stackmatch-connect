@@ -127,6 +127,17 @@ O front envia um `POST` com JSON:
 
 A resposta pode ser texto em streaming (`text/plain`, exibido conforme chega) ou JSON no formato `{ "reply": "..." }`. O botão de parar cancela a requisição via `AbortSignal`. O contrato e os transports ficam em `src/lib/assistant.ts`; a interface, em `src/components/assistant-widget.tsx`.
 
+## Analytics de visitas (Vercel)
+
+O projeto inclui o [Vercel Analytics](https://vercel.com/docs/analytics), desativado por padrão. Ele só coleta dados quando o site está hospedado na Vercel; em outros hosts, como o Lovable, o script de coleta não existe.
+
+Para ativar em um deploy na Vercel:
+
+1. Habilite o Analytics no painel do projeto na Vercel.
+2. Defina a variável de ambiente `VITE_VERCEL_ANALYTICS=true` e faça um novo deploy.
+
+Sem essa variável, o componente não é incluído no build.
+
 ## Decisões técnicas
 
 - **Mocks centralizados:** manter o catálogo em um módulo reduz os pontos de alteração quando houver uma fonte real de dados.
