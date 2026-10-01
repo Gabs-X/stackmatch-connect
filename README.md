@@ -22,7 +22,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Navegação por cards:** botões e arraste, opção de desfazer e encerramento explícito da lista, com reinício manual.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist.
-- **Criação de perfil:** formulário em etapas, skills, inclusão de projetos pelo nome, links, preview e salvamento local ao concluir.
+- **Criação de perfil:** formulário em etapas, skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview e salvamento local ao concluir.
 - **Importação simulada do GitHub:** seleção de projetos fictícios para o perfil.
 - **Agendamento local:** escolha de data e horário, dados do contratante e confirmação. Horários passados ou já reservados para o mesmo profissional ficam indisponíveis.
 - **Assistente (prévia):** chat flutuante com sugestões, digitação em streaming e opção de parar a resposta, pronto para conectar a um backend de IA.
@@ -152,7 +152,7 @@ Sem essa variável, o componente não é incluído no build.
 
 - Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
 - Reservas não representam disponibilidade real e não têm garantia de concorrência entre usuários ou dispositivos.
-- O perfil criado fica no navegador e não é publicado nem incorporado ao catálogo do Discover. O cadastro de projetos armazena apenas seus nomes.
+- O perfil criado fica no navegador e não é publicado nem incorporado ao catálogo do Discover. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.

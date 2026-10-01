@@ -1,8 +1,22 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, ChevronLeft, ChevronRight, Eye, Github, Plus, Upload, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Eye,
+  Github,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { ProjectCover } from "@/components/project-cover";
+import { ProjectFormDialog } from "@/components/project-form-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,9 +33,11 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   emptyProfile,
   loadLocalProfile,
+  newProject,
   saveLocalProfile,
   profileLink,
   type LocalProfile,
+  type LocalProject,
 } from "@/lib/local-profile";
 
 export const Route = createFileRoute("/create-profile")({
@@ -43,7 +59,6 @@ export const Route = createFileRoute("/create-profile")({
   }),
   component: CreateProfile,
 });
-const repos = ["Ecommerce API", "Portfolio", "Task Manager", "Finance Dashboard"];
 function CreateProfile() {
   const { t } = useI18n();
   useLocalizedMeta(t.create.title + " — Stack Match", t.create.sub);
@@ -53,8 +68,8 @@ function CreateProfile() {
   const [completed, setCompleted] = useState(false);
   const { skills, projects } = profile;
   const [skill, setSkill] = useState("");
-  const [manualOpen, setManualOpen] = useState(false);
-  const [projectName, setProjectName] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<LocalProject | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const bioId = useId();
@@ -86,6 +101,60 @@ function CreateProfile() {
     } catch {
       toast.error(t.create.saveError);
     }
+  };
+  const hasProject = (name: string) =>
+    projects.some((project) => project.name.toLowerCase() === name.toLowerCase());
+  const openProjectForm = (project: LocalProject | null) => {
+    setEditing(project);
+    setFormOpen(true);
+  };
+  const saveProject = (project: LocalProject) => {
+    updateField(
+      "projects",
+      projects.some((item) => item.id === project.id)
+        ? projects.map((item) => (item.id === project.id ? project : item))
+        : [...projects, project],
+    );
+    setFormOpen(false);
+    toast.success(t.create.projectSaved, { description: project.name });
+  };
+  const removeProject = (project: LocalProject) => {
+    const position = projects.findIndex((item) => item.id === project.id);
+    updateField(
+      "projects",
+      projects.filter((item) => item.id !== project.id),
+    );
+    toast(t.create.projectRemoved, {
+      description: project.name,
+      action: {
+        label: t.discover.undo,
+        onClick: () =>
+          setProfile((current) => {
+            if (current.projects.some((item) => item.id === project.id)) return current;
+            const next = [...current.projects];
+            next.splice(Math.min(position, next.length), 0, project);
+            return { ...current, projects: next };
+          }),
+      },
+    });
+  };
+  // With a GitHub profile filled in, mock imports point at that account; otherwise they have no repo link.
+  const githubBase = profileLink(profile.github)?.replace(/\/+$/, "");
+  const importSelected = () => {
+    const imported = t.create.importRepos
+      .filter((repo) => selected.includes(repo.name) && !hasProject(repo.name))
+      .map((repo) =>
+        newProject({
+          name: repo.name,
+          description: repo.description,
+          tech: [...repo.tech],
+          github: githubBase ? `${githubBase}/${repo.name.toLowerCase().replace(/\s+/g, "-")}` : "",
+        }),
+      );
+    updateField("projects", [...projects, ...imported]);
+    setSelected([]);
+    setImportOpen(false);
+    toast.success(t.create.importToast);
   };
   const steps = [t.create.steps[0], t.create.steps[1], t.create.projects, t.create.steps[3]];
   const addSkill = () => {
@@ -164,18 +233,68 @@ function CreateProfile() {
               </section>
             )}
             <h2 className="mt-10 text-xl font-bold">{t.create.projects}</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {projects.length ? (
-                projects.map((p) => (
-                  <div className="rounded-lg border p-5" key={p}>
-                    <h3 className="font-bold">{p}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{t.create.imported}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">{t.create.addProjectsHint}</p>
-              )}
-            </div>
+            {projects.length ? (
+              <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => {
+                  const repo = profileLink(project.github);
+                  const demo = profileLink(project.demo);
+                  return (
+                    <article className="overflow-hidden rounded-lg border bg-card" key={project.id}>
+                      <ProjectCover
+                        name={project.name}
+                        image={project.image}
+                        className="aspect-[16/10]"
+                      />
+                      <div className="p-5">
+                        <h3 className="font-bold">{project.name}</h3>
+                        {project.description && (
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            {project.description}
+                          </p>
+                        )}
+                        {project.tech.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-1.5">
+                            {project.tech.map((tech) => (
+                              <span className="skill-chip" key={tech}>
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {(repo || demo) && (
+                          <div className="mt-5 flex gap-4 text-xs font-bold">
+                            {repo && (
+                              <a
+                                href={repo}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:text-primary"
+                              >
+                                <Github className="size-4" />
+                                GitHub
+                              </a>
+                            )}
+                            {demo && (
+                              <a
+                                href={demo}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:text-primary"
+                              >
+                                <ExternalLink className="size-4" />
+                                Demo
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">{t.create.addProjectsHint}</p>
+            )}
           </div>
         </div>
       </main>
@@ -306,62 +425,77 @@ function CreateProfile() {
           )}
           {step === 3 && (
             <div>
+              {projects.length > 0 && (
+                <ul className="mb-5 space-y-3">
+                  {projects.map((project) => (
+                    <li
+                      key={project.id}
+                      className="flex gap-4 rounded-lg border p-3 sm:items-center"
+                    >
+                      <ProjectCover
+                        name={project.name}
+                        image={project.image}
+                        size="sm"
+                        className="aspect-[16/10] w-24 shrink-0 overflow-hidden rounded-md sm:w-28"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">{project.name}</p>
+                        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                          {project.description || t.create.noDescription}
+                        </p>
+                        {project.tech.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {project.tech.map((tech) => (
+                              <span className="skill-chip" key={tech}>
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t.create.editProjectA11y(project.name)}
+                          title={t.create.editProject}
+                          onClick={() => openProjectForm(project)}
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-danger-soft hover:text-destructive"
+                          aria-label={t.create.removeProjectA11y(project.name)}
+                          onClick={() => removeProject(project)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <div className="rounded-lg border border-dashed p-7 text-center">
                 <Upload className="mx-auto text-muted-foreground" />
                 <h3 className="mt-3 font-bold">{t.create.addWork}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{t.create.addWorkSub}</p>
-                <Dialog
-                  open={manualOpen}
-                  onOpenChange={(open) => {
-                    setManualOpen(open);
-                    if (!open) setProjectName("");
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="mt-4">
-                      <Plus />
-                      {t.create.addManual}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{t.create.addManual}</DialogTitle>
-                      <DialogDescription>{t.create.manualDesc}</DialogDescription>
-                    </DialogHeader>
-                    <form
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        const name = projectName.trim();
-                        if (!name || projects.some((p) => p.toLowerCase() === name.toLowerCase()))
-                          return;
-                        updateField("projects", [...projects, name]);
-                        setManualOpen(false);
-                        setProjectName("");
-                      }}
-                    >
-                      <Field
-                        label={t.create.projectName}
-                        placeholder={t.create.projectName}
-                        value={projectName}
-                        onChange={setProjectName}
-                      />
-                      <DialogFooter className="mt-4">
-                        <Button
-                          type="submit"
-                          disabled={
-                            !projectName.trim() ||
-                            projects.some(
-                              (p) => p.toLowerCase() === projectName.trim().toLowerCase(),
-                            )
-                          }
-                        >
-                          {t.create.add}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                <Button variant="outline" className="mt-4" onClick={() => openProjectForm(null)}>
+                  <Plus />
+                  {t.create.addManual}
+                </Button>
               </div>
+              <ProjectFormDialog
+                open={formOpen}
+                onOpenChange={setFormOpen}
+                project={editing}
+                takenNames={projects
+                  .filter((project) => project.id !== editing?.id)
+                  .map((project) => project.name.toLowerCase())}
+                skillSuggestions={skills}
+                onSave={saveProject}
+              />
               <Dialog
                 open={importOpen}
                 onOpenChange={(open) => {
@@ -381,55 +515,45 @@ function CreateProfile() {
                     <DialogDescription>{t.create.importDesc}</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-2">
-                    {repos.map((r) => (
-                      <button
-                        key={r}
-                        disabled={projects.includes(r)}
-                        aria-pressed={selected.includes(r) || projects.includes(r)}
-                        onClick={() =>
-                          setSelected(
-                            selected.includes(r)
-                              ? selected.filter((x) => x !== r)
-                              : [...selected, r],
-                          )
-                        }
-                        className={`flex w-full items-center justify-between rounded-lg border p-4 text-left font-semibold disabled:opacity-50 ${selected.includes(r) ? "border-primary bg-secondary" : ""}`}
-                      >
-                        {r}
-                        {(selected.includes(r) || projects.includes(r)) && (
-                          <Check className="size-4 text-primary" />
-                        )}
-                      </button>
-                    ))}
+                    {t.create.importRepos.map((repo) => {
+                      const added = hasProject(repo.name);
+                      const checked = added || selected.includes(repo.name);
+                      return (
+                        <button
+                          key={repo.name}
+                          type="button"
+                          disabled={added}
+                          aria-pressed={checked}
+                          onClick={() =>
+                            setSelected(
+                              selected.includes(repo.name)
+                                ? selected.filter((name) => name !== repo.name)
+                                : [...selected, repo.name],
+                            )
+                          }
+                          className={`flex w-full items-start justify-between gap-3 rounded-lg border p-4 text-left disabled:opacity-50 ${selected.includes(repo.name) ? "border-primary bg-secondary" : ""}`}
+                        >
+                          <span>
+                            <span className="block font-semibold">{repo.name}</span>
+                            <span className="mt-0.5 block text-sm text-muted-foreground">
+                              {repo.description}
+                            </span>
+                            <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
+                              {repo.tech.join(" · ")}
+                            </span>
+                          </span>
+                          {checked && <Check className="mt-1 size-4 shrink-0 text-primary" />}
+                        </button>
+                      );
+                    })}
                   </div>
                   <DialogFooter>
-                    <Button
-                      disabled={!selected.length}
-                      onClick={() => {
-                        updateField("projects", [...new Set([...projects, ...selected])]);
-                        setSelected([]);
-                        setImportOpen(false);
-                        toast.success(t.create.importToast);
-                      }}
-                    >
+                    <Button disabled={!selected.length} onClick={importSelected}>
                       {t.create.importSelected}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              {projects.length > 0 && (
-                <div className="mt-5 space-y-2">
-                  {projects.map((p) => (
-                    <div
-                      className="flex items-center justify-between rounded-lg border p-4"
-                      key={p}
-                    >
-                      <span className="font-semibold">{p}</span>
-                      <Check className="size-4 text-positive" />
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
           {step === 4 && (
