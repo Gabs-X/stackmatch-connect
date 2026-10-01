@@ -58,7 +58,7 @@ function DeveloperPage() {
               alt={d.name}
               width={768}
               height={768}
-              className="size-36 rounded-xl object-cover shadow-soft"
+              className="size-36 rounded-xl bg-muted object-cover shadow-soft"
             />
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">

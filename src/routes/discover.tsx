@@ -8,9 +8,12 @@ import {
   useTransform,
 } from "framer-motion";
 import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
+import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   FilterPanel,
   defaultFilters,
@@ -19,7 +22,8 @@ import {
 } from "@/components/filter-panel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { developers } from "@/lib/developers";
+import { developersQuery } from "@/lib/api";
+import type { Developer } from "@/lib/developers";
 import { useApp } from "@/lib/app-context";
 
 export const Route = createFileRoute("/discover")({
@@ -46,6 +50,13 @@ function DiscoverPage() {
   const { t, tv, formatCurrency } = useI18n();
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
+  const {
+    data: developers = noDevelopers,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery(developersQuery);
+  const loading = isPending && !isError;
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [index, setIndex] = useState(0);
   const { saved, interests, addSaved, registerInterest, removeSaved, removeInterest } = useApp();
@@ -75,7 +86,7 @@ function DiscoverPage() {
           (!filters.availability.length || filters.availability.includes(d.availability)) &&
           d.rate <= (filters.rate[0] ?? 300),
       ),
-    [filters],
+    [filters, developers],
   );
   const current = filtered[index];
   const changeFilters = (next: Filters) => {
@@ -187,9 +198,13 @@ function DiscoverPage() {
           <section className="mx-auto min-w-0 w-full max-w-[500px]">
             <div className="mb-3 flex items-center justify-between text-xs font-semibold text-muted-foreground">
               <span>
-                {filtered.length
-                  ? `${Math.min(index + 1, filtered.length)} ${t.discover.of} ${filtered.length} ${t.discover.profiles(filtered.length)}`
-                  : t.discover.none}
+                {loading ? (
+                  <Skeleton className="h-4 w-24" />
+                ) : filtered.length ? (
+                  `${Math.min(index + 1, filtered.length)} ${t.discover.of} ${filtered.length} ${t.discover.profiles(filtered.length)}`
+                ) : (
+                  t.discover.none
+                )}
               </span>
               <span className="flex items-center gap-3">
                 {Math.round(progress)}% {t.discover.explored}
@@ -231,8 +246,26 @@ function DiscoverPage() {
                 </span>
               </p>
             )}
-            <div className="relative mt-5 sm:min-h-[570px]">
-              {finished ? (
+            <div className="relative mt-5 sm:min-h-[570px]" aria-busy={loading}>
+              {loading ? (
+                <>
+                  <span role="status" className="sr-only">
+                    {t.common.loading}
+                  </span>
+                  <DeveloperCardSkeleton showProfile />
+                </>
+              ) : isError ? (
+                <div className="grid min-h-[500px] place-items-center rounded-lg border border-dashed bg-card p-8 text-center">
+                  <div role="alert">
+                    <h2 className="text-xl font-bold">{t.discover.loadError}</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">{t.discover.loadErrorSub}</p>
+                    <Button className="mt-5" onClick={() => void refetch()}>
+                      <RotateCcw />
+                      {t.common.retry}
+                    </Button>
+                  </div>
+                </div>
+              ) : finished ? (
                 <div className="grid min-h-[500px] place-items-center rounded-lg border bg-card p-8 text-center">
                   <div>
                     <Check className="mx-auto size-12 text-positive" />
@@ -299,11 +332,12 @@ function DiscoverPage() {
                 </AnimatePresence>
               )}
             </div>
-            {current && (
+            {(current || loading) && (
               <div className="sticky bottom-0 z-20 mt-3 grid grid-cols-3 gap-2 rounded-lg border bg-background/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-soft backdrop-blur sm:static sm:mt-5 sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
                 <Button
                   variant="outline"
                   className="h-14 min-w-0 flex-col gap-1 border-destructive/30 px-1 text-xs text-destructive hover:bg-danger-soft sm:h-12 sm:flex-row sm:gap-2 sm:px-4 sm:text-sm"
+                  disabled={loading}
                   onClick={() => next("pass")}
                 >
                   <X />
@@ -312,6 +346,7 @@ function DiscoverPage() {
                 <Button
                   variant="outline"
                   className="h-14 min-w-0 flex-col gap-1 px-1 text-xs sm:h-12 sm:flex-row sm:gap-2 sm:px-4 sm:text-sm"
+                  disabled={loading}
                   onClick={() => next("save")}
                 >
                   <Bookmark />
@@ -319,6 +354,7 @@ function DiscoverPage() {
                 </Button>
                 <Button
                   className="h-14 min-w-0 flex-col gap-1 bg-positive px-1 text-xs hover:bg-positive/90 sm:h-12 sm:flex-row sm:gap-2 sm:px-4 sm:text-sm"
+                  disabled={loading}
                   onClick={() => next("interest")}
                 >
                   <Check />
@@ -328,6 +364,14 @@ function DiscoverPage() {
             )}
           </section>
           <aside className="sticky top-24 hidden space-y-4 xl:block">
+            {loading && (
+              <div className="space-y-5 rounded-lg border bg-card p-5" aria-hidden="true">
+                <Skeleton className="h-3 w-28" />
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} className="h-4 w-36" />
+                ))}
+              </div>
+            )}
             {current && (
               <>
                 <div className="rounded-lg border bg-card p-5">
@@ -353,6 +397,8 @@ function DiscoverPage() {
     </main>
   );
 }
+const noDevelopers: Developer[] = [];
+
 type HistoryEntry = {
   id: string;
   name: string;
