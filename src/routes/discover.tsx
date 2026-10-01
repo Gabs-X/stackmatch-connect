@@ -1,8 +1,8 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
-import { Bookmark, Check, Filter, RotateCcw, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
 import {
@@ -42,10 +42,17 @@ function DiscoverPage() {
 
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [index, setIndex] = useState(0);
-  const { addSaved, registerInterest } = useApp();
+  const { saved, interests, addSaved, registerInterest, removeSaved, removeInterest } = useApp();
   const [feedback, setFeedback] = useState<{ action: "save" | "interest"; name: string } | null>(
     null,
   );
+  // Each entry records only what the action added, so undo never removes a pre-existing save.
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const historyRef = useRef<HistoryEntry[]>([]);
+  const updateHistory = (next: HistoryEntry[]) => {
+    historyRef.current = next;
+    setHistory(next);
+  };
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-8, 8]);
   const yesOpacity = useTransform(x, [30, 120], [0, 1]);
@@ -68,6 +75,7 @@ function DiscoverPage() {
     setFeedback(null);
     setFilters(next);
     setIndex(0);
+    updateHistory([]);
   };
   const active = (
     ["skills", "seniority", "mode", "hiring", "availability"] as FilterGroup[]
@@ -75,8 +83,25 @@ function DiscoverPage() {
   const rateActive = filters.rate[0] !== defaultFilters.rate[0];
   const finished = filtered.length > 0 && index >= filtered.length;
   const progress = filtered.length ? Math.min(index / filtered.length, 1) * 100 : 0;
+  const undo = (entry = historyRef.current.at(-1)) => {
+    if (!entry || historyRef.current.at(-1) !== entry) return;
+    if (entry.addedSaved) removeSaved(entry.id);
+    if (entry.addedInterest) removeInterest(entry.id);
+    updateHistory(historyRef.current.slice(0, -1));
+    setFeedback(null);
+    setIndex(entry.index);
+    toast(t.discover.undone, { description: entry.name });
+  };
   const next = (action: "pass" | "save" | "interest") => {
     if (!current) return;
+    const entry: HistoryEntry = {
+      id: current.id,
+      name: current.name,
+      index,
+      addedSaved: action !== "pass" && !saved.includes(current.id),
+      addedInterest: action === "interest" && !interests.includes(current.id),
+    };
+    updateHistory([...historyRef.current, entry]);
     if (action !== "pass") {
       addSaved(current.id);
       if (action === "interest") registerInterest(current.id);
@@ -88,7 +113,10 @@ function DiscoverPage() {
         : action === "save"
           ? t.discover.toastSave
           : t.discover.toastInterest,
-      { description: current.name },
+      {
+        description: current.name,
+        action: { label: t.discover.undo, onClick: () => undo(entry) },
+      },
     );
     setIndex((i) => i + 1);
   };
@@ -156,8 +184,18 @@ function DiscoverPage() {
                   ? `${Math.min(index + 1, filtered.length)} ${t.discover.of} ${filtered.length} ${t.discover.profiles(filtered.length)}`
                   : t.discover.none}
               </span>
-              <span>
+              <span className="flex items-center gap-3">
                 {Math.round(progress)}% {t.discover.explored}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  disabled={!history.length}
+                  onClick={() => undo()}
+                >
+                  <Undo2 />
+                  {t.discover.undo}
+                </Button>
               </span>
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-muted">
@@ -198,6 +236,7 @@ function DiscoverPage() {
                       onClick={() => {
                         setIndex(0);
                         setFeedback(null);
+                        updateHistory([]);
                       }}
                     >
                       <RotateCcw />
@@ -304,6 +343,14 @@ function DiscoverPage() {
     </main>
   );
 }
+type HistoryEntry = {
+  id: string;
+  name: string;
+  index: number;
+  addedSaved: boolean;
+  addedInterest: boolean;
+};
+
 function SearchOff() {
   return (
     <div className="mx-auto grid size-12 place-items-center rounded-lg bg-muted">

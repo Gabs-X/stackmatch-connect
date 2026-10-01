@@ -14,6 +14,8 @@ type AppState = {
   interests: string[];
   addSaved: (id: string) => void;
   registerInterest: (id: string) => void;
+  removeSaved: (id: string) => void;
+  removeInterest: (id: string) => void;
   appointments: Appointment[];
   toggleSaved: (id: string) => void;
   scheduleAppointment: (appointment: Appointment) => "success" | "unavailable" | "storage-error";
@@ -86,6 +88,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return next;
     });
+  const removeSaved = (id: string) =>
+    setSaved((current) => {
+      if (!current.includes(id)) return current;
+      const next = current.filter((item) => item !== id);
+      try {
+        window.localStorage.setItem("stackmatch-saved", JSON.stringify(next));
+      } catch {
+        /* Keep session state. */
+      }
+      return next;
+    });
+  const removeInterest = (id: string) =>
+    setInterests((current) => {
+      if (!current.includes(id)) return current;
+      const next = current.filter((item) => item !== id);
+      try {
+        window.localStorage.setItem("stackmatch-interests", JSON.stringify(next));
+      } catch {
+        /* Keep session state. */
+      }
+      return next;
+    });
   const toggleSaved = (id: string) =>
     setSaved((current) => {
       const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
@@ -128,6 +152,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         interests,
         addSaved,
         registerInterest,
+        removeSaved,
+        removeInterest,
         appointments,
         toggleSaved,
         scheduleAppointment,
