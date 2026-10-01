@@ -2,6 +2,7 @@ import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -19,6 +20,7 @@ import { DeveloperPhoto } from "@/components/developer-photo";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -654,20 +656,33 @@ function SelectField({
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-9 w-full rounded-md border border-input bg-transparent px-3 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-      >
-        <option value="">{t.create.selectPh}</option>
-        {legacy && <option value={legacy}>{legacy}</option>}
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {tv(option)}
+      <div className="relative mt-2">
+        {/* appearance-none: Chrome paints its own dark menulist over the author background. */}
+        <select
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={cn(
+            "h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent pl-3 pr-9 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm",
+            !value && "text-muted-foreground",
+          )}
+        >
+          {/* Shown while nothing is chosen, but not selectable from the list. */}
+          <option value="" disabled hidden>
+            {t.create.selectPh}
           </option>
-        ))}
-      </select>
+          {legacy && <option value={legacy}>{legacy}</option>}
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {tv(option)}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+      </div>
     </div>
   );
 }

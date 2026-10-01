@@ -94,6 +94,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+/* Native select lists default to a white background on Windows; follow the theme instead. */
+select option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
 button,
 a {
   -webkit-tap-highlight-color: transparent;

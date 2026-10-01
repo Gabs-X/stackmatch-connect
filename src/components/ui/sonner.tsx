@@ -1,18 +1,26 @@
+import type { CSSProperties } from "react";
 import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
+
+// Sonner injects unlayered CSS, which beats Tailwind's layered utilities. Theme it through its
+// own variables (set inline on the toaster) and mark the button overrides as important.
+const themeVariables = {
+  "--normal-bg": "var(--card)",
+  "--normal-text": "var(--foreground)",
+  "--normal-border": "var(--border)",
+} as CSSProperties;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
+      style={themeVariables}
       toastOptions={{
         classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          description: "text-muted-foreground!",
+          actionButton: "bg-primary! text-primary-foreground!",
+          cancelButton: "bg-muted! text-muted-foreground!",
         },
       }}
       {...props}
