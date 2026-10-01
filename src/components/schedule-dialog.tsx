@@ -158,6 +158,7 @@ export function ScheduleDialog({
                     type="button"
                     variant={time === slot ? "default" : "outline"}
                     disabled={!slotAvailable(slot)}
+                    aria-pressed={time === slot}
                     onClick={() => setTime(slot)}
                     className="justify-center"
                   >

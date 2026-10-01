@@ -100,6 +100,8 @@ export function FilterPanel({
           <span>{formatCurrency(value.rate[0] ?? 300)}</span>
         </div>
         <Slider
+          aria-label={t.filters.maxRate}
+          aria-valuetext={formatCurrency(value.rate[0] ?? 300)}
           min={60}
           max={300}
           step={10}
