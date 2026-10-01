@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { DeveloperPhoto } from "@/components/developer-photo";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,12 @@ import {
   type LocalProfile,
   type LocalProject,
 } from "@/lib/local-profile";
-import { availabilityOptions, seniorityOptions, workModeOptions } from "@/lib/developers";
+import {
+  availabilityOptions,
+  githubAvatarUrl,
+  seniorityOptions,
+  workModeOptions,
+} from "@/lib/developers";
 
 export const Route = createFileRoute("/create-profile")({
   head: () => ({
@@ -189,7 +195,13 @@ function CreateProfile() {
         <div className="mt-7 overflow-hidden rounded-xl border bg-card shadow-card">
           <div className="h-40 bg-foreground" />
           <div className="px-6 pb-10 sm:px-10">
-            <div className="-mt-16 size-32 rounded-xl border-4 border-card bg-muted" />
+            <DeveloperPhoto
+              name={profile.name || t.create.yourName}
+              image={githubAvatarUrl(profileLink(profile.github) ?? "") ?? ""}
+              alt={profile.name || t.create.yourName}
+              fallbackSize="lg"
+              className="-mt-16 size-32 overflow-hidden rounded-xl border-4 border-card bg-muted"
+            />
             <h1 className="mt-5 font-display text-3xl font-extrabold">
               {profile.name || t.create.yourName}
             </h1>

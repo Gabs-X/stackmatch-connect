@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   availabilityOptions,
   seniorityOptions,
+  githubAvatarUrl,
   workModeOptions,
   type Developer,
 } from "./developers";
@@ -172,7 +173,8 @@ export function localProfileToDeveloper(profile: LocalProfile): Developer {
     bio: profile.bio.trim(),
     skills: profile.skills,
     experience: "",
-    image: "",
+    // The GitHub avatar stands in for a photo; the form has no upload for one.
+    image: githubAvatarUrl(profileLink(profile.github) ?? "") ?? "",
     rate: Number.NaN,
     hiringTypes: [],
     links: {

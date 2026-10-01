@@ -2,15 +2,8 @@ import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Briefcase, Clock3, MapPin } from "lucide-react";
 import type { Developer } from "@/lib/developers";
-import { ProjectCover } from "@/components/project-cover";
+import { DeveloperPhoto } from "@/components/developer-photo";
 import { Button } from "@/components/ui/button";
-
-const initials = (name: string) => {
-  const parts = name.split(/\s+/).filter(Boolean);
-  return (
-    (parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : "")
-  ).toUpperCase();
-};
 
 export function DeveloperCard({
   developer,
@@ -34,24 +27,13 @@ export function DeveloperCard({
               : "relative h-64 overflow-hidden bg-muted sm:h-72"
         }
       >
-        {developer.image ? (
-          <img
-            src={developer.image}
-            alt={`${t.card.photoOf} ${developer.name}`}
-            width={768}
-            height={768}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <ProjectCover
-            name={developer.name}
-            label={initials(developer.name)}
-            image=""
-            size="xl"
-            className="h-full w-full"
-          />
-        )}
+        <DeveloperPhoto
+          name={developer.name}
+          image={developer.image}
+          alt={`${t.card.photoOf} ${developer.name}`}
+          className="h-full w-full"
+          lazy
+        />
         {developer.availability && (
           <span className="availability-badge">
             <span className="status-dot" />

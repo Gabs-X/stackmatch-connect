@@ -14,7 +14,7 @@ export function ProjectCover({
   /** Text shown on the gradient; defaults to the first two letters of name. */
   label?: string;
   image: string;
-  className?: string;
+  className?: string | undefined;
   size?: "sm" | "lg" | "xl";
 }) {
   if (image)

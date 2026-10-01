@@ -11,7 +11,23 @@ export const availabilityOptions = ["Disponível agora", "Em 15 dias", "Em 30 di
 
 type ProjectSeed = { name: string; description: string; tech: string[]; color: string };
 export type Project = ProjectSeed & { links: { github: string; demo: string }; image?: string };
-export type ProfessionalLinks = { github: string; linkedin: string };
+export type ProfessionalLinks = {
+  github: string;
+  linkedin: string;
+  website?: string;
+  /** Real addresses that open on click; without it they are examples for fictional people. */
+  verified?: true;
+};
+
+// Profiles whose owners provided their own links.
+const verifiedLinks: Record<string, ProfessionalLinks> = {
+  "gabriel-botelho": {
+    github: "https://github.com/Gabs-X",
+    linkedin: "https://www.linkedin.com/in/gabriel-anthony-7688bb224/",
+    website: "https://gabrielanthony.vercel.app",
+    verified: true,
+  },
+};
 export type Developer = {
   id: string;
   name: string;
@@ -196,7 +212,7 @@ const base = [
     "Disponível agora",
     ["React", "Next.js", "Node.js", "NestJS", "C#", "PostgreSQL"],
     "5 anos",
-    gabriel,
+    "", // Verified profile: photo comes from the GitHub avatar.
     120,
     ["Freelancer", "PJ"],
   ],
@@ -300,6 +316,24 @@ const base = [
   ],
 ] as const;
 
+/**
+ * Public avatar of the GitHub account in profileUrl, always the owner's current photo.
+ * Returns undefined for non-GitHub or malformed addresses.
+ */
+export function githubAvatarUrl(profileUrl: string, size = 768): string | undefined {
+  try {
+    const url = new URL(profileUrl);
+    if (url.hostname !== "github.com" && url.hostname !== "www.github.com") return undefined;
+    const user = url.pathname.split("/").find(Boolean);
+    // GitHub usernames: letters, digits and hyphens, up to 39 characters.
+    return user && /^[a-z\d][a-z\d-]{0,38}$/i.test(user)
+      ? `https://github.com/${user}.png?size=${size}`
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const developers: Developer[] = base.map((d, index) => ({
   id: d[0],
   name: d[1],
@@ -310,12 +344,12 @@ export const developers: Developer[] = base.map((d, index) => ({
   availability: d[6],
   skills: [...d[7]],
   experience: d[8],
-  image: d[9],
+  image: githubAvatarUrl(verifiedLinks[d[0]]?.github ?? "") ?? d[9],
   rate: d[10],
   hiringTypes: [...d[11]],
   bio: bios[index] ?? "",
-  // Example addresses for fictional people; the profile page shows them without navigating.
-  links: {
+  // Real links when the owner provided them; otherwise example addresses shown without navigating.
+  links: verifiedLinks[d[0]] ?? {
     github: `https://github.com/${d[0]}`,
     linkedin: `https://www.linkedin.com/in/${d[0]}`,
   },

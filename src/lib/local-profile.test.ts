@@ -126,7 +126,11 @@ describe("localProfileToDeveloper", () => {
   it("leaves fields the form doesn't collect empty", () => {
     expect(Number.isNaN(developer.rate)).toBe(true);
     expect(developer.hiringTypes).toEqual([]);
-    expect(developer.image).toBe("");
+  });
+
+  it("uses the GitHub avatar as the photo when a GitHub profile is filled in", () => {
+    expect(developer.image).toBe("https://github.com/anasouza.png?size=768");
+    expect(localProfileToDeveloper({ ...emptyProfile, name: "Ana" }).image).toBe("");
   });
 
   it("keeps only valid links", () => {

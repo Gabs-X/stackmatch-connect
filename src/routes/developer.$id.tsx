@@ -3,6 +3,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { DemoLink } from "@/components/demo-link";
+import { DeveloperPhoto } from "@/components/developer-photo";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
 import { developers } from "@/lib/developers";
@@ -54,12 +55,12 @@ function DeveloperPage() {
             {t.profile.back}
           </Link>
           <div className="mt-8 flex flex-col gap-7 sm:flex-row sm:items-center">
-            <img
-              src={d.image}
+            <DeveloperPhoto
+              name={d.name}
+              image={d.image}
               alt={d.name}
-              width={768}
-              height={768}
-              className="size-36 rounded-xl bg-muted object-cover shadow-soft"
+              fallbackSize="lg"
+              className="size-36 shrink-0 overflow-hidden rounded-xl bg-muted shadow-soft"
             />
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">
@@ -172,15 +173,39 @@ function DeveloperPage() {
             <div className="my-5 border-t" />
             <p className="text-xs font-bold uppercase text-muted-foreground">{t.profile.links}</p>
             <div className="mt-3 space-y-2">
-              <DemoLink url={d.links.github} label="GitHub" icon={Github} variant="block" />
-              <DemoLink url={d.links.linkedin} label="LinkedIn" icon={Linkedin} variant="block" />
-              <Button asChild variant="outline" className="w-full justify-start">
-                <a href="#portfolio">
-                  <ExternalLink />
-                  {t.profile.portfolioLink}
-                </a>
-              </Button>
-              <p className="pt-1 text-xs text-muted-foreground">{t.profile.demoNote}</p>
+              <DemoLink
+                url={d.links.github}
+                label="GitHub"
+                icon={Github}
+                variant="block"
+                real={d.links.verified === true}
+              />
+              <DemoLink
+                url={d.links.linkedin}
+                label="LinkedIn"
+                icon={Linkedin}
+                variant="block"
+                real={d.links.verified === true}
+              />
+              {d.links.website ? (
+                <DemoLink
+                  url={d.links.website}
+                  label={t.profile.portfolioLink}
+                  icon={ExternalLink}
+                  variant="block"
+                  real={d.links.verified === true}
+                />
+              ) : (
+                <Button asChild variant="outline" className="w-full justify-start">
+                  <a href="#portfolio">
+                    <ExternalLink />
+                    {t.profile.portfolioLink}
+                  </a>
+                </Button>
+              )}
+              <p className="pt-1 text-xs text-muted-foreground">
+                {d.links.verified ? t.profile.projectsDemoNote : t.profile.demoNote}
+              </p>
             </div>
           </div>
         </aside>

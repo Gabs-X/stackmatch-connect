@@ -144,6 +144,8 @@ const pt = {
     demoLinkDesc: (url: string) =>
       `Este perfil é fictício. Em um perfil real, este link abriria ${url}.`,
     openLink: (label: string, url: string) => `${label}: ${url} (demonstração)`,
+    openRealLink: (label: string, url: string) => `${label}: ${url} (abre em nova aba)`,
+    projectsDemoNote: "Os links dos projetos mostram endereços de exemplo.",
   },
   create: {
     steps: ["Informações pessoais", "Skills", "Projetos", "Links"],
@@ -450,6 +452,8 @@ const en: Dict = {
     demoLinkDesc: (url: string) =>
       `This profile is fictional. On a real profile, this link would open ${url}.`,
     openLink: (label: string, url: string) => `${label}: ${url} (demo)`,
+    openRealLink: (label: string, url: string) => `${label}: ${url} (opens in a new tab)`,
+    projectsDemoNote: "Project links show example addresses.",
   },
   create: {
     steps: ["Personal info", "Skills", "Projects", "Links"],

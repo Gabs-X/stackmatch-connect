@@ -104,6 +104,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - O interesse é um registro local, sem notificação, chat ou contato externo.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Os links de GitHub, LinkedIn e demos dos perfis mockados usam endereços de exemplo: ao clicar, um aviso mostra o endereço sem navegar, já que essas URLs podem pertencer a pessoas reais. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
+- O perfil do Gabriel Botelho usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no navegador também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
 
 ## Assistente com IA (preparado para backend)
