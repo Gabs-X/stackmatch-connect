@@ -6,6 +6,7 @@ import {
   useRouter,
   useRouterState,
   HeadContent,
+  type ErrorComponentProps,
   Scripts,
 } from "@tanstack/react-router";
 import { Analytics } from "@vercel/analytics/react";
@@ -45,7 +46,8 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+// The router types `error` as unknown: anything can be thrown, not only Error instances.
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const { t } = useI18n();
   console.error(error);
   const router = useRouter();
