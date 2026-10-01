@@ -148,8 +148,13 @@ function Index() {
       <section className="cta-band">
         <div className="mx-auto max-w-4xl px-4 py-20 text-center">
           <h2 className="font-display text-4xl font-extrabold">{t.home.ctaTitle}</h2>
-          <p className="mx-auto mt-4 max-w-xl text-primary-foreground/70">{t.home.ctaSub}</p>
-          <Button variant="secondary" size="lg" className="mt-8" asChild>
+          <p className="mx-auto mt-4 max-w-xl opacity-75">{t.home.ctaSub}</p>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="mt-8 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
+            asChild
+          >
             <Link to="/discover">
               {t.home.ctaBtn} <ArrowRight />
             </Link>

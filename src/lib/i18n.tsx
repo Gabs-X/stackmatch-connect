@@ -19,6 +19,10 @@ const pt = {
     create: "Criar perfil",
     openMenu: "Abrir menu",
     language: "Idioma",
+    theme: "Tema",
+    themeSystem: "Sistema",
+    themeLight: "Claro",
+    themeDark: "Escuro",
   },
   card: { photoOf: "Foto de", viewProfile: "Ver perfil" },
   filters: {
@@ -269,6 +273,10 @@ const en: Dict = {
     create: "Create profile",
     openMenu: "Open menu",
     language: "Language",
+    theme: "Theme",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
   card: { photoOf: "Photo of", viewProfile: "View profile" },
   filters: {
