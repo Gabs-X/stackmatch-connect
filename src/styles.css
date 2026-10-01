@@ -381,3 +381,10 @@ a {
   font-weight: 700;
   box-shadow: var(--elevation-soft);
 }
+/* Always dark, so it keeps fixed colors instead of following the theme tokens. */
+@utility auth-panel {
+  background:
+    radial-gradient(circle at 20% 15%, oklch(0.55 0.2 258 / 0.55), transparent 55%),
+    linear-gradient(160deg, oklch(0.32 0.1 262), oklch(0.2 0.05 262));
+  color: oklch(0.98 0 0);
+}

@@ -1,0 +1,166 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  AuthError,
+  hashPassword,
+  homeFor,
+  loadSession,
+  safeRedirect,
+  saveSession,
+  signIn,
+  signInSchema,
+  signUp,
+  signUpSchema,
+  type SignUpInput,
+} from "./auth";
+
+let storage: Map<string, string>;
+
+beforeEach(() => {
+  storage = new Map();
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => void storage.set(key, value),
+      removeItem: (key: string) => void storage.delete(key),
+    },
+  });
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+/** Runs a mock API call to completion, skipping its simulated latency. */
+const settle = async <T>(promise: Promise<T>) => {
+  await vi.runAllTimersAsync();
+  return promise;
+};
+
+const developer: SignUpInput = {
+  accountType: "developer",
+  name: "Ana Souza",
+  company: "",
+  jobTitle: "Frontend Developer",
+  email: "Ana@Example.com ",
+  password: "segredo123",
+  acceptTerms: true,
+};
+
+describe("signUpSchema", () => {
+  const issues = (input: Partial<SignUpInput>) =>
+    signUpSchema.safeParse({ ...developer, ...input }).error?.issues.map((issue) => issue.message);
+
+  it("accepts a complete developer sign-up", () => {
+    expect(signUpSchema.safeParse(developer).success).toBe(true);
+  });
+
+  it("requires a professional title for developers and a company for hiring accounts", () => {
+    expect(issues({ jobTitle: " " })).toEqual(["jobTitle"]);
+    expect(issues({ accountType: "company", jobTitle: "", company: "" })).toEqual(["company"]);
+    expect(issues({ accountType: "company", jobTitle: "", company: "Acme" })).toBeUndefined();
+  });
+
+  it("enforces password length and a mix of letters and numbers", () => {
+    expect(issues({ password: "abc12" })).toContain("passwordLength");
+    expect(issues({ password: "somenteletras" })).toEqual(["passwordMix"]);
+    expect(issues({ password: "12345678" })).toEqual(["passwordMix"]);
+  });
+
+  it("requires a valid e-mail and accepted terms", () => {
+    expect(issues({ email: "ana@" })).toEqual(["email"]);
+    expect(issues({ acceptTerms: false })).toEqual(["terms"]);
+  });
+});
+
+describe("signInSchema", () => {
+  it("requires both fields", () => {
+    const result = signInSchema.safeParse({ email: "", password: "" });
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual(["required", "required"]);
+  });
+});
+
+describe("signUp and signIn", () => {
+  it("creates the account, normalizing the e-mail, and never stores the password", async () => {
+    const session = await settle(signUp(developer));
+    expect(session.user).toMatchObject({
+      name: "Ana Souza",
+      email: "ana@example.com",
+      accountType: "developer",
+      company: "",
+      jobTitle: "Frontend Developer",
+    });
+    expect(session.token).toBeTruthy();
+    expect(storage.get("stackmatch-users")).not.toContain("segredo123");
+  });
+
+  it("rejects a second account with the same e-mail in any case", async () => {
+    await settle(signUp(developer));
+    await expect(settle(signUp({ ...developer, email: "ANA@example.com" }))).rejects.toEqual(
+      new AuthError("email-taken"),
+    );
+  });
+
+  it("signs in with the right password and rejects wrong passwords and unknown e-mails alike", async () => {
+    await settle(signUp(developer));
+    const session = await settle(signIn({ email: " ana@EXAMPLE.com", password: "segredo123" }));
+    expect(session.user.email).toBe("ana@example.com");
+
+    await expect(
+      settle(signIn({ email: "ana@example.com", password: "errada123" })),
+    ).rejects.toEqual(new AuthError("invalid-credentials"));
+    await expect(
+      settle(signIn({ email: "outra@example.com", password: "segredo123" })),
+    ).rejects.toEqual(new AuthError("invalid-credentials"));
+  });
+
+  it("keeps a company account's company name", async () => {
+    const session = await settle(
+      signUp({ ...developer, accountType: "company", company: " Acme ", jobTitle: "" }),
+    );
+    expect(session.user.company).toBe("Acme");
+  });
+});
+
+describe("hashPassword", () => {
+  it("is stable for the same e-mail and differs between e-mails", async () => {
+    expect(await hashPassword("ana@example.com", "x")).toBe(
+      await hashPassword(" ANA@example.com", "x"),
+    );
+    expect(await hashPassword("ana@example.com", "x")).not.toBe(
+      await hashPassword("bia@example.com", "x"),
+    );
+  });
+});
+
+describe("session storage", () => {
+  it("reads back a saved session and clears it on sign-out", async () => {
+    const session = await settle(signUp(developer));
+    saveSession(session);
+    expect(loadSession()).toEqual(session);
+    saveSession(null);
+    expect(loadSession()).toBeNull();
+  });
+
+  it("ignores malformed sessions", () => {
+    storage.set("stackmatch-session", JSON.stringify({ token: "x" }));
+    expect(loadSession()).toBeNull();
+    storage.set("stackmatch-session", "{not json");
+    expect(loadSession()).toBeNull();
+  });
+});
+
+describe("redirects", () => {
+  it("only follows same-site paths", () => {
+    expect(safeRedirect("/saved", "/")).toBe("/saved");
+    expect(safeRedirect("//evil.example", "/")).toBe("/");
+    expect(safeRedirect("https://evil.example", "/")).toBe("/");
+    expect(safeRedirect(undefined, "/discover")).toBe("/discover");
+  });
+
+  it("sends each account type to its own starting page", () => {
+    const base = { id: "1", name: "A", email: "a@a.com", company: "", jobTitle: "" };
+    expect(homeFor({ ...base, accountType: "developer" })).toBe("/create-profile");
+    expect(homeFor({ ...base, accountType: "company" })).toBe("/discover");
+  });
+});

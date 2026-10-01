@@ -36,3 +36,11 @@ test("the assistant opens full screen", async ({ page }) => {
     expect((await chat.boundingBox())?.width).toBe(viewport?.width);
   }).toPass();
 });
+
+test("the mobile menu offers sign-in and sign-up when logged out", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir menu" }).click();
+  await page.getByRole("banner").getByRole("link", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(page.getByRole("heading", { name: "Criar sua conta" })).toBeVisible();
+});

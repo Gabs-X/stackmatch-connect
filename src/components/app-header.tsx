@@ -1,9 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import { Bookmark, BriefcaseBusiness, Menu, Search, UserRoundPlus, X } from "lucide-react";
+import {
+  Bookmark,
+  BriefcaseBusiness,
+  LogIn,
+  Menu,
+  Search,
+  UserPlus,
+  UserRoundPlus,
+  X,
+} from "lucide-react";
 import { useState } from "react";
+import { AccountMenu } from "@/components/account-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/app-context";
+import { useAuth } from "@/lib/auth-context";
 import { useI18n, type Lang } from "@/lib/i18n";
 
 export function AppHeader() {
@@ -15,6 +26,7 @@ export function AppHeader() {
   ];
   const [open, setOpen] = useState(false);
   const { saved } = useApp();
+  const { user, ready } = useAuth();
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -53,6 +65,7 @@ export function AppHeader() {
             </option>
           </select>
           <ThemeToggle />
+          <AccountMenu />
           <Button
             size="icon"
             variant="ghost"
@@ -73,6 +86,22 @@ export function AppHeader() {
               {label}
             </Link>
           ))}
+          {ready && !user && (
+            <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-3">
+              <Button asChild variant="outline" onClick={() => setOpen(false)}>
+                <Link to="/login">
+                  <LogIn />
+                  {t.nav.signIn}
+                </Link>
+              </Button>
+              <Button asChild onClick={() => setOpen(false)}>
+                <Link to="/register">
+                  <UserPlus />
+                  {t.nav.signUp}
+                </Link>
+              </Button>
+            </div>
+          )}
         </nav>
       )}
     </header>

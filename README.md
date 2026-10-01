@@ -20,6 +20,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Discover:** filtros por tecnologias, senioridade, modelo de trabalho, contratação, disponibilidade e valor máximo por hora. Chips permitem remover seleções.
 - **Ações distintas:** passar avança; salvar adiciona à shortlist; interessado registra interesse separadamente e também salva o perfil. Nenhuma ação envia contato ao profissional.
 - **Navegação por cards:** botões e arraste, opção de desfazer e encerramento explícito da lista, com reinício manual.
+- **Contas:** telas de entrar, criar conta (empresa ou desenvolvedor) e recuperar senha, com validação por campo, menu da conta no cabeçalho e retorno à página de origem após o login.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist.
 - **Criação de perfil:** formulário em etapas, skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview e salvamento local ao concluir.
@@ -105,6 +106,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
 - A agenda é uma **simulação local**: grava reservas neste navegador, sem Google Calendar, envio de e-mails ou geração de links de videochamada.
 - O interesse é um registro local, sem notificação, chat ou contato externo.
+- **Contas e login são simulados.** Cadastro, entrada e recuperação de senha funcionam só neste navegador: as contas ficam no `localStorage` com a senha guardada como hash SHA-256 (o que evita texto puro, mas não é segurança real), e nenhum e-mail é enviado. Há dois tipos de conta: **empresa** (com nome da empresa; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido). As funções ficam em `src/lib/auth.ts` e podem ser trocadas por chamadas à API sem mudar as telas.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Os links de GitHub, LinkedIn e demos dos perfis mockados usam endereços de exemplo: ao clicar, um aviso mostra o endereço sem navegar, já que essas URLs podem pertencer a pessoas reais. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
 - O perfil do Gabriel Botelho usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no navegador também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.

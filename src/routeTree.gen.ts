@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CreateProfileRouteImport } from './routes/create-profile'
 import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
 import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
 
@@ -30,6 +33,21 @@ const DiscoverRoute = DiscoverRouteImport.update({
   path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SavedRoute = SavedRouteImport.update({
   id: '/saved',
   path: '/saved',
@@ -45,6 +63,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/developer/$id': typeof DeveloperIdRoute
 }
@@ -52,6 +73,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/developer/$id': typeof DeveloperIdRoute
 }
@@ -60,19 +84,41 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/developer/$id': typeof DeveloperIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/create-profile' | '/discover' | '/saved' | '/developer/$id'
+  fullPaths:
+    | '/'
+    | '/create-profile'
+    | '/discover'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/saved'
+    | '/developer/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create-profile' | '/discover' | '/saved' | '/developer/$id'
+  to:
+    | '/'
+    | '/create-profile'
+    | '/discover'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/saved'
+    | '/developer/$id'
   id:
     | '__root__'
     | '/'
     | '/create-profile'
     | '/discover'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
     | '/saved'
     | '/developer/$id'
   fileRoutesById: FileRoutesById
@@ -81,6 +127,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateProfileRoute: typeof CreateProfileRoute
   DiscoverRoute: typeof DiscoverRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
   DeveloperIdRoute: typeof DeveloperIdRoute
 }
@@ -108,6 +157,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/saved': {
       id: '/saved'
       path: '/saved'
@@ -129,6 +199,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateProfileRoute: CreateProfileRoute,
   DiscoverRoute: DiscoverRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
   DeveloperIdRoute: DeveloperIdRoute,
 }

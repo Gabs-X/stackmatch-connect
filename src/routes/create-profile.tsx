@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -91,6 +92,14 @@ function CreateProfile() {
       setPreview(true);
     }
   }, []);
+  // A developer account starts its first profile with the name and title from sign-up.
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user?.accountType !== "developer" || loadLocalProfile()) return;
+    setProfile((current) =>
+      current.name || current.role ? current : { ...current, name: user.name, role: user.jobTitle },
+    );
+  }, [user]);
   const updateField = <Key extends keyof LocalProfile>(field: Key, value: LocalProfile[Key]) => {
     setProfile((current) => ({ ...current, [field]: value }));
     setCompleted(false);

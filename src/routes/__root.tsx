@@ -14,6 +14,7 @@ import { AppHeader } from "@/components/app-header";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { Toaster } from "@/components/ui/sonner";
 import { AppProvider } from "@/lib/app-context";
+import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { ThemeProvider, themeInitScript, useTheme } from "@/lib/theme";
 
@@ -144,17 +145,19 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
-        <AppHeader />
-        <Outlet />
-        <Toaster
-          richColors
-          theme={resolved}
-          position="bottom-right"
-          offset={{ bottom: 96, right: 24 }}
-          mobileOffset={{ bottom: raised ? 176 : 80 }}
-        />
-        <AssistantWidget raised={raised} />
-        {vercelAnalyticsEnabled && <Analytics />}
+        <AuthProvider>
+          <AppHeader />
+          <Outlet />
+          <Toaster
+            richColors
+            theme={resolved}
+            position="bottom-right"
+            offset={{ bottom: 96, right: 24 }}
+            mobileOffset={{ bottom: raised ? 176 : 80 }}
+          />
+          <AssistantWidget raised={raised} />
+          {vercelAnalyticsEnabled && <Analytics />}
+        </AuthProvider>
       </AppProvider>
     </QueryClientProvider>
   );
