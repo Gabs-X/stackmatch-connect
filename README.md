@@ -60,6 +60,7 @@ Acesse o endereço informado pelo Vite no terminal. Os fluxos mockados não exig
 ```sh
 npm run lint
 npx tsc --noEmit
+npm test
 npm run build
 ```
 
@@ -157,12 +158,12 @@ Sem essa variável, o componente não é incluído no build.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
 - Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.
-- Não há uma suíte automatizada abrangente de testes de interface.
+- Os testes automatizados (Vitest, `npm test`) cobrem a lógica: filtros, desfazer, agendamento, perfil local e o contrato do assistente. Ainda não há testes de interface ou ponta a ponta.
 
 ## Próximos passos
 
 1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
-2. Ampliar testes automatizados dos fluxos de descoberta, criação de perfil, persistência e agendamento.
+2. Adicionar testes de interface e ponta a ponta dos fluxos de descoberta, criação de perfil e agendamento.
 3. Refinar validações do formulário e ampliar o cadastro de projetos, conforme feedback de uso.
 4. Em uma etapa com backend, definir contratos de API, autenticação, publicação de perfis e persistência por usuário.
 5. Integrar GitHub e calendário apenas após definir permissões, privacidade e tratamento de conflitos de agenda.
