@@ -1,5 +1,6 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { DemoLink } from "@/components/demo-link";
@@ -126,8 +127,12 @@ function DeveloperPage() {
               <h2 className="section-title">{t.profile.featured}</h2>
             </div>
             <div className="mt-6 grid gap-5 md:grid-cols-3">
-              {d.projects.map((p) => (
-                <article className="overflow-hidden rounded-lg border bg-card" key={p.name}>
+              {d.projects.map((p, index) => (
+                <article
+                  className="stagger-item overflow-hidden rounded-lg border bg-card"
+                  style={{ "--stagger-index": index } as CSSProperties}
+                  key={p.name}
+                >
                   <div className={`grid aspect-[16/10] place-items-center ${p.color}`}>
                     <span className="font-display text-4xl font-extrabold text-white">
                       {p.name.slice(0, 2).toUpperCase()}

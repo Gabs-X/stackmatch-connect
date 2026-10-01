@@ -135,8 +135,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { resolved } = useTheme();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Discover pins its action bar to the bottom on phones; lift floating UI above it there.
-  const raised = useRouterState({ select: (state) => state.location.pathname === "/discover" });
+  const raised = pathname === "/discover";
   // Marks when client handlers are attached; e2e tests wait for it before interacting.
   useEffect(() => {
     document.documentElement.dataset["hydrated"] = "";
@@ -147,7 +148,10 @@ function RootComponent() {
       <AppProvider>
         <AuthProvider>
           <AppHeader />
-          <Outlet />
+          {/* Keyed by path so each navigation replays the entrance animation. */}
+          <div key={pathname} className="page-enter">
+            <Outlet />
+          </div>
           <Toaster
             richColors
             theme={resolved}

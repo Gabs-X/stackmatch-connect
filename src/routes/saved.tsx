@@ -1,5 +1,6 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 import { Bookmark, RotateCcw, Trash2 } from "lucide-react";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
@@ -56,8 +57,12 @@ function SavedPage() {
         </div>
       ) : items.length ? (
         <div className={grid}>
-          {items.map((d) => (
-            <div className="relative" key={d.id}>
+          {items.map((d, index) => (
+            <div
+              className="stagger-item relative"
+              style={{ "--stagger-index": index } as CSSProperties}
+              key={d.id}
+            >
               <DeveloperCard developer={d} compact />
               <Button
                 size="icon"
