@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowUpRight, Briefcase, Clock3, MapPin } from "lucide-react";
 import type { Developer } from "@/lib/developers";
 import { DeveloperPhoto } from "@/components/developer-photo";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
 export function DeveloperCard({
@@ -22,6 +23,10 @@ export function DeveloperCard({
   layoutId?: string;
 }) {
   const { t, tv, formatCurrency } = useI18n();
+  const { user } = useAuth();
+  // The profile saved in this browser belongs to its developer account, not to a company using
+  // the same browser: for companies it is just another candidate.
+  const own = developer.isLocal && user?.accountType === "developer";
   // Spread, not passed as undefined: motion props reject an explicit undefined layoutId.
   const shared = (part?: string) =>
     layoutId ? { layoutId: part ? `${layoutId}-${part}` : layoutId } : {};
@@ -56,7 +61,7 @@ export function DeveloperCard({
             {tv(developer.availability)}
           </span>
         )}
-        {developer.isLocal && <span className="own-profile-badge">{t.card.yourProfile}</span>}
+        {own && <span className="own-profile-badge">{t.card.yourProfile}</span>}
       </motion.div>
       <motion.div
         {...(layoutId
@@ -135,7 +140,7 @@ export function DeveloperCard({
             variant="outline"
             className={compact ? "mt-5 w-full" : "mt-5 min-h-11 w-full"}
           >
-            {developer.isLocal ? (
+            {own ? (
               <Link to="/create-profile" onPointerDown={(event) => event.stopPropagation()}>
                 {t.card.viewProfile} <ArrowUpRight />
               </Link>

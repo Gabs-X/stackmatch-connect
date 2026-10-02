@@ -29,12 +29,7 @@ export function ProfilePreview({
   profile: LocalProfile;
   showCard: boolean;
 }) {
-  const { t } = useI18n();
-  const developer = {
-    ...localProfileToDeveloper(profile),
-    name: profile.name.trim() || t.create.yourName,
-    role: profile.role.trim() || t.create.yourRole,
-  };
+  const developer = usePreviewDeveloper(profile);
 
   return (
     <MotionConfig reducedMotion="user" transition={morph}>
@@ -42,11 +37,29 @@ export function ProfilePreview({
         {showCard ? (
           <CardView developer={developer} />
         ) : (
-          <FullProfile profile={profile} developer={developer} />
+          <FullProfile profile={profile} developer={developer} own />
         )}
       </LayoutGroup>
     </MotionConfig>
   );
+}
+
+/** The full profile card on its own, as companies open it from Discover or their shortlist. */
+export function ProfileCard({ profile }: { profile: LocalProfile }) {
+  return (
+    <MotionConfig reducedMotion="user">
+      <FullProfile profile={profile} developer={usePreviewDeveloper(profile)} own={false} />
+    </MotionConfig>
+  );
+}
+
+function usePreviewDeveloper(profile: LocalProfile) {
+  const { t } = useI18n();
+  return {
+    ...localProfileToDeveloper(profile),
+    name: profile.name.trim() || t.create.yourName,
+    role: profile.role.trim() || t.create.yourRole,
+  };
 }
 
 type PreviewDeveloper = ReturnType<typeof localProfileToDeveloper>;
@@ -75,9 +88,12 @@ function CardView({ developer }: { developer: PreviewDeveloper }) {
 function FullProfile({
   profile,
   developer,
+  own,
 }: {
   profile: LocalProfile;
   developer: PreviewDeveloper;
+  /** Shows the "Your profile" badge, for the developer previewing their own profile. */
+  own: boolean;
 }) {
   const { t, tv } = useI18n();
   const links = [
@@ -109,7 +125,7 @@ function FullProfile({
               {tv(developer.availability)}
             </span>
           )}
-          <span className="own-profile-badge">{t.card.yourProfile}</span>
+          {own && <span className="own-profile-badge">{t.card.yourProfile}</span>}
         </motion.div>
 
         <div className="min-w-0 p-6 sm:p-8 lg:p-10">

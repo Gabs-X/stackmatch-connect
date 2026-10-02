@@ -163,7 +163,7 @@ Sem essa variável, o componente não é incluído no build.
 
 - Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
-- O perfil criado fica no navegador e não é publicado: ele aparece no Discover e nos salvos apenas neste navegador, com o selo "Seu perfil", e o desenvolvedor confere esse card na prévia do próprio perfil. Como o formulário não coleta valor por hora nem tipo de contratação, ele sai da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
+- O perfil criado fica no navegador e não é publicado: ele aparece no Discover e nos salvos apenas neste navegador. Para empresas é um candidato como os outros, com página em `/developer/local-profile`; o selo "Seu perfil" aparece só para a conta de desenvolvedor, que confere esse card na prévia do próprio perfil. Como o formulário não coleta valor por hora nem tipo de contratação, ele sai da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.

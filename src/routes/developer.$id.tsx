@@ -1,17 +1,21 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { DemoLink } from "@/components/demo-link";
 import { DeveloperPhoto } from "@/components/developer-photo";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
-import { developers } from "@/lib/developers";
+import { developers, type Developer } from "@/lib/developers";
+import { loadLocalProfile, localDeveloperId, type LocalProfile } from "@/lib/local-profile";
+import { ProfileCard } from "@/components/profile-preview";
 import { useApp } from "@/lib/app-context";
 
 export const Route = createFileRoute("/developer/$id")({
   loader: ({ params }) => {
+    // The profile created in this browser has no server copy; its page reads it on the client.
+    if (params.id === localDeveloperId) return null;
     const developer = developers.find((d) => d.id === params.id);
     if (!developer) throw notFound();
     return developer;
@@ -39,8 +43,12 @@ export const Route = createFileRoute("/developer/$id")({
   component: DeveloperPage,
 });
 function DeveloperPage() {
-  const { t, tv, formatCurrency } = useI18n();
   const d = Route.useLoaderData();
+  return d ? <CatalogDeveloperPage d={d} /> : <LocalDeveloperPage />;
+}
+
+function CatalogDeveloperPage({ d }: { d: Developer }) {
+  const { t, tv, formatCurrency } = useI18n();
   useLocalizedMeta(d.name + " — Stack Match", tv(d.bio));
   const { saved, toggleSaved } = useApp();
   const isSaved = saved.includes(d.id);
@@ -215,6 +223,66 @@ function DeveloperPage() {
           </div>
         </aside>
       </div>
+    </main>
+  );
+}
+
+/** The profile a developer created in this browser, as a company sees it. */
+function LocalDeveloperPage() {
+  const { t } = useI18n();
+  const [profile, setProfile] = useState<LocalProfile | null | undefined>(undefined);
+  useEffect(() => setProfile(loadLocalProfile()), []);
+  const name = profile?.name.trim() || t.create.yourName;
+  useLocalizedMeta(name + " — Stack Match", profile?.bio ?? "");
+  const { saved, toggleSaved } = useApp();
+  const isSaved = saved.includes(localDeveloperId);
+
+  if (profile === undefined)
+    return (
+      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4">
+        <p role="status" className="text-sm text-muted-foreground">
+          {t.common.loading}
+        </p>
+      </main>
+    );
+  if (profile === null)
+    return (
+      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
+        <div>
+          <h1 className="text-xl font-semibold">{t.common.notFound}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t.common.notFoundDescription}</p>
+          <Button asChild className="mt-6">
+            <Link to="/discover">{t.profile.back}</Link>
+          </Button>
+        </div>
+      </main>
+    );
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-8 pb-20 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Link
+          to="/discover"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          {t.profile.back}
+        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={isSaved ? "secondary" : "outline"}
+            onClick={() => {
+              toggleSaved(localDeveloperId);
+              toast(isSaved ? t.profile.toastRemoved : t.profile.toastSaved);
+            }}
+          >
+            <Bookmark />
+            {isSaved ? t.profile.saved : t.profile.save}
+          </Button>
+          <ScheduleDialog developerId={localDeveloperId} developerName={name} />
+        </div>
+      </div>
+      <ProfileCard profile={profile} />
     </main>
   );
 }

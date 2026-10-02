@@ -71,3 +71,28 @@ test("visitors see no app areas until they sign in", async ({ page }) => {
   await page.goto("/discover");
   await expect(page).toHaveURL(/\/login\?redirect=%2Fdiscover$/);
 });
+
+test("a company sees the developer's profile from this browser as a regular candidate", async ({
+  page,
+}) => {
+  await signInAs(page, "developer");
+  await page.getByLabel("Nome completo").fill("Diego Fernandes");
+  await page.getByRole("button", { name: "4 Links" }).click();
+  await page.getByRole("button", { name: "Concluir perfil" }).click();
+  await page.getByRole("button", { name: "Ver como card" }).click();
+  // The developer still sees it as their own.
+  await expect(page.getByRole("article")).toContainText("Seu perfil");
+  await page.getByRole("button", { name: "Menu da conta de Dev Teste" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  await signInAs(page, "company");
+  const card = page.locator("main section article").first();
+  await expect(card).toContainText("Diego Fernandes");
+  await expect(card).not.toContainText("Seu perfil");
+
+  await card.getByRole("link", { name: "Ver perfil" }).click();
+  await expect(page).toHaveURL(/\/developer\/local-profile$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Diego Fernandes" })).toBeVisible();
+  await expect(page.getByRole("main")).not.toContainText("Seu perfil");
+  await expect(page.getByRole("button", { name: "Propor reunião" })).toBeVisible();
+});
