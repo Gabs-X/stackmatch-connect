@@ -134,7 +134,12 @@ describe("localProfileToDeveloper", () => {
   });
 
   it("keeps only valid links", () => {
-    expect(developer.links).toEqual({ github: "https://github.com/anasouza", linkedin: "" });
+    // Typed by the developer, so they open for real instead of showing an example notice.
+    expect(developer.links).toEqual({
+      github: "https://github.com/anasouza",
+      linkedin: "",
+      verified: true,
+    });
     expect(developer.projects[0]?.links).toEqual({
       github: "",
       demo: "https://clinic.vercel.app/",

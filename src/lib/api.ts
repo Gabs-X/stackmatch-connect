@@ -6,6 +6,7 @@ import {
   type MeetingRequestInput,
 } from "./meeting-requests";
 import type { ProfileInterest } from "./profile-interests";
+import { demoDeveloperId } from "./auth";
 
 /**
  * Simulated network latency for the mocked API, so loading states behave like a real backend.
@@ -61,7 +62,7 @@ export async function fetchCompanyActivity(
   developerName: string,
 ): Promise<{ interests: ProfileInterest[]; meetings: MeetingRequest[] }> {
   await delay(MOCK_LATENCY_MS);
-  return accountId === "demo-developer"
+  return accountId === demoDeveloperId
     ? demoCompanyActivity(developerId, developerName)
     : { interests: [], meetings: [] };
 }

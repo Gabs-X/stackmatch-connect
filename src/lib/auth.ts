@@ -121,15 +121,16 @@ function readUsers(): StoredUser[] {
  * in storage, so clearing site data never removes them. Sign in with the e-mail or the username.
  */
 export const demoPassword = "teste1234";
+export const demoDeveloperId = "demo-developer";
 export const demoAccounts: (AuthUser & { username: string })[] = [
   {
-    id: "demo-developer",
+    id: demoDeveloperId,
     username: "teste.dev",
-    name: "Dev Teste",
+    name: "Gabriel Botelho",
     email: "teste.dev@stackmatch.app",
     accountType: "developer",
     company: "",
-    jobTitle: "Desenvolvedor Full Stack",
+    jobTitle: "Full Stack Developer",
   },
   {
     id: "demo-company",

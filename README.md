@@ -23,7 +23,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Contas:** telas de entrar, criar conta (empresa ou desenvolvedor) e recuperar senha, com validação por campo, menu da conta no cabeçalho e retorno à página de origem após o login.
 - **Acesso por tipo de conta:** Discover e Talentos salvos são exclusivos de empresas; Meu perfil e Empresas interessadas são exclusivos de desenvolvedores. Visitantes são levados ao login (voltando à página depois) e a conta do outro tipo vê um aviso. A página individual de cada perfil continua aberta para links compartilhados. Sem login, o cabeçalho mostra apenas Entrar e Criar conta; com login, só as áreas da conta conectada.
 - **Empresas interessadas:** aba do desenvolvedor com as empresas que marcaram interesse no perfil dele pelo Discover ou propuseram uma conversa, com contato, horário sugerido, mensagem e botão para responder por e-mail.
-- **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`); a tela de login tem atalhos que preenchem cada uma.
+- **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`); a tela de login tem atalhos que preenchem cada uma. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist.
 - **Criação de perfil:** formulário em etapas, skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento local ao concluir.
@@ -105,7 +105,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 
 ## O que está mockado
 
-- Os oito profissionais, suas bios, projetos, valores, experiências e disponibilidades são fictícios. Números e alegações da apresentação do produto não representam uma base real de usuários ou verificações.
+- Os sete profissionais do catálogo, suas bios, projetos, valores, experiências e disponibilidades são fictícios. Números e alegações da apresentação do produto não representam uma base real de usuários ou verificações.
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
 - O envio da proposta de reunião é **simulado**: `sendMeetingRequest` em `src/lib/api.ts` faz o papel do futuro `POST /meeting-requests`, que enviará o e-mail ao profissional com `Reply-To` da empresa. Nenhum e-mail é enviado; a proposta fica registrada neste navegador para a empresa lembrar com quem já falou.
 - O interesse é um registro local, sem notificação, chat ou contato externo; quando feito por uma conta de empresa, aparece para o desenvolvedor em Empresas interessadas.
@@ -113,7 +113,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - **Controle de acesso e empresas interessadas são de front-end.** O guard `RequireAccount` (`src/components/require-account.tsx`) só organiza a interface; o backend precisará validar o tipo de conta em cada endpoint. Interesses marcados por empresas ficam neste navegador (`stackmatch-profile-interests`) e são associados ao perfil local; `fetchCompanyActivity` em `src/lib/api.ts` faz o papel do futuro `GET /me/interested-companies` e devolve atividade fictícia (de `src/lib/developers.ts`) apenas para a conta `teste.dev`. As contas de teste ficam em `src/lib/auth.ts`, fora do `localStorage`.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Os links de GitHub, LinkedIn e demos dos perfis mockados usam endereços de exemplo: ao clicar, um aviso mostra o endereço sem navegar, já que essas URLs podem pertencer a pessoas reais. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
-- O perfil do Gabriel Botelho usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no navegador também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.
+- O perfil do Gabriel Botelho é o perfil da conta `teste.dev` (`demoDeveloperProfile` em `src/lib/developers.ts`), mostrado como o perfil publicado neste navegador até um desenvolvedor salvar o próprio. Ele usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no navegador também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
 
 ## Assistente com IA (preparado para backend)
@@ -163,7 +163,7 @@ Sem essa variável, o componente não é incluído no build.
 
 - Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
-- O perfil criado fica no navegador e não é publicado: ele aparece no Discover e nos salvos apenas neste navegador. Para empresas é um candidato como os outros, com página em `/developer/local-profile`; o selo "Seu perfil" aparece só para a conta de desenvolvedor, que confere esse card na prévia do próprio perfil. Como o formulário não coleta valor por hora nem tipo de contratação, ele sai da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
+- O perfil criado fica no navegador e não é publicado: ele aparece no Discover e nos salvos apenas neste navegador. Para empresas é um candidato como os outros, com página em `/developer/local-profile` no mesmo formato dos demais perfis (sem valor por hora e experiência, que o formulário não coleta); o selo "Seu perfil" aparece só para a conta de desenvolvedor, que confere esse card na prévia do próprio perfil. Como o formulário não coleta valor por hora nem tipo de contratação, ele sai da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.

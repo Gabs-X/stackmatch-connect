@@ -8,8 +8,11 @@ import { DeveloperPhoto } from "@/components/developer-photo";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
 import { developers, type Developer } from "@/lib/developers";
-import { loadLocalProfile, localDeveloperId, type LocalProfile } from "@/lib/local-profile";
-import { ProfileCard } from "@/components/profile-preview";
+import {
+  loadPublishedProfile,
+  localDeveloperId,
+  localProfileToDeveloper,
+} from "@/lib/local-profile";
 import { useApp } from "@/lib/app-context";
 
 export const Route = createFileRoute("/developer/$id")({
@@ -52,6 +55,9 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
   useLocalizedMeta(d.name + " — Stack Match", tv(d.bio));
   const { saved, toggleSaved } = useApp();
   const isSaved = saved.includes(d.id);
+  // Profiles created in the app may leave out what the form doesn't collect (rate, experience).
+  const place = [d.location, tv(d.workMode)].filter(Boolean).join(" · ");
+  const real = d.links.verified === true;
   return (
     <main className="pb-20">
       <section className="stagger-item border-b bg-card">
@@ -74,18 +80,22 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-4xl font-extrabold">{d.name}</h1>
-                <span className="level-badge">{tv(d.seniority)}</span>
+                {d.seniority && <span className="level-badge">{tv(d.seniority)}</span>}
               </div>
               <p className="mt-2 text-lg font-semibold text-primary">{d.role}</p>
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-4" />
-                  {d.location} · {tv(d.workMode)}
-                </span>
-                <span className="flex items-center gap-1.5 text-positive">
-                  <span className="status-dot" />
-                  {tv(d.availability)}
-                </span>
+                {place && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="size-4" />
+                    {place}
+                  </span>
+                )}
+                {d.availability && (
+                  <span className="flex items-center gap-1.5 text-positive">
+                    <span className="status-dot" />
+                    {tv(d.availability)}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -120,15 +130,15 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
               ))}
             </div>
           </section>
-          <section>
-            <h2 className="text-xl font-bold">{t.profile.experience}</h2>
-            <div className="mt-5 border-l-2 border-primary pl-5">
-              <p className="font-bold">
-                {d.role} · {tv(d.seniority)}
-              </p>
-              <p className="text-sm text-primary">{tv(d.experience)}</p>
-            </div>
-          </section>
+          {d.experience && (
+            <section>
+              <h2 className="text-xl font-bold">{t.profile.experience}</h2>
+              <div className="mt-5 border-l-2 border-primary pl-5">
+                <p className="font-bold">{[d.role, tv(d.seniority)].filter(Boolean).join(" · ")}</p>
+                <p className="text-sm text-primary">{tv(d.experience)}</p>
+              </div>
+            </section>
+          )}
           <section id="portfolio" className="scroll-mt-24">
             <div>
               <span className="section-kicker">{t.profile.portfolioLink}</span>
@@ -141,11 +151,19 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
                   style={{ "--stagger-index": index } as CSSProperties}
                   key={p.name}
                 >
-                  <div className={`grid aspect-[16/10] place-items-center ${p.color}`}>
-                    <span className="font-display text-4xl font-extrabold text-white">
-                      {p.name.slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
+                  {p.image ? (
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="aspect-[16/10] w-full object-cover"
+                    />
+                  ) : (
+                    <div className={`grid aspect-[16/10] place-items-center ${p.color}`}>
+                      <span className="font-display text-4xl font-extrabold text-white">
+                        {p.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                   <div className="p-5">
                     <h3 className="font-bold">{p.name}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -158,10 +176,21 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
                         </span>
                       ))}
                     </div>
-                    <div className="mt-5 flex gap-4 text-xs font-bold">
-                      <DemoLink url={p.links.github} label="GitHub" icon={Github} />
-                      <DemoLink url={p.links.demo} label="Demo" icon={ExternalLink} />
-                    </div>
+                    {(p.links.github || p.links.demo) && (
+                      <div className="mt-5 flex gap-4 text-xs font-bold">
+                        {p.links.github && (
+                          <DemoLink url={p.links.github} label="GitHub" icon={Github} real={real} />
+                        )}
+                        {p.links.demo && (
+                          <DemoLink
+                            url={p.links.demo}
+                            label="Demo"
+                            icon={ExternalLink}
+                            real={real}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 </article>
               ))}
@@ -175,38 +204,46 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
             </p>
             <p className="mt-2 flex items-center gap-2 font-bold text-positive">
               <Check className="size-4" />
-              {tv(d.availability)}
+              {d.availability ? tv(d.availability) : "—"}
             </p>
-            <div className="my-5 border-t" />
-            <p className="text-xs text-muted-foreground">{t.profile.rate}</p>
-            <p className="mt-1 font-display text-2xl font-bold">
-              {formatCurrency(d.rate)}
-              <span className="text-sm font-normal text-muted-foreground">/h</span>
-            </p>
+            {Number.isFinite(d.rate) && (
+              <>
+                <div className="my-5 border-t" />
+                <p className="text-xs text-muted-foreground">{t.profile.rate}</p>
+                <p className="mt-1 font-display text-2xl font-bold">
+                  {formatCurrency(d.rate)}
+                  <span className="text-sm font-normal text-muted-foreground">/h</span>
+                </p>
+              </>
+            )}
             <div className="my-5 border-t" />
             <p className="text-xs font-bold uppercase text-muted-foreground">{t.profile.links}</p>
             <div className="mt-3 space-y-2">
-              <DemoLink
-                url={d.links.github}
-                label="GitHub"
-                icon={Github}
-                variant="block"
-                real={d.links.verified === true}
-              />
-              <DemoLink
-                url={d.links.linkedin}
-                label="LinkedIn"
-                icon={Linkedin}
-                variant="block"
-                real={d.links.verified === true}
-              />
+              {d.links.github && (
+                <DemoLink
+                  url={d.links.github}
+                  label="GitHub"
+                  icon={Github}
+                  variant="block"
+                  real={real}
+                />
+              )}
+              {d.links.linkedin && (
+                <DemoLink
+                  url={d.links.linkedin}
+                  label="LinkedIn"
+                  icon={Linkedin}
+                  variant="block"
+                  real={real}
+                />
+              )}
               {d.links.website ? (
                 <DemoLink
                   url={d.links.website}
                   label={t.profile.portfolioLink}
                   icon={ExternalLink}
                   variant="block"
-                  real={d.links.verified === true}
+                  real={real}
                 />
               ) : (
                 <Button asChild variant="outline" className="w-full justify-start">
@@ -216,9 +253,7 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
                   </a>
                 </Button>
               )}
-              <p className="pt-1 text-xs text-muted-foreground">
-                {d.links.verified ? t.profile.projectsDemoNote : t.profile.demoNote}
-              </p>
+              {!real && <p className="pt-1 text-xs text-muted-foreground">{t.profile.demoNote}</p>}
             </div>
           </div>
         </aside>
@@ -227,17 +262,12 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
   );
 }
 
-/** The profile a developer created in this browser, as a company sees it. */
+/** The developer profile published in this browser, shown like any other profile. */
 function LocalDeveloperPage() {
   const { t } = useI18n();
-  const [profile, setProfile] = useState<LocalProfile | null | undefined>(undefined);
-  useEffect(() => setProfile(loadLocalProfile()), []);
-  const name = profile?.name.trim() || t.create.yourName;
-  useLocalizedMeta(name + " — Stack Match", profile?.bio ?? "");
-  const { saved, toggleSaved } = useApp();
-  const isSaved = saved.includes(localDeveloperId);
-
-  if (profile === undefined)
+  const [developer, setDeveloper] = useState<Developer>();
+  useEffect(() => setDeveloper(localProfileToDeveloper(loadPublishedProfile())), []);
+  if (!developer)
     return (
       <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4">
         <p role="status" className="text-sm text-muted-foreground">
@@ -245,44 +275,5 @@ function LocalDeveloperPage() {
         </p>
       </main>
     );
-  if (profile === null)
-    return (
-      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
-        <div>
-          <h1 className="text-xl font-semibold">{t.common.notFound}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t.common.notFoundDescription}</p>
-          <Button asChild className="mt-6">
-            <Link to="/discover">{t.profile.back}</Link>
-          </Button>
-        </div>
-      </main>
-    );
-
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-8 pb-20 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          to="/discover"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" />
-          {t.profile.back}
-        </Link>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={isSaved ? "secondary" : "outline"}
-            onClick={() => {
-              toggleSaved(localDeveloperId);
-              toast(isSaved ? t.profile.toastRemoved : t.profile.toastSaved);
-            }}
-          >
-            <Bookmark />
-            {isSaved ? t.profile.saved : t.profile.save}
-          </Button>
-          <ScheduleDialog developerId={localDeveloperId} developerName={name} />
-        </div>
-      </div>
-      <ProfileCard profile={profile} />
-    </main>
-  );
+  return <CatalogDeveloperPage d={developer} />;
 }

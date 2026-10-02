@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   availabilityOptions,
+  demoDeveloperProfile,
   seniorityOptions,
   githubAvatarUrl,
   workModeOptions,
@@ -94,6 +95,14 @@ export function loadLocalProfile(): LocalProfile | null {
   }
 }
 
+/**
+ * The developer profile this browser shows to companies: the one saved here or, until a developer
+ * saves one, the demo account's profile.
+ */
+export function loadPublishedProfile(): LocalProfile {
+  return loadLocalProfile() ?? demoDeveloperProfile;
+}
+
 export function saveLocalProfile(profile: LocalProfile): LocalProfile {
   const saved = profileSchema.parse(profile);
   window.localStorage.setItem(localProfileStorageKey, JSON.stringify(saved));
@@ -177,9 +186,12 @@ export function localProfileToDeveloper(profile: LocalProfile): Developer {
     image: githubAvatarUrl(profileLink(profile.github) ?? "") ?? "",
     rate: Number.NaN,
     hiringTypes: [],
+    // Addresses the developer typed themselves, so they open for real.
     links: {
       github: profileLink(profile.github) ?? "",
       linkedin: profileLink(profile.linkedin) ?? "",
+      ...(profileLink(profile.website) ? { website: profileLink(profile.website) ?? "" } : {}),
+      verified: true,
     },
     projects: profile.projects.map((project, index) => ({
       name: project.name,

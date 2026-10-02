@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { companyActivityQuery } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
-import type { AuthUser } from "@/lib/auth";
+import { demoDeveloperId, type AuthUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { loadLocalProfile, localDeveloperId, localProfileStorageKey } from "@/lib/local-profile";
@@ -45,14 +45,15 @@ function InterestsList({ user }: { user: AuthUser }) {
   // This browser's profile is the developer's; companies reach it under localDeveloperId.
   const [hasProfile, setHasProfile] = useState(true);
   useEffect(() => {
-    const read = () => setHasProfile(loadLocalProfile() !== null);
+    // The demo developer already has a published profile (see loadPublishedProfile).
+    const read = () => setHasProfile(loadLocalProfile() !== null || user.id === demoDeveloperId);
     read();
     const onStorage = (event: StorageEvent) => {
       if (event.key === null || event.key === localProfileStorageKey) read();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [user.id]);
   const { data, isPending, isError, refetch } = useQuery(
     companyActivityQuery(user.id, localDeveloperId, user.name),
   );

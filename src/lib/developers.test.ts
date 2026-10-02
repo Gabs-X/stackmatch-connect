@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { developers, githubAvatarUrl } from "./developers";
+import { demoDeveloperProfile, developers, githubAvatarUrl } from "./developers";
+import { localProfileToDeveloper } from "./local-profile";
 
 describe("githubAvatarUrl", () => {
   it("builds the public avatar address from a GitHub profile link", () => {
@@ -21,13 +22,20 @@ describe("githubAvatarUrl", () => {
 });
 
 describe("developers catalog", () => {
-  it("opens real links and the GitHub avatar only for verified profiles", () => {
-    const gabriel = developers.find((developer) => developer.id === "gabriel-botelho");
-    expect(gabriel?.links.verified).toBe(true);
-    expect(gabriel?.image).toBe("https://github.com/Gabs-X.png?size=768");
+  it("keeps fictional people on example links and photos", () => {
+    expect(developers.length).toBeGreaterThan(0);
+    for (const developer of developers) {
+      expect(developer.links.verified).toBeUndefined();
+      expect(developer.image).not.toContain("github.com");
+    }
+  });
 
-    const fictional = developers.filter((developer) => !developer.links.verified);
-    expect(fictional.length).toBeGreaterThan(0);
-    for (const developer of fictional) expect(developer.image).not.toContain("github.com");
+  it("gives the demo developer account Gabriel's profile with real links and avatar", () => {
+    expect(developers.some((developer) => developer.name === "Gabriel Botelho")).toBe(false);
+    const gabriel = localProfileToDeveloper(demoDeveloperProfile);
+    expect(gabriel).toMatchObject({ id: "local-profile", name: "Gabriel Botelho" });
+    expect(gabriel.links.verified).toBe(true);
+    expect(gabriel.links.website).toBe("https://gabrielanthony.vercel.app/");
+    expect(gabriel.image).toBe("https://github.com/Gabs-X.png?size=768");
   });
 });

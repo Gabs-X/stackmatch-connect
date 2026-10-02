@@ -2,6 +2,7 @@ import gabriel from "@/assets/developer-gabriel.jpg";
 import marina from "@/assets/developer-marina.jpg";
 import rafael from "@/assets/developer-rafael.jpg";
 import juliana from "@/assets/developer-juliana.jpg";
+import type { LocalProfile } from "./local-profile";
 
 // Catalog values double as filter keys; tv() translates them for display.
 export const seniorityOptions = ["Júnior", "Pleno", "Sênior"] as const;
@@ -19,15 +20,6 @@ export type ProfessionalLinks = {
   verified?: true;
 };
 
-// Profiles whose owners provided their own links.
-const verifiedLinks: Record<string, ProfessionalLinks> = {
-  "gabriel-botelho": {
-    github: "https://github.com/Gabs-X",
-    linkedin: "https://www.linkedin.com/in/gabriel-anthony-7688bb224/",
-    website: "https://gabrielanthony.vercel.app",
-    verified: true,
-  },
-};
 export type Developer = {
   id: string;
   name: string;
@@ -49,26 +41,6 @@ export type Developer = {
 };
 
 const projectSets: ProjectSeed[][] = [
-  [
-    {
-      name: "Pulse Commerce",
-      description: "Checkout modular que reduziu o abandono em 24%.",
-      tech: ["Next.js", "Node.js"],
-      color: "project-blue",
-    },
-    {
-      name: "Atlas CRM",
-      description: "Plataforma comercial com automações e analytics.",
-      tech: ["React", "NestJS"],
-      color: "project-green",
-    },
-    {
-      name: "Core Banking",
-      description: "APIs resilientes para operações financeiras.",
-      tech: ["C#", "PostgreSQL"],
-      color: "project-ink",
-    },
-  ],
   [
     {
       name: "Nexo Design System",
@@ -191,7 +163,6 @@ projectSets.push(
 );
 
 const bios = [
-  "Desenvolvo aplicações full stack com React e Node.js, integrando interfaces, APIs e bancos relacionais.",
   "Sou especialista em interfaces React, acessibilidade e design systems. Colaboro com produto e design para evoluir experiências web.",
   "Projeto APIs e serviços backend com Java e Node.js, com foco em observabilidade, integração e confiabilidade.",
   "Automatizo infraestrutura em AWS com Terraform e Python e mantenho pipelines de deploy para aplicações em containers.",
@@ -202,20 +173,6 @@ const bios = [
 ];
 
 const base = [
-  [
-    "gabriel-botelho",
-    "Gabriel Botelho",
-    "Full Stack Developer",
-    "Pleno",
-    "Uberaba, MG",
-    "Remoto",
-    "Disponível agora",
-    ["React", "Next.js", "Node.js", "NestJS", "C#", "PostgreSQL"],
-    "5 anos",
-    "", // Verified profile: photo comes from the GitHub avatar.
-    120,
-    ["Freelancer", "PJ"],
-  ],
   [
     "marina-costa",
     "Marina Costa",
@@ -344,12 +301,12 @@ export const developers: Developer[] = base.map((d, index) => ({
   availability: d[6],
   skills: [...d[7]],
   experience: d[8],
-  image: githubAvatarUrl(verifiedLinks[d[0]]?.github ?? "") ?? d[9],
+  image: d[9],
   rate: d[10],
   hiringTypes: [...d[11]],
   bio: bios[index] ?? "",
-  // Real links when the owner provided them; otherwise example addresses shown without navigating.
-  links: verifiedLinks[d[0]] ?? {
+  // Example addresses for fictional people, shown without navigating.
+  links: {
     github: `https://github.com/${d[0]}`,
     linkedin: `https://www.linkedin.com/in/${d[0]}`,
   },
@@ -374,6 +331,53 @@ function slugify(value: string) {
     .replace(/^-|-$/g, "");
 }
 
+/**
+ * Profile of the demo developer account (teste.dev): Gabriel Botelho, with his real links. It
+ * stands in for the profile that account saved in the browser until it saves its own edits.
+ */
+export const demoDeveloperProfile: LocalProfile = {
+  name: "Gabriel Botelho",
+  role: "Full Stack Developer",
+  location: "Uberaba, MG",
+  seniority: "Pleno",
+  availability: "Disponível agora",
+  workMode: "Remoto",
+  bio: "Desenvolvo aplicações full stack com React e Node.js, integrando interfaces, APIs e bancos relacionais.",
+  github: "https://github.com/Gabs-X",
+  linkedin: "https://www.linkedin.com/in/gabriel-anthony-7688bb224/",
+  website: "https://gabrielanthony.vercel.app",
+  skills: ["React", "Next.js", "Node.js", "NestJS", "C#", "PostgreSQL"],
+  // No example repository or demo addresses: this profile's links open for real.
+  projects: [
+    {
+      id: "demo-pulse-commerce",
+      name: "Pulse Commerce",
+      description: "Checkout modular que reduziu o abandono em 24%.",
+      tech: ["Next.js", "Node.js"],
+      image: "",
+      github: "",
+      demo: "",
+    },
+    {
+      id: "demo-atlas-crm",
+      name: "Atlas CRM",
+      description: "Plataforma comercial com automações e analytics.",
+      tech: ["React", "NestJS"],
+      image: "",
+      github: "",
+      demo: "",
+    },
+    {
+      id: "demo-core-banking",
+      name: "Core Banking",
+      description: "APIs resilientes para operações financeiras.",
+      tech: ["C#", "PostgreSQL"],
+      image: "",
+      github: "",
+      demo: "",
+    },
+  ],
+};
 /**
  * Companies that showed interest in the demo developer account (teste.dev), so its "Interested
  * companies" page has something to show. Dates are relative to `now` to always look recent.

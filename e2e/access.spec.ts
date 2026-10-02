@@ -20,7 +20,7 @@ test("each account type only reaches its own areas", async ({ page }) => {
   await page.goto("/saved");
   await expect(page.getByRole("heading", { name: "Área para contas de empresa" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Menu da conta de Dev Teste" }).click();
+  await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await signInAs(page, "company");
@@ -33,17 +33,10 @@ test("each account type only reaches its own areas", async ({ page }) => {
 });
 
 test("a developer sees the companies interested in their profile", async ({ page }) => {
-  // The developer publishes a profile, so it shows up first in Discover.
-  await signInAs(page, "developer");
-  await page.getByRole("button", { name: "4 Links" }).click();
-  await page.getByRole("button", { name: "Concluir perfil" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Dev Teste" })).toBeVisible();
-  await page.getByRole("button", { name: "Menu da conta de Dev Teste" }).click();
-  await page.getByRole("menuitem", { name: "Sair" }).click();
-
+  // teste.dev's profile (Gabriel Botelho) is already published, first in Discover.
   // The test company marks it as interesting.
   await signInAs(page, "company");
-  await expect(page.locator("main section article").first()).toContainText("Dev Teste");
+  await expect(page.locator("main section article").first()).toContainText("Gabriel Botelho");
   await page.getByRole("button", { name: "Interessado" }).click();
   await page.getByRole("button", { name: "Menu da conta de Recrutadora Teste" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
@@ -76,13 +69,15 @@ test("a company sees the developer's profile from this browser as a regular cand
   page,
 }) => {
   await signInAs(page, "developer");
+  // teste.dev opens on its published profile; edit it from the form.
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
   await page.getByLabel("Nome completo").fill("Diego Fernandes");
   await page.getByRole("button", { name: "4 Links" }).click();
   await page.getByRole("button", { name: "Concluir perfil" }).click();
   await page.getByRole("button", { name: "Ver como card" }).click();
   // The developer still sees it as their own.
   await expect(page.getByRole("article")).toContainText("Seu perfil");
-  await page.getByRole("button", { name: "Menu da conta de Dev Teste" }).click();
+  await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await signInAs(page, "company");

@@ -1,7 +1,7 @@
 import { expect, signInAs, test } from "./fixtures";
 
 test("verified profile links open the owner's real pages in a new tab", async ({ page }) => {
-  await page.goto("/developer/gabriel-botelho");
+  await page.goto("/developer/local-profile");
   const links = page.getByRole("complementary");
 
   await expect(links.getByRole("link", { name: /^GitHub:/ })).toHaveAttribute(
@@ -13,13 +13,13 @@ test("verified profile links open the owner's real pages in a new tab", async ({
     "https://www.linkedin.com/in/gabriel-anthony-7688bb224/",
   );
   const portfolio = links.getByRole("link", { name: /^Portfólio:/ });
-  await expect(portfolio).toHaveAttribute("href", "https://gabrielanthony.vercel.app");
+  await expect(portfolio).toHaveAttribute("href", "https://gabrielanthony.vercel.app/");
   await expect(portfolio).toHaveAttribute("target", "_blank");
   await expect(portfolio).toHaveAttribute("rel", "noopener noreferrer");
 });
 
 test("verified profile photo comes from the GitHub avatar", async ({ page }) => {
-  await page.goto("/developer/gabriel-botelho");
+  await page.goto("/developer/local-profile");
   await expect(page.getByRole("img", { name: "Gabriel Botelho" })).toHaveAttribute(
     "src",
     "https://github.com/Gabs-X.png?size=768",
@@ -30,7 +30,7 @@ test.describe("when the GitHub avatar fails to load", () => {
   test.use({ githubAvatars: "fail" });
 
   test("shows the initials instead of a broken image", async ({ page }) => {
-    await page.goto("/developer/gabriel-botelho");
+    await page.goto("/developer/local-profile");
     await expect(page.getByText("GB", { exact: true })).toBeVisible();
     await expect(page.getByRole("img", { name: "Gabriel Botelho" })).toHaveCount(0);
   });

@@ -2,21 +2,25 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { developersQuery } from "./api";
 import type { Developer } from "./developers";
-import { loadLocalProfile, localProfileStorageKey, localProfileToDeveloper } from "./local-profile";
+import {
+  loadPublishedProfile,
+  localProfileStorageKey,
+  localProfileToDeveloper,
+} from "./local-profile";
 
 /**
- * Catalog from the (mock) API plus the profile created in this browser, listed first so its
- * author sees it right away. The local profile is read after mount because storage only exists
+ * Catalog from the (mock) API plus the developer profile published in this browser, listed first so
+ * its author sees it right away. The local profile is read after mount because storage only exists
  * in the browser.
  */
 export function useDevelopers() {
   const { data, isPending, isError, refetch } = useQuery(developersQuery);
-  const [local, setLocal] = useState<Developer | null>(null);
+  // Undefined until storage is read, so the list never shows up first without this profile.
+  const [local, setLocal] = useState<Developer>();
 
   useEffect(() => {
     const read = () => {
-      const profile = loadLocalProfile();
-      setLocal(profile ? localProfileToDeveloper(profile) : null);
+      setLocal(localProfileToDeveloper(loadPublishedProfile()));
     };
     read();
     const onStorage = (event: StorageEvent) => {
@@ -26,10 +30,7 @@ export function useDevelopers() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const developers = useMemo(
-    () => (data ? (local ? [local, ...data] : data) : undefined),
-    [data, local],
-  );
+  const developers = useMemo(() => (data && local ? [local, ...data] : undefined), [data, local]);
 
-  return { developers, isPending, isError, refetch };
+  return { developers, isPending: isPending || !local, isError, refetch };
 }

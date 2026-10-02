@@ -52,7 +52,7 @@ test("undo brings the card back and removes the save it created", async ({ page 
 
 test("profiles already saved stay out of Discover", async ({ page }) => {
   await page.evaluate(() =>
-    localStorage.setItem("stackmatch-saved", JSON.stringify(["gabriel-botelho"])),
+    localStorage.setItem("stackmatch-saved", JSON.stringify(["local-profile"])),
   );
   await page.reload();
 

@@ -2,6 +2,8 @@ import { expect, signInAs, test } from "./fixtures";
 
 test("a completed profile previews the card companies see in Discover", async ({ page }) => {
   await signInAs(page, "developer");
+  // teste.dev opens on its published profile; edit it from the form.
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
 
   // Step 1: personal info.
   await page.getByLabel("Nome completo").fill("Ana Souza");
@@ -61,6 +63,8 @@ test("a completed profile previews the card companies see in Discover", async ({
 
 test("removing a project can be undone", async ({ page }) => {
   await signInAs(page, "developer");
+  // teste.dev opens on its published profile; edit it from the form.
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
   await page.getByRole("button", { name: "Projetos" }).click();
   await page.getByRole("button", { name: "Simular importação do GitHub" }).click();
   await page

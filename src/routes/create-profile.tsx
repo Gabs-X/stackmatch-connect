@@ -1,3 +1,4 @@
+import { demoDeveloperId } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -45,7 +46,12 @@ import {
   type LocalProfile,
   type LocalProject,
 } from "@/lib/local-profile";
-import { availabilityOptions, seniorityOptions, workModeOptions } from "@/lib/developers";
+import {
+  availabilityOptions,
+  demoDeveloperProfile,
+  seniorityOptions,
+  workModeOptions,
+} from "@/lib/developers";
 
 export const Route = createFileRoute("/create-profile")({
   head: () => ({
@@ -87,16 +93,18 @@ function CreateProfile() {
   const [selected, setSelected] = useState<string[]>([]);
   const bioId = useId();
   const skillId = useId();
+  const { user } = useAuth();
   useEffect(() => {
-    const stored = loadLocalProfile();
+    // The demo developer account opens with its ready-made profile until it saves its own.
+    const stored =
+      loadLocalProfile() ?? (user?.id === demoDeveloperId ? demoDeveloperProfile : null);
     if (stored) {
       setProfile(stored);
       setCompleted(true);
       setPreview(true);
     }
-  }, []);
+  }, [user?.id]);
   // A developer account starts its first profile with the name and title from sign-up.
-  const { user } = useAuth();
   useEffect(() => {
     if (user?.accountType !== "developer" || loadLocalProfile()) return;
     setProfile((current) =>
