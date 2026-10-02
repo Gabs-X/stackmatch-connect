@@ -40,7 +40,7 @@ export const passwordRules = {
 };
 
 export const signInSchema = z.object({
-  // An e-mail, or a demo account's username ("test.dev").
+  // An e-mail, or a demo account's username ("teste.dev").
   email: z.string().trim().min(1, "required"),
   password: z.string().min(1, "required"),
 });
@@ -124,9 +124,9 @@ export const demoPassword = "teste1234";
 export const demoAccounts: (AuthUser & { username: string })[] = [
   {
     id: "demo-developer",
-    username: "test.dev",
+    username: "teste.dev",
     name: "Dev Teste",
-    email: "test.dev@stackmatch.app",
+    email: "teste.dev@stackmatch.app",
     accountType: "developer",
     company: "",
     jobTitle: "Desenvolvedor Full Stack",

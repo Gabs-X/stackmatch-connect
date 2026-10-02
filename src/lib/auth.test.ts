@@ -128,7 +128,7 @@ describe("signUp and signIn", () => {
 
 describe("demo accounts", () => {
   it("sign in by username or e-mail with the shared password", async () => {
-    const dev = await settle(signIn({ email: "test.dev", password: demoPassword }));
+    const dev = await settle(signIn({ email: "teste.dev", password: demoPassword }));
     expect(dev.user).toMatchObject({ id: "demo-developer", accountType: "developer" });
     expect(dev.user).not.toHaveProperty("username");
 
@@ -137,7 +137,7 @@ describe("demo accounts", () => {
     );
     expect(company.user).toMatchObject({ accountType: "company", company: "Empresa Teste" });
 
-    await expect(settle(signIn({ email: "test.dev", password: "1234" }))).rejects.toEqual(
+    await expect(settle(signIn({ email: "teste.dev", password: "1234" }))).rejects.toEqual(
       new AuthError("invalid-credentials"),
     );
   });

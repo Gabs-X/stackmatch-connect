@@ -44,7 +44,7 @@ export { expect } from "@playwright/test";
 export async function signInAs(page: Page, type: "developer" | "company") {
   await page.goto("/login");
   const form = page.getByRole("main");
-  await form.getByLabel("E-mail ou usuário").fill(type === "developer" ? "test.dev" : "teste.emp");
+  await form.getByLabel("E-mail ou usuário").fill(type === "developer" ? "teste.dev" : "teste.emp");
   await form.getByLabel("Senha", { exact: true }).fill("teste1234");
   await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(type === "developer" ? /\/create-profile$/ : /\/discover$/);

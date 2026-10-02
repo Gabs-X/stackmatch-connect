@@ -375,7 +375,7 @@ function slugify(value: string) {
 }
 
 /**
- * Companies that showed interest in the demo developer account (test.dev), so its "Interested
+ * Companies that showed interest in the demo developer account (teste.dev), so its "Interested
  * companies" page has something to show. Dates are relative to `now` to always look recent.
  */
 export function demoCompanyActivity(developerId: string, developerName: string, now = Date.now()) {
