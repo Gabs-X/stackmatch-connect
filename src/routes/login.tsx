@@ -145,36 +145,38 @@ function LoginPage() {
             {isSubmitting && <Loader2 className="animate-spin" />}
             {isSubmitting ? t.auth.loggingIn : t.auth.loginSubmit}
           </Button>
-          <div className="rounded-lg border border-dashed bg-muted/40 p-4 text-sm">
-            <p className="flex items-center gap-2 font-semibold">
-              <FlaskConical className="size-4 text-primary" aria-hidden="true" />
-              {t.auth.demoTitle}
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {demoAccounts.map((account) => {
-                const who =
-                  account.accountType === "developer" ? t.auth.demoDeveloper : t.auth.demoCompany;
-                return (
-                  <Button
-                    key={account.id}
-                    type="button"
-                    variant="outline"
-                    className="h-auto flex-col items-start gap-0.5 py-2 text-left"
-                    aria-label={t.auth.demoFill(who)}
-                    onClick={() => {
-                      setError(null);
-                      setValue("email", account.username, { shouldValidate: true });
-                      setValue("password", demoPassword, { shouldValidate: true });
-                    }}
-                  >
-                    <span className="text-xs text-muted-foreground">{who}</span>
-                    <span className="font-mono text-sm">{account.username}</span>
-                  </Button>
-                );
-              })}
+          {demoAccounts.length > 0 && (
+            <div className="rounded-lg border border-dashed bg-muted/40 p-4 text-sm">
+              <p className="flex items-center gap-2 font-semibold">
+                <FlaskConical className="size-4 text-primary" aria-hidden="true" />
+                {t.auth.demoTitle}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {demoAccounts.map((account) => {
+                  const who =
+                    account.accountType === "developer" ? t.auth.demoDeveloper : t.auth.demoCompany;
+                  return (
+                    <Button
+                      key={account.id}
+                      type="button"
+                      variant="outline"
+                      className="h-auto flex-col items-start gap-0.5 py-2 text-left"
+                      aria-label={t.auth.demoFill(who)}
+                      onClick={() => {
+                        setError(null);
+                        setValue("email", account.username, { shouldValidate: true });
+                        setValue("password", demoPassword, { shouldValidate: true });
+                      }}
+                    >
+                      <span className="text-xs text-muted-foreground">{who}</span>
+                      <span className="font-mono text-sm">{account.username}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{t.auth.demoHint(demoPassword)}</p>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{t.auth.demoHint(demoPassword)}</p>
-          </div>
+          )}
         </form>
       )}
     </AuthLayout>

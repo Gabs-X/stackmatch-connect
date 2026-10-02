@@ -12,6 +12,14 @@ test("a completed profile previews the card companies see in Discover", async ({
   await page.getByLabel("Senioridade").selectOption("Pleno");
   await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
   await page.getByLabel("Disponibilidade").selectOption("Disponível agora");
+  // Answers Discover filters on; only digits are kept.
+  await page.getByLabel("Anos de experiência").fill("4");
+  const rate = page.getByLabel("Valor por hora (R$)");
+  await rate.fill("R$ 95");
+  await expect(rate).toHaveValue("95");
+  const clt = page.getByRole("button", { name: "CLT", exact: true });
+  await clt.click();
+  await expect(clt).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   // Step 2: skills.
@@ -51,6 +59,7 @@ test("a completed profile previews the card companies see in Discover", async ({
   const card = page.getByRole("region", { name: "Seu card no Discover" }).getByRole("article");
   await expect(card).toContainText("Ana Souza");
   await expect(card).toContainText("Seu perfil");
+  await expect(card).toContainText("4 anos");
   await expect(card.getByRole("img")).toHaveAttribute(
     "src",
     "https://github.com/anasouza.png?size=768",

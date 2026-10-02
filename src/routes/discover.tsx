@@ -152,12 +152,13 @@ function DiscoverPage() {
       companySettings &&
       recordProfileInterest({
         developerId: current.id,
+        companyId: user.id,
         company: user.company,
         contactName: companySettings.contactName,
         email: companySettings.contactEmail,
       })
     )
-      entry.interestFrom = companySettings.contactEmail;
+      entry.interestFrom = user.id;
     updateHistory([...historyRef.current, entry]);
     if (action !== "pass") {
       addSaved(current.id);

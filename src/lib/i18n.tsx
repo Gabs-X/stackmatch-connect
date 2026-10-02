@@ -42,13 +42,13 @@ const pt = {
     hiring: "Contratação",
   },
   home: {
-    eyebrow: "Mais de 2.400 talentos verificados",
+    eyebrow: "Perfis com stack, projetos e disponibilidade",
     h1a: "Encontre o desenvolvedor certo para o seu ",
     h1b: "próximo projeto.",
     sub: "Descubra profissionais com as tecnologias, experiência e disponibilidade que sua empresa precisa.",
     find: "Encontrar talentos",
     createMine: "Criar meu perfil",
-    perks: ["Cadastro rápido", "Perfis verificados", "Resposta rápida"],
+    perks: ["Cadastro rápido", "Projetos no perfil", "Contato por e-mail"],
     match: "Match com sua vaga",
     availableNow: "Disponível agora",
     howKicker: "Como funciona",
@@ -237,6 +237,12 @@ const pt = {
     workMode: "Modelo de trabalho",
     viewInterested: "Ver empresas interessadas",
     availability: "Disponibilidade",
+    experienceYears: "Anos de experiência",
+    experienceYearsPh: "Ex: 5",
+    rate: "Valor por hora (R$)",
+    ratePh: "Ex: 120",
+    hiringTypes: "Tipos de contratação",
+    hiringTypesHint: "Usados pelos filtros que as empresas aplicam no Discover.",
     bio: "Bio profissional",
     bioPh: "Conte brevemente sobre sua trajetória e especialidades...",
     tech: "Tecnologias",
@@ -552,13 +558,13 @@ const en: Dict = {
     hiring: "Hiring type",
   },
   home: {
-    eyebrow: "2,400+ verified professionals",
+    eyebrow: "Profiles with stack, projects and availability",
     h1a: "Find the right developer for your ",
     h1b: "next project.",
     sub: "Discover professionals with the technologies, experience and availability your company needs.",
     find: "Find talent",
     createMine: "Create my profile",
-    perks: ["Quick sign-up", "Verified profiles", "Fast replies"],
+    perks: ["Quick sign-up", "Projects on every profile", "Contact by e-mail"],
     match: "Match with your role",
     availableNow: "Available now",
     howKicker: "How it works",
@@ -742,6 +748,12 @@ const en: Dict = {
     workMode: "Work model",
     viewInterested: "See interested companies",
     availability: "Availability",
+    experienceYears: "Years of experience",
+    experienceYearsPh: "E.g. 5",
+    rate: "Hourly rate (R$)",
+    ratePh: "E.g. 120",
+    hiringTypes: "Hiring types",
+    hiringTypesHint: "Used by the filters companies apply in Discover.",
     bio: "Professional bio",
     bioPh: "Briefly describe your background and specialties...",
     tech: "Technologies",
@@ -1110,8 +1122,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }).format(value);
   const tv = (value: string) => {
     if (lang === "pt") return value;
-    const years = value.match(/^(\d+) anos$/);
-    if (years) return `${years[1]} years`;
+    const years = value.match(/^(\d+) anos?$/);
+    if (years) return years[1] === "1" ? "1 year" : `${years[1]} years`;
     return dataEn[value] ?? value;
   };
   return (

@@ -161,10 +161,13 @@ function readUsers(): StoredUser[] {
 /**
  * Ready-made accounts for trying each side of the app without signing up. They live in code, not
  * in storage, so clearing site data never removes them. Sign in with the e-mail or the username.
+ *
+ * Public deployments should set VITE_DEMO_ACCOUNTS=false: the password is in the source code.
  */
 export const demoPassword = "teste1234";
 export const demoDeveloperId = "demo-developer";
-export const demoAccounts: (AuthUser & { username: string })[] = [
+export const demoAccountsEnabled = import.meta.env.VITE_DEMO_ACCOUNTS !== "false";
+const allDemoAccounts: (AuthUser & { username: string })[] = [
   {
     id: demoDeveloperId,
     username: "teste.dev",
@@ -187,6 +190,8 @@ export const demoAccounts: (AuthUser & { username: string })[] = [
     jobTitle: "Tech Recruiter",
   },
 ];
+
+export const demoAccounts = demoAccountsEnabled ? allDemoAccounts : [];
 
 const findDemoAccount = (login: string) =>
   demoAccounts.find((account) => account.email === login || account.username === login);

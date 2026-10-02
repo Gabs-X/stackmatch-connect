@@ -31,7 +31,7 @@ type AppState = {
   profileInterests: ProfileInterest[];
   /** Returns false when this company had already marked the profile. */
   recordProfileInterest: (input: ProfileInterestInput) => boolean;
-  removeProfileInterest: (developerId: string, email: string) => void;
+  removeProfileInterest: (developerId: string, companyId: string) => void;
 };
 // Keep a single context instance across hot reloads so provider/consumers never diverge.
 const globalStore = globalThis as unknown as {
@@ -164,7 +164,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   const recordProfileInterest = (input: ProfileInterestInput) => {
     const exists = (items: ProfileInterest[]) =>
-      items.some((item) => item.developerId === input.developerId && item.email === input.email);
+      items.some(
+        (item) => item.developerId === input.developerId && item.companyId === input.companyId,
+      );
     if (exists(profileInterests)) return false;
     writeProfileInterests((current) =>
       exists(current)
@@ -176,9 +178,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
     return true;
   };
-  const removeProfileInterest = (developerId: string, email: string) =>
+  const removeProfileInterest = (developerId: string, companyId: string) =>
     writeProfileInterests((current) =>
-      current.filter((item) => item.developerId !== developerId || item.email !== email),
+      current.filter((item) => item.developerId !== developerId || item.companyId !== companyId),
     );
   return (
     <AppContext.Provider

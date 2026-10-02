@@ -347,6 +347,9 @@ export const demoDeveloperProfile: LocalProfile = {
   linkedin: "https://www.linkedin.com/in/gabriel-anthony-7688bb224/",
   website: "https://gabrielanthony.vercel.app",
   skills: ["React", "Next.js", "Node.js", "NestJS", "C#", "PostgreSQL"],
+  experienceYears: 5,
+  rate: 120,
+  hiringTypes: ["Freelancer", "PJ"],
   // No example repository or demo addresses: this profile's links open for real.
   projects: [
     {
@@ -389,6 +392,7 @@ export function demoCompanyActivity(developerId: string, developerName: string, 
     interests: [
       {
         id: "demo-interest-nuvempay",
+        companyId: "demo-company-nuvempay",
         developerId,
         company: "NuvemPay",
         contactName: "Carla Mendes",
@@ -397,6 +401,7 @@ export function demoCompanyActivity(developerId: string, developerName: string, 
       },
       {
         id: "demo-interest-orbita",
+        companyId: "demo-company-orbita",
         developerId,
         company: "Órbita Labs",
         contactName: "Thiago Rocha",
@@ -407,6 +412,7 @@ export function demoCompanyActivity(developerId: string, developerName: string, 
     meetings: [
       {
         id: "demo-meeting-verdetech",
+        companyId: "demo-company-verdetech",
         developerId,
         developerName,
         date: proposedDay,

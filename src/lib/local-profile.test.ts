@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   emptyProfile,
+  experienceLabel,
   loadAccountProfile,
   loadPublishedProfiles,
   loadSavedProfile,
@@ -157,7 +158,7 @@ describe("localProfileToDeveloper", () => {
     expect(developer.name).toBe("Ana Souza");
   });
 
-  it("leaves fields the form doesn't collect empty", () => {
+  it("leaves fields the developer didn't answer empty", () => {
     expect(Number.isNaN(developer.rate)).toBe(true);
     expect(developer.hiringTypes).toEqual([]);
   });
@@ -178,5 +179,30 @@ describe("localProfileToDeveloper", () => {
       github: "",
       demo: "https://clinic.vercel.app/",
     });
+  });
+});
+
+describe("experience, rate and hiring types", () => {
+  it("leave older profiles unanswered instead of guessing", () => {
+    const { experienceYears: _years, rate: _rate, hiringTypes: _types, ...older } = emptyProfile;
+    store({ ...older, name: "Ana", role: "Dev" });
+    expect(loadSavedProfile("ana")).toMatchObject({
+      experienceYears: null,
+      rate: null,
+      hiringTypes: [],
+    });
+    const developer = localProfileToDeveloper(emptyProfile, "ana");
+    expect(developer.experience).toBe("");
+    expect(Number.isNaN(developer.rate)).toBe(true);
+  });
+
+  it("reach Discover in the catalog's format, so its filters apply", () => {
+    const developer = localProfileToDeveloper(
+      { ...emptyProfile, experienceYears: 4, rate: 95, hiringTypes: ["PJ", "CLT"] },
+      "ana",
+    );
+    expect(developer).toMatchObject({ experience: "4 anos", rate: 95, hiringTypes: ["PJ", "CLT"] });
+    expect(experienceLabel(1)).toBe("1 ano");
+    expect(experienceLabel(0)).toBe("0 anos");
   });
 });

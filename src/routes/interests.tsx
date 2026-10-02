@@ -111,7 +111,7 @@ function InterestsList({ user }: { user: AuthUser }) {
               const subject = encodeURIComponent(t.interests.replySubject(item.company));
               return (
                 <li
-                  key={item.email}
+                  key={item.companyId}
                   className="stagger-item rounded-xl border bg-card p-5 shadow-sm"
                   style={{ "--stagger-index": index } as CSSProperties}
                 >

@@ -23,7 +23,7 @@ export const defaultFilters: Filters = {
 
 /**
  * Options inside a group combine with OR; groups combine with AND. Profiles without a rate
- * (the one created in this browser) only pass while the rate filter is untouched.
+ * (developers who left it blank) only pass while the rate filter is untouched.
  */
 export function matchesFilters(developer: Developer, filters: Filters): boolean {
   const limit = filters.rate[0] ?? maxRate;

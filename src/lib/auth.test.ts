@@ -229,3 +229,24 @@ describe("CNPJ", () => {
     expect(formatCnpj("11a222333000181999")).toBe("11.222.333/0001-81");
   });
 });
+
+describe("with VITE_DEMO_ACCOUNTS=false", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("removes the test accounts and the demo developer's profile", async () => {
+    vi.stubEnv("VITE_DEMO_ACCOUNTS", "false");
+    vi.resetModules();
+    const auth = await import("./auth");
+    const profiles = await import("./local-profile");
+
+    expect(auth.demoAccounts).toEqual([]);
+    await expect(
+      settle(auth.signIn({ email: "teste.dev", password: auth.demoPassword })),
+    ).rejects.toEqual(new auth.AuthError("invalid-credentials"));
+    expect(profiles.loadAccountProfile(auth.demoDeveloperId)).toBeNull();
+    expect(profiles.loadPublishedProfiles()).toEqual([]);
+  });
+});

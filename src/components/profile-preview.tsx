@@ -1,5 +1,14 @@
 import { LayoutGroup, motion, MotionConfig, type Transition } from "framer-motion";
-import { Briefcase, ExternalLink, Github, Globe, Linkedin, MapPin } from "lucide-react";
+import {
+  Briefcase,
+  Clock3,
+  ExternalLink,
+  Github,
+  Globe,
+  Linkedin,
+  MapPin,
+  Wallet,
+} from "lucide-react";
 import { useId } from "react";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperPhoto } from "@/components/developer-photo";
@@ -82,7 +91,8 @@ function FullProfile({
   profile: LocalProfile;
   developer: PreviewDeveloper;
 }) {
-  const { t, tv } = useI18n();
+  const { t, tv, formatCurrency } = useI18n();
+  const hasRate = Number.isFinite(developer.rate);
   const links = [
     { label: "GitHub", value: profile.github, icon: Github },
     { label: "LinkedIn", value: profile.linkedin, icon: Linkedin },
@@ -136,7 +146,7 @@ function FullProfile({
           </div>
 
           <motion.div {...reveal(0.18)}>
-            {(developer.location || developer.workMode) && (
+            {(developer.location || developer.workMode || developer.experience || hasRate) && (
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                 {developer.location && (
                   <span className="inline-flex items-center gap-1.5">
@@ -148,6 +158,18 @@ function FullProfile({
                   <span className="inline-flex items-center gap-1.5">
                     <Briefcase className="size-4" />
                     {tv(developer.workMode)}
+                  </span>
+                )}
+                {developer.experience && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock3 className="size-4" />
+                    {tv(developer.experience)}
+                  </span>
+                )}
+                {hasRate && (
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+                    <Wallet className="size-4" />
+                    {formatCurrency(developer.rate)}/h
                   </span>
                 )}
               </div>

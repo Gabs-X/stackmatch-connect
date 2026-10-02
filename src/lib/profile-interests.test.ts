@@ -5,6 +5,7 @@ import { interestedCompanies, type ProfileInterest } from "./profile-interests";
 const interest = (fields: Partial<ProfileInterest>): ProfileInterest => ({
   id: "i",
   developerId: "demo-developer",
+  companyId: "acme-account",
   company: "Acme",
   contactName: "Bruno",
   email: "bruno@acme.com",
@@ -15,6 +16,7 @@ const interest = (fields: Partial<ProfileInterest>): ProfileInterest => ({
 const meeting = (fields: Partial<MeetingRequest>): MeetingRequest => ({
   id: "m",
   developerId: "demo-developer",
+  companyId: "acme-account",
   developerName: "Ana",
   date: "2026-10-05",
   time: "14:00",
@@ -32,7 +34,12 @@ describe("interestedCompanies", () => {
       "demo-developer",
       [
         interest({}),
-        interest({ email: "carla@nuvem.com", company: "Nuvem", at: "2026-10-03T08:00:00.000Z" }),
+        interest({
+          companyId: "nuvem-account",
+          email: "carla@nuvem.com",
+          company: "Nuvem",
+          at: "2026-10-03T08:00:00.000Z",
+        }),
         interest({ developerId: "marina-costa", email: "x@y.com" }),
       ],
       [meeting({}), meeting({ developerId: "marina-costa", email: "z@y.com" })],
@@ -50,5 +57,18 @@ describe("interestedCompanies", () => {
     );
     expect(acme?.meeting?.id).toBe("new");
     expect(acme?.at).toBe("2026-10-04T00:00:00.000Z");
+  });
+});
+
+describe("interestedCompanies by account", () => {
+  it("keeps one entry per company even after it changes its contact, showing the latest", () => {
+    const [acme, ...rest] = interestedCompanies(
+      "demo-developer",
+      [interest({})],
+      [meeting({ contactName: "Carla", email: "carla@acme.com" })],
+    );
+    expect(rest).toEqual([]);
+    expect(acme).toMatchObject({ companyId: "acme-account", contactName: "Carla" });
+    expect(acme?.email).toBe("carla@acme.com");
   });
 });

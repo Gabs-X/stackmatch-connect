@@ -45,7 +45,12 @@ import {
   type LocalProfile,
   type LocalProject,
 } from "@/lib/local-profile";
-import { availabilityOptions, seniorityOptions, workModeOptions } from "@/lib/developers";
+import {
+  availabilityOptions,
+  hiringOptions,
+  seniorityOptions,
+  workModeOptions,
+} from "@/lib/developers";
 
 export const Route = createFileRoute("/create-profile")({
   head: () => ({
@@ -291,6 +296,47 @@ function CreateProfile() {
                 options={availabilityOptions}
                 onChange={(value) => updateField("availability", value)}
               />
+              <Field
+                label={t.create.experienceYears}
+                placeholder={t.create.experienceYearsPh}
+                inputMode="numeric"
+                value={profile.experienceYears?.toString() ?? ""}
+                onChange={(value) => updateField("experienceYears", wholeNumber(value, 60))}
+              />
+              <Field
+                label={t.create.rate}
+                placeholder={t.create.ratePh}
+                inputMode="numeric"
+                value={profile.rate?.toString() ?? ""}
+                onChange={(value) => updateField("rate", wholeNumber(value, 10000))}
+              />
+              <fieldset className="sm:col-span-2">
+                <legend className="text-sm font-medium">{t.create.hiringTypes}</legend>
+                <p className="mt-1 text-xs text-muted-foreground">{t.create.hiringTypesHint}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {hiringOptions.map((option) => {
+                    const selected = profile.hiringTypes.includes(option);
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        aria-pressed={selected}
+                        className={selected ? "filter-chip filter-chip-active" : "filter-chip"}
+                        onClick={() =>
+                          updateField(
+                            "hiringTypes",
+                            selected
+                              ? profile.hiringTypes.filter((item) => item !== option)
+                              : [...profile.hiringTypes, option],
+                          )
+                        }
+                      >
+                        {tv(option)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
               <div className="sm:col-span-2">
                 <Label htmlFor={bioId}>{t.create.bio}</Label>
                 <Textarea
@@ -571,16 +617,24 @@ function SelectField({
     </div>
   );
 }
+/** Keeps only the digits typed, capped at `max`; empty means "not answered". */
+function wholeNumber(value: string, max: number) {
+  const digits = value.replace(/\D/g, "").slice(0, 6);
+  return digits ? Math.min(Number(digits), max) : null;
+}
+
 function Field({
   label,
   placeholder,
   value,
   onChange,
+  inputMode,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  inputMode?: "numeric";
 }) {
   const id = useId();
   return (
@@ -590,6 +644,7 @@ function Field({
         id={id}
         className="mt-2"
         placeholder={placeholder}
+        {...(inputMode ? { inputMode } : {})}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />

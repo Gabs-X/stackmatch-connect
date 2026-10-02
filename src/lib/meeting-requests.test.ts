@@ -14,6 +14,7 @@ const request = (overrides: Partial<MeetingRequest> = {}): MeetingRequest => ({
   id: "1",
   developerId: "marina-costa",
   developerName: "Marina Costa",
+  companyId: "acme-account",
   date: "2026-10-02",
   time: "09:00",
   company: "Acme",
@@ -47,15 +48,23 @@ describe("lastRequestTo", () => {
   it("returns the newest proposal from the same sender to the developer", () => {
     const older = request({ id: "a", sentAt: "2026-09-01T10:00:00.000Z" });
     const newer = request({ id: "b", sentAt: "2026-09-20T10:00:00.000Z" });
-    expect(lastRequestTo([newer, older], "marina-costa", "rh@acme.com")).toBe(newer);
+    expect(lastRequestTo([newer, older], "marina-costa", "acme-account")).toBe(newer);
+  });
+
+  it("still finds earlier proposals after the company changes its contact e-mail", () => {
+    const sent = request({ email: "rh@acme.com" });
+    expect(lastRequestTo([sent], "marina-costa", "acme-account")).toBe(sent);
+    expect(
+      lastRequestTo([{ ...sent, email: "novo@acme.com" }], "marina-costa", "acme-account"),
+    ).toBeDefined();
   });
 
   it("ignores other developers and other senders", () => {
     const requests = [
       request({ developerId: "rafael-lima" }),
-      request({ email: "outra@empresa.com" }),
+      request({ companyId: "other-account" }),
     ];
-    expect(lastRequestTo(requests, "marina-costa", "rh@acme.com")).toBeUndefined();
+    expect(lastRequestTo(requests, "marina-costa", "acme-account")).toBeUndefined();
   });
 });
 
@@ -74,6 +83,12 @@ describe("readMeetingRequests", () => {
     withStorage(JSON.stringify([request(), { id: 2 }, null, "x"]));
     expect(readMeetingRequests()).toEqual([request()]);
     expect(meetingRequestStorageKey).toBe("stackmatch-meeting-requests");
+  });
+
+  it("identifies proposals saved before account ids by their e-mail", () => {
+    const { companyId: _companyId, ...older } = request();
+    withStorage(JSON.stringify([older]));
+    expect(readMeetingRequests()).toEqual([request({ companyId: "rh@acme.com" })]);
   });
 
   it("ignores stored values that aren't a list", () => {

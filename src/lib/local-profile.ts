@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { demoDeveloperId } from "./auth";
+import { demoAccountsEnabled, demoDeveloperId } from "./auth";
 import {
   availabilityOptions,
   demoDeveloperProfile,
@@ -62,6 +62,10 @@ const profileSchema = z.object({
   linkedin: z.string(),
   website: z.string(),
   skills: z.array(z.string()),
+  // Added later; older profiles don't have them and leave the matching filters unanswered.
+  experienceYears: z.number().int().min(0).max(60).nullable().default(null),
+  rate: z.number().min(0).max(10000).nullable().default(null),
+  hiringTypes: z.array(z.string()).default([]),
   // Profiles saved before projects had details stored only each project's name.
   projects: z.array(z.union([projectSchema, z.string().transform((name) => newProject({ name }))])),
 });
@@ -80,6 +84,9 @@ export const emptyProfile: LocalProfile = {
   linkedin: "",
   website: "",
   skills: ["React", "TypeScript"],
+  experienceYears: null,
+  rate: null,
+  hiringTypes: [],
   projects: [],
 };
 
@@ -115,7 +122,8 @@ export function loadSavedProfile(accountId: string): LocalProfile | null {
 /** The account's profile: what it saved or, for the demo developer, its ready-made profile. */
 export function loadAccountProfile(accountId: string): LocalProfile | null {
   return (
-    loadSavedProfile(accountId) ?? (accountId === demoDeveloperId ? demoDeveloperProfile : null)
+    loadSavedProfile(accountId) ??
+    (demoAccountsEnabled && accountId === demoDeveloperId ? demoDeveloperProfile : null)
   );
 }
 
@@ -131,7 +139,10 @@ export function saveAccountProfile(accountId: string, profile: LocalProfile): Lo
 /** Every developer profile companies can find, newest accounts' edits included. */
 export function loadPublishedProfiles(): Developer[] {
   const profiles = readProfiles();
-  const owners = new Set([demoDeveloperId, ...Object.keys(profiles)]);
+  const owners = new Set([
+    ...(demoAccountsEnabled ? [demoDeveloperId] : []),
+    ...Object.keys(profiles),
+  ]);
   return [...owners].flatMap((accountId) => {
     const profile = loadAccountProfile(accountId);
     return profile ? [localProfileToDeveloper(profile, accountId)] : [];
@@ -192,8 +203,8 @@ export function readProjectImage(file: File): Promise<string> {
 const projectColors = ["project-blue", "project-green", "project-violet", "project-ink"];
 
 /**
- * Presents an account's profile as a catalog entry, identified by the account id. Fields the form
- * doesn't collect stay empty (rate is NaN), so filters on them exclude it instead of guessing.
+ * Presents an account's profile as a catalog entry, identified by the account id. Answers left
+ * blank stay empty (rate is NaN), so filters on them exclude it instead of guessing.
  */
 export function localProfileToDeveloper(profile: LocalProfile, accountId: string): Developer {
   return {
@@ -208,11 +219,11 @@ export function localProfileToDeveloper(profile: LocalProfile, accountId: string
     availability: profile.availability,
     bio: profile.bio.trim(),
     skills: profile.skills,
-    experience: "",
+    experience: experienceLabel(profile.experienceYears),
     // The GitHub avatar stands in for a photo; the form has no upload for one.
     image: githubAvatarUrl(profileLink(profile.github) ?? "") ?? "",
-    rate: Number.NaN,
-    hiringTypes: [],
+    rate: profile.rate ?? Number.NaN,
+    hiringTypes: profile.hiringTypes,
     // Addresses the developer typed themselves, so they open for real.
     links: {
       github: profileLink(profile.github) ?? "",
@@ -229,4 +240,10 @@ export function localProfileToDeveloper(profile: LocalProfile, accountId: string
       links: { github: profileLink(project.github) ?? "", demo: profileLink(project.demo) ?? "" },
     })),
   };
+}
+
+/** Same wording as the catalog ("5 anos"), which the interface translates. */
+export function experienceLabel(years: number | null) {
+  if (years === null) return "";
+  return years === 1 ? "1 ano" : `${years} anos`;
 }

@@ -54,6 +54,7 @@ export function ScheduleDialog({
   // Proposals are signed with the contact set in the company details; replies go to its e-mail.
   const sender = user
     ? {
+        id: user.id,
         company: user.company,
         name: settings?.contactName ?? user.name,
         email: settings?.contactEmail ?? user.email,
@@ -105,7 +106,7 @@ export function ScheduleDialog({
 
   const formattedDate = date ? format(date, t.schedule.dateFormat, { locale }) : "";
   const when = `${formattedDate}, ${t.schedule.at} ${time}`;
-  const previous = sender ? lastRequestTo(meetingRequests, developerId, sender.email) : undefined;
+  const previous = user ? lastRequestTo(meetingRequests, developerId, user.id) : undefined;
   const previousWhen = previous
     ? `${format(new Date(`${previous.date}T12:00:00`), t.schedule.dateFormat, { locale })}, ${t.schedule.at} ${previous.time}`
     : "";
@@ -118,6 +119,7 @@ export function ScheduleDialog({
       const request = await sendMeetingRequest({
         developerId,
         developerName,
+        companyId: sender.id,
         date: format(date, "yyyy-MM-dd"),
         time,
         company: sender.company,
