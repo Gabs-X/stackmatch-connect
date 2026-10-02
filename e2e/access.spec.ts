@@ -14,6 +14,9 @@ test("each account type only reaches its own areas", async ({ page }) => {
   const nav = page.getByRole("banner").getByRole("navigation");
   await expect(nav.getByRole("link", { name: "Empresas interessadas" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Talentos salvos" })).toBeHidden();
+  await expect(nav.getByRole("link", { name: "Discover" })).toBeHidden();
+  await page.goto("/discover");
+  await expect(page.getByRole("heading", { name: "Área para contas de empresa" })).toBeVisible();
   await page.goto("/saved");
   await expect(page.getByRole("heading", { name: "Área para contas de empresa" })).toBeVisible();
 
@@ -34,7 +37,7 @@ test("a developer sees the companies interested in their profile", async ({ page
   await signInAs(page, "developer");
   await page.getByRole("button", { name: "4 Links" }).click();
   await page.getByRole("button", { name: "Concluir perfil" }).click();
-  await expect(page.getByRole("heading", { name: "Dev Teste" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Dev Teste" })).toBeVisible();
   await page.getByRole("button", { name: "Menu da conta de Dev Teste" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 

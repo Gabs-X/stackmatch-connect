@@ -53,7 +53,7 @@ export const Route = createFileRoute("/discover")({
     ],
   }),
   component: () => (
-    <RequireAccount>
+    <RequireAccount type="company">
       <DiscoverPage />
     </RequireAccount>
   ),

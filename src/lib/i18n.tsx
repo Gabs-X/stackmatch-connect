@@ -153,6 +153,9 @@ const pt = {
   create: {
     steps: ["Informações pessoais", "Skills", "Projetos", "Links"],
     backEdit: "Voltar à edição",
+    cardPreviewTitle: "Seu card no Discover",
+    cardPreviewSub:
+      "É assim que as empresas veem seu perfil ao buscar talentos. Clicando no card, elas abrem o perfil completo abaixo.",
     yourName: "Seu nome",
     yourRole: "Seu cargo profissional",
     yourBio:
@@ -225,7 +228,7 @@ const pt = {
     seniority: "Senioridade",
     selectPh: "Selecione",
     workMode: "Modelo de trabalho",
-    viewInDiscover: "Ver no Discover",
+    viewInterested: "Ver empresas interessadas",
     availability: "Disponibilidade",
     bio: "Bio profissional",
     bioPh: "Conte brevemente sobre sua trajetória e especialidades...",
@@ -421,7 +424,6 @@ const pt = {
       open: (name: string) => `Menu da conta de ${name}`,
       myProfile: "Meu perfil",
       discover: "Discover",
-      viewInDiscover: "Ver no Discover",
       saved: "Talentos salvos",
       interests: "Empresas interessadas",
       signOut: "Sair",
@@ -604,6 +606,9 @@ const en: Dict = {
   create: {
     steps: ["Personal info", "Skills", "Projects", "Links"],
     backEdit: "Back to editing",
+    cardPreviewTitle: "Your card in Discover",
+    cardPreviewSub:
+      "This is how companies see your profile when they search for talent. Opening the card shows the full profile below.",
     yourName: "Your name",
     yourRole: "Your professional title",
     yourBio:
@@ -676,7 +681,7 @@ const en: Dict = {
     seniority: "Seniority",
     selectPh: "Select",
     workMode: "Work model",
-    viewInDiscover: "See it in Discover",
+    viewInterested: "See interested companies",
     availability: "Availability",
     bio: "Professional bio",
     bioPh: "Briefly describe your background and specialties...",
@@ -869,7 +874,6 @@ const en: Dict = {
       open: (name: string) => `Account menu for ${name}`,
       myProfile: "My profile",
       discover: "Discover",
-      viewInDiscover: "See me in Discover",
       saved: "Saved talent",
       interests: "Interested companies",
       signOut: "Sign out",

@@ -1,6 +1,6 @@
 import { expect, signInAs, test } from "./fixtures";
 
-test("a completed profile shows up first in Discover", async ({ page }) => {
+test("a completed profile previews the card companies see in Discover", async ({ page }) => {
   await signInAs(page, "developer");
 
   // Step 1: personal info.
@@ -37,14 +37,14 @@ test("a completed profile shows up first in Discover", async ({ page }) => {
   await page.getByLabel("GitHub").fill("github.com/anasouza");
   await page.getByRole("button", { name: "Concluir perfil" }).click();
 
-  await expect(page.getByRole("heading", { name: "Ana Souza" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Ana Souza" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Demo" })).toHaveAttribute(
     "href",
     "https://clinic-booking.vercel.app/",
   );
 
-  await page.getByRole("link", { name: "Ver no Discover" }).click();
-  const card = page.locator("main section article").first();
+  // Developers don't browse Discover, so the preview shows the card companies will see there.
+  const card = page.getByRole("region", { name: "Seu card no Discover" }).getByRole("article");
   await expect(card).toContainText("Ana Souza");
   await expect(card).toContainText("Seu perfil");
   await expect(card.getByRole("img")).toHaveAttribute(

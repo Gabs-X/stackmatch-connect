@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperPhoto } from "@/components/developer-photo";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
@@ -38,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   emptyProfile,
   loadLocalProfile,
+  localProfileToDeveloper,
   newProject,
   saveLocalProfile,
   profileLink,
@@ -88,6 +90,7 @@ function CreateProfile() {
   const [importOpen, setImportOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const bioId = useId();
+  const cardPreviewId = useId();
   const skillId = useId();
   useEffect(() => {
     const stored = loadLocalProfile();
@@ -196,8 +199,8 @@ function CreateProfile() {
           </Button>
           {completed && (
             <Button asChild>
-              <Link to="/discover">
-                {t.create.viewInDiscover}
+              <Link to="/interests">
+                {t.create.viewInterested}
                 <ChevronRight />
               </Link>
             </Button>
@@ -208,6 +211,25 @@ function CreateProfile() {
             {t.create.finishToast} {t.create.finishDesc}
           </p>
         )}
+        <section
+          aria-labelledby={cardPreviewId}
+          className="mt-7 grid gap-6 rounded-xl border bg-muted/40 p-5 sm:p-6 md:grid-cols-[minmax(0,22rem)_1fr] md:items-center"
+        >
+          {/* The same card companies swipe through in Discover. */}
+          <DeveloperCard
+            developer={{
+              ...localProfileToDeveloper(profile),
+              name: profile.name.trim() || t.create.yourName,
+              role: profile.role.trim() || t.create.yourRole,
+            }}
+          />
+          <div>
+            <h2 id={cardPreviewId} className="text-xl font-bold">
+              {t.create.cardPreviewTitle}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">{t.create.cardPreviewSub}</p>
+          </div>
+        </section>
         <div className="mt-7 overflow-hidden rounded-xl border bg-card shadow-card">
           <div className="h-40 bg-foreground" />
           <div className="px-6 pb-10 sm:px-10">

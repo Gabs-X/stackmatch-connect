@@ -80,12 +80,6 @@ export function AccountMenu() {
                 {t.auth.menu.interests}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/discover">
-                <Search />
-                {t.auth.menu.viewInDiscover}
-              </Link>
-            </DropdownMenuItem>
           </>
         ) : (
           <>
