@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
+import { expect, signInAs, test } from "./fixtures";
 
 test("switching to English translates the interface and is remembered", async ({ page }) => {
-  await page.goto("/discover");
+  await signInAs(page, "company");
   await page.getByRole("combobox", { name: "Idioma" }).selectOption("en");
 
   await expect(page.getByRole("heading", { name: "Find your next hire" })).toBeVisible();

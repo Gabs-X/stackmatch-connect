@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
+import { expect, signInAs, test } from "./fixtures";
 
 test("the Discover action bar stays usable above the assistant button", async ({ page }) => {
-  await page.goto("/discover");
+  await signInAs(page, "company");
   await expect(page.locator("main section article").first()).toContainText("Gabriel Botelho");
 
   const interested = page.getByRole("button", { name: "Interessado" });
@@ -17,7 +17,7 @@ test("the Discover action bar stays usable above the assistant button", async ({
 });
 
 test("filters open in a drawer on small screens", async ({ page }) => {
-  await page.goto("/discover");
+  await signInAs(page, "company");
   await page.getByRole("button", { name: "Filtros" }).click();
   const drawer = page.getByRole("dialog");
   await drawer.getByRole("button", { name: "Sênior", exact: true }).click();

@@ -7,11 +7,11 @@ import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 
 /**
- * Shows its children only to signed-in accounts of the given type. Visitors go to the login with a
- * redirect back here; the other account type sees a notice. The session lives in the browser, so
- * this runs on the client; a real backend must also enforce it on its own endpoints.
+ * Shows its children only to signed-in accounts, of the given type when one is set. Visitors go to
+ * the login with a redirect back here; the other account type sees a notice. The session lives in
+ * the browser, so this runs on the client; a real backend must also enforce it on its endpoints.
  */
-export function RequireAccount({ type, children }: { type: AccountType; children: ReactNode }) {
+export function RequireAccount({ type, children }: { type?: AccountType; children: ReactNode }) {
   const { t } = useI18n();
   const { user, ready } = useAuth();
   const router = useRouter();
@@ -34,7 +34,7 @@ export function RequireAccount({ type, children }: { type: AccountType; children
       </main>
     );
 
-  if (user.accountType !== type) {
+  if (type && user.accountType !== type) {
     const isCompanyArea = type === "company";
     return (
       <main className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl place-items-center px-4 py-10">

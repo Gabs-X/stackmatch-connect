@@ -14,6 +14,7 @@ import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPanel } from "@/components/filter-panel";
+import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { Developer } from "@/lib/developers";
@@ -51,7 +52,11 @@ export const Route = createFileRoute("/discover")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: DiscoverPage,
+  component: () => (
+    <RequireAccount>
+      <DiscoverPage />
+    </RequireAccount>
+  ),
 });
 
 function DiscoverPage() {

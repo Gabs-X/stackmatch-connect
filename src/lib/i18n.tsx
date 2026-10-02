@@ -17,7 +17,6 @@ const pt = {
   nav: {
     discover: "Discover",
     saved: "Talentos salvos",
-    create: "Criar perfil",
     openMenu: "Abrir menu",
     language: "Idioma",
     theme: "Tema",
@@ -49,7 +48,7 @@ const pt = {
     sub: "Descubra profissionais com as tecnologias, experiência e disponibilidade que sua empresa precisa.",
     find: "Encontrar talentos",
     createMine: "Criar meu perfil",
-    perks: ["Sem cadastro", "Perfis verificados", "Resposta rápida"],
+    perks: ["Cadastro rápido", "Perfis verificados", "Resposta rápida"],
     match: "Match com sua vaga",
     availableNow: "Disponível agora",
     howKicker: "Como funciona",
@@ -474,7 +473,6 @@ const en: Dict = {
   nav: {
     discover: "Discover",
     saved: "Saved talent",
-    create: "Create profile",
     openMenu: "Open menu",
     language: "Language",
     theme: "Theme",
@@ -506,7 +504,7 @@ const en: Dict = {
     sub: "Discover professionals with the technologies, experience and availability your company needs.",
     find: "Find talent",
     createMine: "Create my profile",
-    perks: ["No sign-up", "Verified profiles", "Fast replies"],
+    perks: ["Quick sign-up", "Verified profiles", "Fast replies"],
     match: "Match with your role",
     availableNow: "Available now",
     howKicker: "How it works",

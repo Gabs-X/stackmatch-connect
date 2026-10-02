@@ -8,7 +8,6 @@ import {
   Search,
   UserPlus,
   UserRound,
-  UserRoundPlus,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,21 +23,19 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
   const { saved } = useApp();
   const { user, ready } = useAuth();
-  // Each account type only sees its own areas; visitors see both entry points.
-  const links = [
-    { to: "/discover" as const, label: t.nav.discover, icon: Search },
-    ...(user?.accountType === "developer"
-      ? [
-          { to: "/create-profile" as const, label: t.nav.myProfile, icon: UserRound },
-          { to: "/interests" as const, label: t.nav.interests, icon: Heart },
-        ]
-      : user?.accountType === "company"
-        ? [{ to: "/saved" as const, label: t.nav.saved, icon: Bookmark }]
-        : [
-            { to: "/saved" as const, label: t.nav.saved, icon: Bookmark },
-            { to: "/create-profile" as const, label: t.nav.create, icon: UserRoundPlus },
-          ]),
-  ];
+  // The app areas need an account, so visitors only get the sign-in buttons; each account type
+  // sees just its own areas.
+  const links = !user
+    ? []
+    : [
+        { to: "/discover" as const, label: t.nav.discover, icon: Search },
+        ...(user.accountType === "developer"
+          ? [
+              { to: "/create-profile" as const, label: t.nav.myProfile, icon: UserRound },
+              { to: "/interests" as const, label: t.nav.interests, icon: Heart },
+            ]
+          : [{ to: "/saved" as const, label: t.nav.saved, icon: Bookmark }]),
+      ];
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">

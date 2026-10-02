@@ -58,3 +58,13 @@ test("a developer sees the companies interested in their profile", async ({ page
   await expect(list.filter({ hasText: "VerdeTech" })).toContainText("Propôs uma conversa");
   await expect(list).toHaveCount(4);
 });
+
+test("visitors see no app areas until they sign in", async ({ page }) => {
+  await page.goto("/");
+  const banner = page.getByRole("banner");
+  for (const name of ["Discover", "Talentos salvos", "Criar perfil"])
+    await expect(banner.getByRole("link", { name })).toBeHidden();
+
+  await page.goto("/discover");
+  await expect(page).toHaveURL(/\/login\?redirect=%2Fdiscover$/);
+});

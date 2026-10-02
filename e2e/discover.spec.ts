@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, signInAs, test } from "./fixtures";
 
 const card = (page: Page) => page.locator("main section article").first();
 const counter = (page: Page) => page.getByText(/^\d+ de \d+ perf(il|is)$/);
@@ -12,15 +12,18 @@ const filterChip = (page: Page, label: string) =>
   page.locator("aside").first().getByRole("button", { name: label, exact: true });
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/discover");
+  await signInAs(page, "company");
   await expect(card(page)).toContainText("Gabriel Botelho");
 });
 
-test("shows a loading skeleton, then the first profile", async ({ page, request }) => {
-  // The skeleton lasts ~450 ms in the browser, too short to catch reliably; the server-rendered
-  // HTML always carries the loading state, so assert it there.
+test("checks the account before showing any profile, then the first one", async ({
+  page,
+  request,
+}) => {
+  // The session lives in the browser, so the server-rendered page only shows the access check.
   const html = await (await request.get("/discover")).text();
-  expect(html).toContain('aria-busy="true"');
+  expect(html).toContain("Verificando seu acesso...");
+  expect(html).not.toContain("Gabriel Botelho");
 
   await page.goto("/discover");
   await expect(counter(page)).toHaveText("1 de 8 perfis");
