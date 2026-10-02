@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
+import { expect, signInAs, test } from "./fixtures";
 
 test("a completed profile shows up first in Discover", async ({ page }) => {
-  await page.goto("/create-profile");
+  await signInAs(page, "developer");
 
   // Step 1: personal info.
   await page.getByLabel("Nome completo").fill("Ana Souza");
@@ -54,7 +54,7 @@ test("a completed profile shows up first in Discover", async ({ page }) => {
 });
 
 test("removing a project can be undone", async ({ page }) => {
-  await page.goto("/create-profile");
+  await signInAs(page, "developer");
   await page.getByRole("button", { name: "Projetos" }).click();
   await page.getByRole("button", { name: "Simular importação do GitHub" }).click();
   await page

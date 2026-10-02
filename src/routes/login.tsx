@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, FlaskConical, Loader2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -8,7 +8,15 @@ import { AuthLayout, FieldError, PasswordInput } from "@/components/auth-layout"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AuthError, homeFor, safeRedirect, signInSchema, type SignInInput } from "@/lib/auth";
+import {
+  AuthError,
+  demoAccounts,
+  demoPassword,
+  homeFor,
+  safeRedirect,
+  signInSchema,
+  type SignInInput,
+} from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 
@@ -36,6 +44,7 @@ function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
@@ -94,13 +103,16 @@ function LoginPage() {
             </p>
           )}
           <div>
-            <Label htmlFor={ids.email}>{t.auth.email}</Label>
+            <Label htmlFor={ids.email}>{t.auth.loginId}</Label>
             <Input
               id={ids.email}
-              type="email"
-              autoComplete="email"
+              type="text"
+              inputMode="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              autoComplete="username"
               className="mt-2"
-              placeholder={t.auth.emailPh}
+              placeholder={t.auth.loginIdPh}
               aria-invalid={Boolean(errors.email)}
               aria-describedby={errors.email ? `${ids.email}-error` : undefined}
               {...register("email")}
@@ -133,6 +145,36 @@ function LoginPage() {
             {isSubmitting && <Loader2 className="animate-spin" />}
             {isSubmitting ? t.auth.loggingIn : t.auth.loginSubmit}
           </Button>
+          <div className="rounded-lg border border-dashed bg-muted/40 p-4 text-sm">
+            <p className="flex items-center gap-2 font-semibold">
+              <FlaskConical className="size-4 text-primary" aria-hidden="true" />
+              {t.auth.demoTitle}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {demoAccounts.map((account) => {
+                const who =
+                  account.accountType === "developer" ? t.auth.demoDeveloper : t.auth.demoCompany;
+                return (
+                  <Button
+                    key={account.id}
+                    type="button"
+                    variant="outline"
+                    className="h-auto flex-col items-start gap-0.5 py-2 text-left"
+                    aria-label={t.auth.demoFill(who)}
+                    onClick={() => {
+                      setError(null);
+                      setValue("email", account.username, { shouldValidate: true });
+                      setValue("password", demoPassword, { shouldValidate: true });
+                    }}
+                  >
+                    <span className="text-xs text-muted-foreground">{who}</span>
+                    <span className="font-mono text-sm">{account.username}</span>
+                  </Button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{t.auth.demoHint(demoPassword)}</p>
+          </div>
         </form>
       )}
     </AuthLayout>

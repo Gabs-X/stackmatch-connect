@@ -39,3 +39,13 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
 });
 
 export { expect } from "@playwright/test";
+
+/** Signs in with a built-in test account through the login form and waits for its home page. */
+export async function signInAs(page: Page, type: "developer" | "company") {
+  await page.goto("/login");
+  const form = page.getByRole("main");
+  await form.getByLabel("E-mail ou usuário").fill(type === "developer" ? "test.dev" : "teste.emp");
+  await form.getByLabel("Senha", { exact: true }).fill("teste1234");
+  await form.getByRole("button", { name: "Entrar", exact: true }).click();
+  await page.waitForURL(type === "developer" ? /\/create-profile$/ : /\/discover$/);
+}

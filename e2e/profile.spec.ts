@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, signInAs, test } from "./fixtures";
 
 test("verified profile links open the owner's real pages in a new tab", async ({ page }) => {
   await page.goto("/developer/gabriel-botelho");
@@ -48,6 +48,7 @@ test("fictional profile links explain the example address instead of navigating"
 });
 
 test("saving from the profile adds it to the shortlist", async ({ page }) => {
+  await signInAs(page, "company");
   await page.goto("/developer/marina-costa");
   await page.getByRole("button", { name: "Salvar" }).click();
   await page

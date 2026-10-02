@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bookmark, LogOut, Search, UserRound } from "lucide-react";
+import { Bookmark, Heart, LogOut, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +72,12 @@ export function AccountMenu() {
               <Link to="/create-profile">
                 <UserRound />
                 {t.auth.menu.myProfile}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/interests">
+                <Heart />
+                {t.auth.menu.interests}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

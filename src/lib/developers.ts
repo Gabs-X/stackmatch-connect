@@ -373,3 +373,47 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+/**
+ * Companies that showed interest in the demo developer account (test.dev), so its "Interested
+ * companies" page has something to show. Dates are relative to `now` to always look recent.
+ */
+export function demoCompanyActivity(developerId: string, developerName: string, now = Date.now()) {
+  const hoursAgo = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
+  const proposedDay = new Date(now + 3 * 86_400_000).toISOString().slice(0, 10);
+  return {
+    interests: [
+      {
+        id: "demo-interest-nuvempay",
+        developerId,
+        company: "NuvemPay",
+        contactName: "Carla Mendes",
+        email: "carla.mendes@nuvempay.example",
+        at: hoursAgo(5),
+      },
+      {
+        id: "demo-interest-orbita",
+        developerId,
+        company: "Órbita Labs",
+        contactName: "Thiago Rocha",
+        email: "thiago@orbitalabs.example",
+        at: hoursAgo(30),
+      },
+    ],
+    meetings: [
+      {
+        id: "demo-meeting-verdetech",
+        developerId,
+        developerName,
+        date: proposedDay,
+        time: "14:00",
+        company: "VerdeTech",
+        contactName: "Paula Nogueira",
+        email: "paula@verdetech.example",
+        message:
+          "Olá! Gostamos muito dos seus projetos e queremos conversar sobre uma vaga de Full Stack no nosso time de produto.",
+        sentAt: hoursAgo(2),
+      },
+    ],
+  };
+}

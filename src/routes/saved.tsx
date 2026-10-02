@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { Bookmark, RotateCcw, Trash2 } from "lucide-react";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
+import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/app-context";
 import { useDevelopers } from "@/lib/use-developers";
@@ -18,7 +19,11 @@ export const Route = createFileRoute("/saved")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: SavedPage,
+  component: () => (
+    <RequireAccount type="company">
+      <SavedPage />
+    </RequireAccount>
+  ),
 });
 function SavedPage() {
   const { t } = useI18n();

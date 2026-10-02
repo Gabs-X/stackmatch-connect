@@ -40,7 +40,8 @@ export const passwordRules = {
 };
 
 export const signInSchema = z.object({
-  email,
+  // An e-mail, or a demo account's username ("test.dev").
+  email: z.string().trim().min(1, "required"),
   password: z.string().min(1, "required"),
 });
 export type SignInInput = z.infer<typeof signInSchema>;
@@ -115,6 +116,35 @@ function readUsers(): StoredUser[] {
   }
 }
 
+/**
+ * Ready-made accounts for trying each side of the app without signing up. They live in code, not
+ * in storage, so clearing site data never removes them. Sign in with the e-mail or the username.
+ */
+export const demoPassword = "teste1234";
+export const demoAccounts: (AuthUser & { username: string })[] = [
+  {
+    id: "demo-developer",
+    username: "test.dev",
+    name: "Dev Teste",
+    email: "test.dev@stackmatch.app",
+    accountType: "developer",
+    company: "",
+    jobTitle: "Desenvolvedor Full Stack",
+  },
+  {
+    id: "demo-company",
+    username: "teste.emp",
+    name: "Recrutadora Teste",
+    email: "teste.emp@stackmatch.app",
+    accountType: "company",
+    company: "Empresa Teste",
+    jobTitle: "Tech Recruiter",
+  },
+];
+
+const findDemoAccount = (login: string) =>
+  demoAccounts.find((account) => account.email === login || account.username === login);
+
 const toSession = ({ passwordHash: _hash, ...user }: StoredUser): AuthSession => ({
   user,
   token: createId(),
@@ -124,7 +154,8 @@ export async function signUp(input: SignUpInput): Promise<AuthSession> {
   await delay();
   const users = readUsers();
   const address = normalizeEmail(input.email);
-  if (users.some((user) => user.email === address)) throw new AuthError("email-taken");
+  if (findDemoAccount(address) || users.some((user) => user.email === address))
+    throw new AuthError("email-taken");
   const user: StoredUser = {
     id: createId(),
     name: input.name.trim(),
@@ -141,6 +172,12 @@ export async function signUp(input: SignUpInput): Promise<AuthSession> {
 export async function signIn(input: SignInInput): Promise<AuthSession> {
   await delay();
   const address = normalizeEmail(input.email);
+  const demo = findDemoAccount(address);
+  if (demo) {
+    if (input.password !== demoPassword) throw new AuthError("invalid-credentials");
+    const { username: _username, ...user } = demo;
+    return { user, token: createId() };
+  }
   const user = readUsers().find((item) => item.email === address);
   // Same error for unknown e-mail and wrong password, so the form doesn't reveal accounts.
   if (!user || user.passwordHash !== (await hashPassword(address, input.password)))

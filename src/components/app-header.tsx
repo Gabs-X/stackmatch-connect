@@ -2,10 +2,12 @@ import { Link } from "@tanstack/react-router";
 import {
   Bookmark,
   BriefcaseBusiness,
+  Heart,
   LogIn,
   Menu,
   Search,
   UserPlus,
+  UserRound,
   UserRoundPlus,
   X,
 } from "lucide-react";
@@ -19,14 +21,24 @@ import { useI18n, type Lang } from "@/lib/i18n";
 
 export function AppHeader() {
   const { t, lang, setLang } = useI18n();
-  const links = [
-    { to: "/discover" as const, label: t.nav.discover, icon: Search },
-    { to: "/saved" as const, label: t.nav.saved, icon: Bookmark },
-    { to: "/create-profile" as const, label: t.nav.create, icon: UserRoundPlus },
-  ];
   const [open, setOpen] = useState(false);
   const { saved } = useApp();
   const { user, ready } = useAuth();
+  // Each account type only sees its own areas; visitors see both entry points.
+  const links = [
+    { to: "/discover" as const, label: t.nav.discover, icon: Search },
+    ...(user?.accountType === "developer"
+      ? [
+          { to: "/create-profile" as const, label: t.nav.myProfile, icon: UserRound },
+          { to: "/interests" as const, label: t.nav.interests, icon: Heart },
+        ]
+      : user?.accountType === "company"
+        ? [{ to: "/saved" as const, label: t.nav.saved, icon: Bookmark }]
+        : [
+            { to: "/saved" as const, label: t.nav.saved, icon: Bookmark },
+            { to: "/create-profile" as const, label: t.nav.create, icon: UserRoundPlus },
+          ]),
+  ];
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">

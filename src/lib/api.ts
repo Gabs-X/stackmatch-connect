@@ -1,10 +1,11 @@
 import { queryOptions } from "@tanstack/react-query";
-import { developers, type Developer } from "./developers";
+import { demoCompanyActivity, developers, type Developer } from "./developers";
 import {
   isProposedTimeValid,
   type MeetingRequest,
   type MeetingRequestInput,
 } from "./meeting-requests";
+import type { ProfileInterest } from "./profile-interests";
 
 /**
  * Simulated network latency for the mocked API, so loading states behave like a real backend.
@@ -48,3 +49,25 @@ export async function sendMeetingRequest(input: MeetingRequestInput): Promise<Me
     sentAt: new Date().toISOString(),
   };
 }
+
+/**
+ * Stand-in for `GET /me/interested-companies`: interest marks and meeting proposals other
+ * companies sent to the signed-in developer. Only the demo developer account has mock activity;
+ * what companies do in this browser is merged in by the page from shared client state.
+ */
+export async function fetchCompanyActivity(
+  accountId: string,
+  developerId: string,
+  developerName: string,
+): Promise<{ interests: ProfileInterest[]; meetings: MeetingRequest[] }> {
+  await delay(MOCK_LATENCY_MS);
+  return accountId === "demo-developer"
+    ? demoCompanyActivity(developerId, developerName)
+    : { interests: [], meetings: [] };
+}
+
+export const companyActivityQuery = (accountId: string, developerId: string, name: string) =>
+  queryOptions({
+    queryKey: ["company-activity", accountId, developerId],
+    queryFn: () => fetchCompanyActivity(accountId, developerId, name),
+  });

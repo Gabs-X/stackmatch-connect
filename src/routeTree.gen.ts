@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CreateProfileRouteImport } from './routes/create-profile'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as InterestsRouteImport } from './routes/interests'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
@@ -36,6 +37,11 @@ const DiscoverRoute = DiscoverRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterestsRoute = InterestsRouteImport.update({
+  id: '/interests',
+  path: '/interests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/interests': typeof InterestsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/interests': typeof InterestsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/interests': typeof InterestsRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/create-profile'
     | '/discover'
     | '/forgot-password'
+    | '/interests'
     | '/login'
     | '/register'
     | '/saved'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/create-profile'
     | '/discover'
     | '/forgot-password'
+    | '/interests'
     | '/login'
     | '/register'
     | '/saved'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/create-profile'
     | '/discover'
     | '/forgot-password'
+    | '/interests'
     | '/login'
     | '/register'
     | '/saved'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   CreateProfileRoute: typeof CreateProfileRoute
   DiscoverRoute: typeof DiscoverRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InterestsRoute: typeof InterestsRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interests': {
+      id: '/interests'
+      path: '/interests'
+      fullPath: '/interests'
+      preLoaderRoute: typeof InterestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateProfileRoute: CreateProfileRoute,
   DiscoverRoute: DiscoverRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InterestsRoute: InterestsRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,

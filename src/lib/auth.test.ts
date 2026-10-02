@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AuthError,
+  demoAccounts,
+  demoPassword,
   hashPassword,
   homeFor,
   loadSession,
@@ -33,6 +35,8 @@ afterEach(() => {
 
 /** Runs a mock API call to completion, skipping its simulated latency. */
 const settle = async <T>(promise: Promise<T>) => {
+  // Mark a rejection as handled now; the caller still receives it from the returned promise.
+  promise.catch(() => {});
   await vi.runAllTimersAsync();
   return promise;
 };
@@ -119,6 +123,30 @@ describe("signUp and signIn", () => {
       signUp({ ...developer, accountType: "company", company: " Acme ", jobTitle: "" }),
     );
     expect(session.user.company).toBe("Acme");
+  });
+});
+
+describe("demo accounts", () => {
+  it("sign in by username or e-mail with the shared password", async () => {
+    const dev = await settle(signIn({ email: "test.dev", password: demoPassword }));
+    expect(dev.user).toMatchObject({ id: "demo-developer", accountType: "developer" });
+    expect(dev.user).not.toHaveProperty("username");
+
+    const company = await settle(
+      signIn({ email: " TESTE.EMP@stackmatch.app", password: demoPassword }),
+    );
+    expect(company.user).toMatchObject({ accountType: "company", company: "Empresa Teste" });
+
+    await expect(settle(signIn({ email: "test.dev", password: "1234" }))).rejects.toEqual(
+      new AuthError("invalid-credentials"),
+    );
+  });
+
+  it("use a password the sign-up rules would accept, and their e-mails can't be taken", async () => {
+    expect(signUpSchema.safeParse({ ...developer, password: demoPassword }).success).toBe(true);
+    await expect(
+      settle(signUp({ ...developer, email: demoAccounts[0]?.email ?? "" })),
+    ).rejects.toEqual(new AuthError("email-taken"));
   });
 });
 

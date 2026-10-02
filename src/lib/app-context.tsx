@@ -6,6 +6,12 @@ import {
   meetingRequestStorageKey,
   readMeetingRequests,
 } from "./meeting-requests";
+import {
+  type ProfileInterest,
+  type ProfileInterestInput,
+  profileInterestStorageKey,
+  readProfileInterests,
+} from "./profile-interests";
 export type { MeetingRequest } from "./meeting-requests";
 
 type AppState = {
@@ -21,6 +27,11 @@ type AppState = {
   meetingRequests: MeetingRequest[];
   toggleSaved: (id: string) => void;
   recordMeetingRequest: (request: MeetingRequest) => void;
+  /** Which company marked which profile as interesting, so developers see who it was. */
+  profileInterests: ProfileInterest[];
+  /** Returns false when this company had already marked the profile. */
+  recordProfileInterest: (input: ProfileInterestInput) => boolean;
+  removeProfileInterest: (developerId: string, email: string) => void;
 };
 // Keep a single context instance across hot reloads so provider/consumers never diverge.
 const globalStore = globalThis as unknown as {
@@ -32,6 +43,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
+  const [profileInterests, setProfileInterests] = useState<ProfileInterest[]>([]);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     try {
@@ -55,11 +67,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       /* Keep the local list empty if storage cannot be read. */
     }
+    try {
+      setProfileInterests(readProfileInterests());
+    } catch {
+      /* Keep the local list empty if storage cannot be read. */
+    }
     setHydrated(true);
     const sync = (event: StorageEvent) => {
-      if (event.key !== meetingRequestStorageKey && event.key !== null) return;
       try {
-        setMeetingRequests(readMeetingRequests());
+        if (event.key === meetingRequestStorageKey || event.key === null)
+          setMeetingRequests(readMeetingRequests());
+        if (event.key === profileInterestStorageKey || event.key === null)
+          setProfileInterests(readProfileInterests());
       } catch {
         /* Preserve current state. */
       }
@@ -132,6 +151,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setMeetingRequests(next);
   };
+  const writeProfileInterests = (update: (current: ProfileInterest[]) => ProfileInterest[]) => {
+    let next = update(profileInterests);
+    try {
+      // Re-read so marks made in another tab aren't overwritten.
+      next = update(readProfileInterests());
+      window.localStorage.setItem(profileInterestStorageKey, JSON.stringify(next));
+    } catch {
+      /* Keep session state. */
+    }
+    setProfileInterests(next);
+  };
+  const recordProfileInterest = (input: ProfileInterestInput) => {
+    const exists = (items: ProfileInterest[]) =>
+      items.some((item) => item.developerId === input.developerId && item.email === input.email);
+    if (exists(profileInterests)) return false;
+    writeProfileInterests((current) =>
+      exists(current)
+        ? current
+        : [
+            ...current,
+            { ...input, id: `${input.developerId}-${Date.now()}`, at: new Date().toISOString() },
+          ],
+    );
+    return true;
+  };
+  const removeProfileInterest = (developerId: string, email: string) =>
+    writeProfileInterests((current) =>
+      current.filter((item) => item.developerId !== developerId || item.email !== email),
+    );
   return (
     <AppContext.Provider
       value={{
@@ -145,6 +193,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         meetingRequests,
         toggleSaved,
         recordMeetingRequest,
+        profileInterests,
+        recordProfileInterest,
+        removeProfileInterest,
       }}
     >
       {children}

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { DeveloperPhoto } from "@/components/developer-photo";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
+import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -67,7 +68,11 @@ export const Route = createFileRoute("/create-profile")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: CreateProfile,
+  component: () => (
+    <RequireAccount type="developer">
+      <CreateProfile />
+    </RequireAccount>
+  ),
 });
 function CreateProfile() {
   const { t, tv } = useI18n();
