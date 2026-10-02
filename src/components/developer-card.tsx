@@ -1,5 +1,6 @@
 import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { ArrowUpRight, Briefcase, Clock3, MapPin } from "lucide-react";
 import type { Developer } from "@/lib/developers";
 import { DeveloperPhoto } from "@/components/developer-photo";
@@ -9,16 +10,31 @@ export function DeveloperCard({
   developer,
   compact = false,
   showProfile = compact,
+  layoutId,
 }: {
   developer: Developer;
   compact?: boolean;
   showProfile?: boolean;
+  /**
+   * Shares the frame and photo with another element using the same id (`<id>`, `<id>-photo`),
+   * so switching between them morphs one into the other; the text fades in once it settles.
+   */
+  layoutId?: string;
 }) {
   const { t, tv, formatCurrency } = useI18n();
+  // Spread, not passed as undefined: motion props reject an explicit undefined layoutId.
+  const shared = (part?: string) =>
+    layoutId ? { layoutId: part ? `${layoutId}-${part}` : layoutId } : {};
 
   return (
-    <article className={compact ? "talent-card" : "developer-card"}>
-      <div
+    <motion.article
+      {...shared()}
+      // Set inline so the corner radius stays round while the shared layout animation scales it.
+      {...(layoutId ? { style: { borderRadius: 12.8 } } : {})}
+      className={compact ? "talent-card" : "developer-card"}
+    >
+      <motion.div
+        {...shared("photo")}
         className={
           compact
             ? "relative h-52 overflow-hidden bg-muted"
@@ -41,8 +57,17 @@ export function DeveloperCard({
           </span>
         )}
         {developer.isLocal && <span className="own-profile-badge">{t.card.yourProfile}</span>}
-      </div>
-      <div className={compact ? "p-5" : showProfile ? "p-4 sm:p-6" : "p-6"}>
+      </motion.div>
+      <motion.div
+        {...(layoutId
+          ? {
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              transition: { duration: 0.3, delay: 0.25 },
+            }
+          : {})}
+        className={compact ? "p-5" : showProfile ? "p-4 sm:p-6" : "p-6"}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 break-words">
             <h2 className={compact ? "text-lg font-bold" : "text-2xl font-bold"}>
@@ -125,7 +150,7 @@ export function DeveloperCard({
             )}
           </Button>
         )}
-      </div>
-    </article>
+      </motion.div>
+    </motion.article>
   );
 }
