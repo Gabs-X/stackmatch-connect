@@ -18,12 +18,13 @@ import { localProfileToDeveloper, profileLink, type LocalProfile } from "@/lib/l
 
 /** Frame and photo shared by the full profile and the Discover card, so one morphs into the other. */
 const layoutId = "own-profile";
-const morph: Transition = { type: "spring", stiffness: 210, damping: 28, mass: 0.9 };
-/** Content that only exists in one view arrives after the frame has mostly settled. */
+// No bounce: a long, decelerating curve reads as one smooth resize instead of a springy jump.
+const morph: Transition = { duration: 0.6, ease: [0.32, 0.72, 0, 1] };
+/** Content that only exists in one view fades in as the frame settles. */
 const reveal = (delay: number) => ({
-  initial: { opacity: 0, y: 14 },
+  initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] as const },
+  transition: { duration: 0.45, delay: 0.3 + delay, ease: [0.16, 1, 0.3, 1] as const },
 });
 
 /**
@@ -110,19 +111,22 @@ function FullProfile({
           layoutId={`${layoutId}-photo`}
           className="relative h-72 overflow-hidden bg-muted sm:h-80 md:h-auto md:min-h-[26rem]"
         >
-          <DeveloperPhoto
-            name={developer.name}
-            image={developer.image}
-            alt={`${t.card.photoOf} ${developer.name}`}
-            className="absolute inset-0 h-full w-full"
-          />
-          {developer.availability && (
-            <span className="availability-badge">
-              <span className="status-dot" />
-              {tv(developer.availability)}
-            </span>
-          )}
-          <span className="own-profile-badge">{t.card.yourProfile}</span>
+          {/* Keeps its proportions while the frame resizes, so the photo isn't stretched. */}
+          <motion.div layout="preserve-aspect" className="absolute inset-0">
+            <DeveloperPhoto
+              name={developer.name}
+              image={developer.image}
+              alt={`${t.card.photoOf} ${developer.name}`}
+              className="h-full w-full"
+            />
+            {developer.availability && (
+              <span className="availability-badge">
+                <span className="status-dot" />
+                {tv(developer.availability)}
+              </span>
+            )}
+            <span className="own-profile-badge">{t.card.yourProfile}</span>
+          </motion.div>
         </motion.div>
 
         <div className="min-w-0 p-6 sm:p-8 lg:p-10">

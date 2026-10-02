@@ -138,6 +138,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { resolved } = useTheme();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // The page on screen: while the next route loads, the location already changed but the old page
+  // still renders. Keying on this replays the entrance once the new page is ready, instead of
+  // re-animating the old one.
+  const shownPathname = useRouterState({
+    select: (state) => state.resolvedLocation?.pathname ?? state.location.pathname,
+  });
   // Discover pins its action bar to the bottom on phones; lift floating UI above it there.
   const raised = pathname === "/discover";
   // Marks when client handlers are attached; e2e tests wait for it before interacting.
@@ -150,8 +156,8 @@ function RootComponent() {
       <AppProvider>
         <AuthProvider>
           <AppHeader />
-          {/* Keyed by path so each navigation replays the entrance animation. */}
-          <div key={pathname} className="page-enter">
+          {/* Keyed by the shown page so each navigation replays the entrance animation. */}
+          <div key={shownPathname} className="page-enter">
             <Outlet />
           </div>
           <Toaster

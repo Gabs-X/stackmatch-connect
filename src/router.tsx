@@ -9,6 +9,8 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    // Load a page's code when the pointer rests on or focuses its link, so the click shows it at once.
+    defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
   });
 

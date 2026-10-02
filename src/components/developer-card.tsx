@@ -47,27 +47,33 @@ export function DeveloperCard({
               : "relative h-64 overflow-hidden bg-muted sm:h-72"
         }
       >
-        <DeveloperPhoto
-          name={developer.name}
-          image={developer.image}
-          alt={`${t.card.photoOf} ${developer.name}`}
-          className="h-full w-full"
-          lazy
-        />
-        {developer.availability && (
-          <span className="availability-badge">
-            <span className="status-dot" />
-            {tv(developer.availability)}
-          </span>
-        )}
-        {own && <span className="own-profile-badge">{t.card.yourProfile}</span>}
+        {/* While morphing, keeps its proportions so the photo isn't stretched. */}
+        <motion.div
+          {...(layoutId ? { layout: "preserve-aspect" as const } : {})}
+          className="absolute inset-0"
+        >
+          <DeveloperPhoto
+            name={developer.name}
+            image={developer.image}
+            alt={`${t.card.photoOf} ${developer.name}`}
+            className="h-full w-full"
+            lazy
+          />
+          {developer.availability && (
+            <span className="availability-badge">
+              <span className="status-dot" />
+              {tv(developer.availability)}
+            </span>
+          )}
+          {own && <span className="own-profile-badge">{t.card.yourProfile}</span>}
+        </motion.div>
       </motion.div>
       <motion.div
         {...(layoutId
           ? {
-              initial: { opacity: 0 },
-              animate: { opacity: 1 },
-              transition: { duration: 0.3, delay: 0.25 },
+              initial: { opacity: 0, y: 6 },
+              animate: { opacity: 1, y: 0 },
+              transition: { duration: 0.45, delay: 0.35, ease: [0.16, 1, 0.3, 1] },
             }
           : {})}
         className={compact ? "p-5" : showProfile ? "p-4 sm:p-6" : "p-6"}

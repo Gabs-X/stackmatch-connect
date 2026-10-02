@@ -1,28 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { developersQuery } from "./api";
-import type { Developer } from "./developers";
 import { loadPublishedProfiles, profilesStorageKey } from "./local-profile";
+
+const subscribe = (onChange: () => void) => {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === profilesStorageKey) onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+};
+/** The stored text is a stable snapshot; parsing happens once per change, below. */
+const readStored = () => window.localStorage.getItem(profilesStorageKey) ?? "";
+/** Storage only exists in the browser: during server rendering the profiles are still unknown. */
+const unknownOnServer = () => undefined;
 
 /**
  * Catalog from the (mock) API plus the profiles developer accounts created in the app, listed
- * first so they're easy to find. Those are read after mount because storage only exists in the
- * browser.
+ * first so they're easy to find. Browser navigation reads them right away, so the list doesn't
+ * flash a loading state on every visit; only the first, server-rendered load waits for storage.
  */
 export function useDevelopers() {
   const { data, isPending, isError, refetch } = useQuery(developersQuery);
-  // Undefined until storage is read, so the list never shows up first without these profiles.
-  const [profiles, setProfiles] = useState<Developer[]>();
-
-  useEffect(() => {
-    const read = () => setProfiles(loadPublishedProfiles());
-    read();
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === profilesStorageKey) read();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  const stored = useSyncExternalStore(subscribe, readStored, unknownOnServer);
+  const profiles = useMemo(
+    () => (stored === undefined ? undefined : loadPublishedProfiles()),
+    [stored],
+  );
 
   const developers = useMemo(
     () => (data && profiles ? [...profiles, ...data] : undefined),
