@@ -18,9 +18,10 @@ import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useDevelopers } from "@/lib/use-developers";
+import { cn } from "@/lib/utils";
 
 export function AppHeader() {
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const { saved } = useApp();
   const { user, ready } = useAuth();
@@ -67,19 +68,8 @@ export function AppHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <select
-            aria-label={t.nav.language}
-            value={lang}
-            onChange={(event) => setLang(event.target.value as Lang)}
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="pt" lang="pt-BR">
-              PT-BR
-            </option>
-            <option value="en" lang="en">
-              EN
-            </option>
-          </select>
+          {/* On phones it moves into the menu, so the header fits narrow screens. */}
+          <LanguageSelect className="hidden sm:block" />
           <ThemeToggle />
           <AccountMenu />
           <Button
@@ -95,15 +85,28 @@ export function AppHeader() {
         </div>
       </div>
       {open && (
-        <nav className="border-t border-border bg-background p-3 md:hidden">
-          {links.map(({ to, label, icon: Icon }) => (
-            <Link key={to} to={to} onClick={() => setOpen(false)} className="nav-link flex w-full">
-              <Icon className="size-4" />
-              {label}
-            </Link>
-          ))}
+        <nav className="divide-y divide-border border-t border-border bg-background px-3 md:hidden">
+          {links.length > 0 && (
+            <div className="py-3">
+              {links.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setOpen(false)}
+                  activeProps={{ className: "nav-active" }}
+                  className="nav-link flex w-full"
+                >
+                  <Icon className="size-4" />
+                  {label}
+                  {to === "/saved" && savedCount > 0 && (
+                    <span className="count-badge">{savedCount}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
           {ready && !user && (
-            <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-3">
+            <div className="grid grid-cols-2 gap-2 py-3">
               <Button asChild variant="outline" onClick={() => setOpen(false)}>
                 <Link to="/login">
                   <LogIn />
@@ -118,8 +121,34 @@ export function AppHeader() {
               </Button>
             </div>
           )}
+          <label className="flex items-center justify-between gap-3 py-3 text-sm font-medium sm:hidden">
+            {t.nav.language}
+            <LanguageSelect />
+          </label>
         </nav>
       )}
     </header>
+  );
+}
+
+function LanguageSelect({ className }: { className?: string }) {
+  const { t, lang, setLang } = useI18n();
+  return (
+    <select
+      aria-label={t.nav.language}
+      value={lang}
+      onChange={(event) => setLang(event.target.value as Lang)}
+      className={cn(
+        "h-9 rounded-md border border-input bg-background px-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className,
+      )}
+    >
+      <option value="pt" lang="pt-BR">
+        PT-BR
+      </option>
+      <option value="en" lang="en">
+        EN
+      </option>
+    </select>
   );
 }

@@ -106,7 +106,7 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
           </div>
         </div>
       </section>
-      <div className="stagger-item stagger-1 mx-auto grid max-w-6xl gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_300px] lg:px-8">
+      <div className="stagger-item stagger-1 mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:px-8">
         <div className="space-y-12">
           <section>
             <h2 className="text-xl font-bold">{t.profile.about}</h2>

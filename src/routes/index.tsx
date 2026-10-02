@@ -55,7 +55,7 @@ function Index() {
             <span className="eyebrow">
               <span className="status-dot" /> {t.home.eyebrow}
             </span>
-            <h1 className="mt-6 max-w-3xl font-display text-5xl font-extrabold leading-[1.05] sm:text-6xl">
+            <h1 className="mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.05] min-[400px]:text-5xl sm:text-6xl">
               {t.home.h1a} <span className="text-primary">{t.home.h1b}</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">{t.home.sub}</p>

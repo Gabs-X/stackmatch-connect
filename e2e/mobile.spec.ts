@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signInAs, test } from "./fixtures";
 
 test("the Discover action bar stays usable above the assistant button", async ({ page }) => {
@@ -43,4 +44,38 @@ test("the mobile menu offers sign-in and sign-up when logged out", async ({ page
   await page.getByRole("banner").getByRole("link", { name: "Criar conta" }).click();
   await expect(page).toHaveURL(/\/register$/);
   await expect(page.getByRole("heading", { name: "Criar sua conta" })).toBeVisible();
+});
+
+test.describe("on a narrow phone", () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  const fitsWidth = async (page: Page, path: string) => {
+    await page.goto(path);
+    const { scroll, client } = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }));
+    expect(scroll, `${path} scrolls sideways`).toBeLessThanOrEqual(client);
+  };
+
+  test("no page scrolls sideways and the menu button stays on screen", async ({ page }) => {
+    await fitsWidth(page, "/");
+    await signInAs(page, "company");
+    for (const path of ["/discover", "/saved", "/developer/marina-costa", "/company-settings"])
+      await fitsWidth(page, path);
+    await expect(page.getByRole("button", { name: "Abrir menu" })).toBeInViewport({ ratio: 1 });
+
+    await page.getByRole("button", { name: "Menu da conta de Recrutadora Teste" }).click();
+    await page.getByRole("menuitem", { name: "Sair" }).click();
+    await signInAs(page, "developer");
+    for (const path of ["/create-profile", "/developer/demo-developer", "/interests"])
+      await fitsWidth(page, path);
+  });
+
+  test("the language is chosen from the menu", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Abrir menu" }).click();
+    await page.getByRole("banner").getByRole("combobox", { name: "Idioma" }).selectOption("en");
+    await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+  });
 });

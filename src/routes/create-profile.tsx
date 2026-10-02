@@ -234,14 +234,16 @@ function CreateProfile() {
           {t.create.preview}
         </Button>
       </div>
-      <div className="mt-9 grid gap-10 lg:grid-cols-[240px_1fr]">
+      <div className="mt-9 grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
         <aside className="stagger-item">
-          <div className="space-y-1">
+          {/* A compact row of steps on phones; a vertical list beside the form on large screens. */}
+          <div className="grid grid-cols-4 gap-1 lg:block lg:space-y-1">
             {steps.map((name, i) => (
               <button
                 key={name}
                 onClick={() => setStep(i + 1)}
-                className={`flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm font-semibold ${step === i + 1 ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                aria-current={step === i + 1 ? "step" : undefined}
+                className={`flex w-full flex-col items-center gap-1 rounded-lg p-2 text-center text-[11px] font-semibold leading-tight lg:flex-row lg:gap-3 lg:p-3 lg:text-left lg:text-sm ${step === i + 1 ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
               >
                 <span
                   className={`grid size-7 place-items-center rounded-full border text-xs ${step > i + 1 ? "bg-positive text-primary-foreground" : ""}`}

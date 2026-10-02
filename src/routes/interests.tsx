@@ -128,7 +128,7 @@ function InterestsList({ user }: { user: AuthUser }) {
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end">
                       <span className="level-badge flex items-center gap-1">
                         {meeting ? (
                           <CalendarDays className="size-3.5" aria-hidden="true" />
