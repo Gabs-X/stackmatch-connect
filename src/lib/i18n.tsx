@@ -155,7 +155,9 @@ const pt = {
     backEdit: "Voltar à edição",
     cardPreviewTitle: "Seu card no Discover",
     cardPreviewSub:
-      "É assim que as empresas veem seu perfil ao buscar talentos. Clicando no card, elas abrem o perfil completo abaixo.",
+      "É assim que as empresas veem seu perfil ao buscar talentos. Pelo botão Ver perfil, elas abrem seu perfil completo.",
+    showCard: "Ver como card",
+    showFullProfile: "Ver perfil completo",
     yourName: "Seu nome",
     yourRole: "Seu cargo profissional",
     yourBio:
@@ -608,7 +610,9 @@ const en: Dict = {
     backEdit: "Back to editing",
     cardPreviewTitle: "Your card in Discover",
     cardPreviewSub:
-      "This is how companies see your profile when they search for talent. Opening the card shows the full profile below.",
+      "This is how companies see your profile when they search for talent. The View profile button opens your full profile.",
+    showCard: "View as card",
+    showFullProfile: "View full profile",
     yourName: "Your name",
     yourRole: "Your professional title",
     yourBio:

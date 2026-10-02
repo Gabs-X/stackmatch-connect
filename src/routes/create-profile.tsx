@@ -9,10 +9,12 @@ import {
   ExternalLink,
   Eye,
   Github,
+  IdCard,
   Pencil,
   Plus,
   Trash2,
   Upload,
+  UserRound,
   X,
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -81,6 +83,8 @@ function CreateProfile() {
   useLocalizedMeta(t.create.title + " — Stack Match", t.create.sub);
   const [step, setStep] = useState(1);
   const [preview, setPreview] = useState(false);
+  // In the preview, swaps the full profile for the card companies see in Discover.
+  const [showCard, setShowCard] = useState(false);
   const [profile, setProfile] = useState<LocalProfile>(emptyProfile);
   const [completed, setCompleted] = useState(false);
   const { skills, projects } = profile;
@@ -197,6 +201,10 @@ function CreateProfile() {
             <ChevronLeft />
             {t.create.backEdit}
           </Button>
+          <Button variant="outline" onClick={() => setShowCard((current) => !current)}>
+            {showCard ? <UserRound /> : <IdCard />}
+            {showCard ? t.create.showFullProfile : t.create.showCard}
+          </Button>
           {completed && (
             <Button asChild>
               <Link to="/interests">
@@ -211,160 +219,165 @@ function CreateProfile() {
             {t.create.finishToast} {t.create.finishDesc}
           </p>
         )}
-        <section
-          aria-labelledby={cardPreviewId}
-          className="mt-7 grid gap-6 rounded-xl border bg-muted/40 p-5 sm:p-6 md:grid-cols-[minmax(0,22rem)_1fr] md:items-center"
-        >
-          {/* The same card companies swipe through in Discover. */}
-          <DeveloperCard
-            developer={{
-              ...localProfileToDeveloper(profile),
-              name: profile.name.trim() || t.create.yourName,
-              role: profile.role.trim() || t.create.yourRole,
-            }}
-          />
-          <div>
+        {showCard ? (
+          <section aria-labelledby={cardPreviewId} className="mt-10 text-center">
             <h2 id={cardPreviewId} className="text-xl font-bold">
               {t.create.cardPreviewTitle}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">{t.create.cardPreviewSub}</p>
-          </div>
-        </section>
-        <div className="mt-7 overflow-hidden rounded-xl border bg-card shadow-card">
-          <div className="h-40 bg-foreground" />
-          <div className="px-6 pb-10 sm:px-10">
-            <DeveloperPhoto
-              name={profile.name || t.create.yourName}
-              image={githubAvatarUrl(profileLink(profile.github) ?? "") ?? ""}
-              alt={profile.name || t.create.yourName}
-              fallbackSize="lg"
-              className="-mt-16 size-32 overflow-hidden rounded-xl border-4 border-card bg-muted"
-            />
-            <h1 className="mt-5 font-display text-3xl font-extrabold">
-              {profile.name || t.create.yourName}
-            </h1>
-            <p className="mt-1 font-semibold text-primary">{profile.role || t.create.yourRole}</p>
-            {[profile.location, profile.seniority, profile.workMode, profile.availability].some(
-              Boolean,
-            ) && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                {[
-                  profile.location,
-                  tv(profile.seniority),
-                  tv(profile.workMode),
-                  tv(profile.availability),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            )}
-            <p className="mt-5 max-w-2xl whitespace-pre-wrap text-muted-foreground">
-              {profile.bio || t.create.yourBio}
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              {t.create.cardPreviewSub}
             </p>
-            <h2 className="mt-10 text-xl font-bold">{t.create.steps[1]}</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {skills.map((s) => (
-                <span className="skill-chip" key={s}>
-                  {s}
-                </span>
-              ))}
+            {/* The same card companies swipe through in Discover. */}
+            <div className="mx-auto mt-7 max-w-sm text-left">
+              <DeveloperCard
+                developer={{
+                  ...localProfileToDeveloper(profile),
+                  name: profile.name.trim() || t.create.yourName,
+                  role: profile.role.trim() || t.create.yourRole,
+                }}
+              />
             </div>
-            {[profile.github, profile.linkedin, profile.website].some(Boolean) && (
-              <section className="mt-10">
-                <h2 className="text-xl font-bold">{t.create.steps[3]}</h2>
-                <div className="mt-4 space-y-2 text-sm">
+          </section>
+        ) : (
+          <div className="mt-7">
+            <div className="h-40 rounded-xl bg-foreground" />
+            <div className="px-6 pb-10 sm:px-10">
+              <DeveloperPhoto
+                name={profile.name || t.create.yourName}
+                image={githubAvatarUrl(profileLink(profile.github) ?? "") ?? ""}
+                alt={profile.name || t.create.yourName}
+                fallbackSize="lg"
+                className="-mt-16 size-32 overflow-hidden rounded-xl border-4 border-background bg-muted"
+              />
+              <h1 className="mt-5 font-display text-3xl font-extrabold">
+                {profile.name || t.create.yourName}
+              </h1>
+              <p className="mt-1 font-semibold text-primary">{profile.role || t.create.yourRole}</p>
+              {[profile.location, profile.seniority, profile.workMode, profile.availability].some(
+                Boolean,
+              ) && (
+                <p className="mt-3 text-sm text-muted-foreground">
                   {[
-                    ["GitHub", profile.github],
-                    ["LinkedIn", profile.linkedin],
-                    [t.create.site, profile.website],
-                  ].map(
-                    ([label, value]) =>
-                      value && (
-                        <p key={label} className="break-words">
-                          <span className="font-semibold">{label}: </span>
-                          {profileLink(value) ? (
-                            <a
-                              className="text-primary underline"
-                              href={profileLink(value)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {value}
-                            </a>
-                          ) : (
-                            value
-                          )}
-                        </p>
-                      ),
-                  )}
-                </div>
-              </section>
-            )}
-            <h2 className="mt-10 text-xl font-bold">{t.create.projects}</h2>
-            {projects.length ? (
-              <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {projects.map((project) => {
-                  const repo = profileLink(project.github);
-                  const demo = profileLink(project.demo);
-                  return (
-                    <article className="overflow-hidden rounded-lg border bg-card" key={project.id}>
-                      <ProjectCover
-                        name={project.name}
-                        image={project.image}
-                        className="aspect-[16/10]"
-                      />
-                      <div className="p-5">
-                        <h3 className="font-bold">{project.name}</h3>
-                        {project.description && (
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                            {project.description}
-                          </p>
-                        )}
-                        {project.tech.length > 0 && (
-                          <div className="mt-4 flex flex-wrap gap-1.5">
-                            {project.tech.map((tech) => (
-                              <span className="skill-chip" key={tech}>
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {(repo || demo) && (
-                          <div className="mt-5 flex gap-4 text-xs font-bold">
-                            {repo && (
-                              <a
-                                href={repo}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 hover:text-primary"
-                              >
-                                <Github className="size-4" />
-                                GitHub
-                              </a>
-                            )}
-                            {demo && (
-                              <a
-                                href={demo}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 hover:text-primary"
-                              >
-                                <ExternalLink className="size-4" />
-                                Demo
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
+                    profile.location,
+                    tv(profile.seniority),
+                    tv(profile.workMode),
+                    tv(profile.availability),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
+              <p className="mt-5 max-w-2xl whitespace-pre-wrap text-muted-foreground">
+                {profile.bio || t.create.yourBio}
+              </p>
+              <h2 className="mt-10 text-xl font-bold">{t.create.steps[1]}</h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {skills.map((s) => (
+                  <span className="skill-chip" key={s}>
+                    {s}
+                  </span>
+                ))}
               </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">{t.create.addProjectsHint}</p>
-            )}
+              {[profile.github, profile.linkedin, profile.website].some(Boolean) && (
+                <section className="mt-10">
+                  <h2 className="text-xl font-bold">{t.create.steps[3]}</h2>
+                  <div className="mt-4 space-y-2 text-sm">
+                    {[
+                      ["GitHub", profile.github],
+                      ["LinkedIn", profile.linkedin],
+                      [t.create.site, profile.website],
+                    ].map(
+                      ([label, value]) =>
+                        value && (
+                          <p key={label} className="break-words">
+                            <span className="font-semibold">{label}: </span>
+                            {profileLink(value) ? (
+                              <a
+                                className="text-primary underline"
+                                href={profileLink(value)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {value}
+                              </a>
+                            ) : (
+                              value
+                            )}
+                          </p>
+                        ),
+                    )}
+                  </div>
+                </section>
+              )}
+              <h2 className="mt-10 text-xl font-bold">{t.create.projects}</h2>
+              {projects.length ? (
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {projects.map((project) => {
+                    const repo = profileLink(project.github);
+                    const demo = profileLink(project.demo);
+                    return (
+                      <article
+                        className="overflow-hidden rounded-lg border bg-card"
+                        key={project.id}
+                      >
+                        <ProjectCover
+                          name={project.name}
+                          image={project.image}
+                          className="aspect-[16/10]"
+                        />
+                        <div className="p-5">
+                          <h3 className="font-bold">{project.name}</h3>
+                          {project.description && (
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                              {project.description}
+                            </p>
+                          )}
+                          {project.tech.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-1.5">
+                              {project.tech.map((tech) => (
+                                <span className="skill-chip" key={tech}>
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {(repo || demo) && (
+                            <div className="mt-5 flex gap-4 text-xs font-bold">
+                              {repo && (
+                                <a
+                                  href={repo}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 hover:text-primary"
+                                >
+                                  <Github className="size-4" />
+                                  GitHub
+                                </a>
+                              )}
+                              {demo && (
+                                <a
+                                  href={demo}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 hover:text-primary"
+                                >
+                                  <ExternalLink className="size-4" />
+                                  Demo
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-muted-foreground">{t.create.addProjectsHint}</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </main>
     );
   return (

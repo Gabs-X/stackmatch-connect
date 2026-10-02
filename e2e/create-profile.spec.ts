@@ -43,7 +43,9 @@ test("a completed profile previews the card companies see in Discover", async ({
     "https://clinic-booking.vercel.app/",
   );
 
-  // Developers don't browse Discover, so the preview shows the card companies will see there.
+  // Developers don't browse Discover, so the preview can swap the profile for their card.
+  await page.getByRole("button", { name: "Ver como card" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Ana Souza" })).toBeHidden();
   const card = page.getByRole("region", { name: "Seu card no Discover" }).getByRole("article");
   await expect(card).toContainText("Ana Souza");
   await expect(card).toContainText("Seu perfil");
@@ -51,6 +53,10 @@ test("a completed profile previews the card companies see in Discover", async ({
     "src",
     "https://github.com/anasouza.png?size=768",
   );
+
+  await page.getByRole("button", { name: "Ver perfil completo" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Ana Souza" })).toBeVisible();
+  await expect(card).toBeHidden();
 });
 
 test("removing a project can be undone", async ({ page }) => {
