@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompanySettingsRouteImport } from './routes/company-settings'
 import { Route as CreateProfileRouteImport } from './routes/create-profile'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -22,6 +23,11 @@ import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompanySettingsRoute = CompanySettingsRouteImport.update({
+  id: '/company-settings',
+  path: '/company-settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateProfileRoute = CreateProfileRouteImport.update({
@@ -67,6 +73,7 @@ const DeveloperIdRoute = DeveloperIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/company-settings'
     | '/create-profile'
     | '/discover'
     | '/forgot-password'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/company-settings'
     | '/create-profile'
     | '/discover'
     | '/forgot-password'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/company-settings'
     | '/create-profile'
     | '/discover'
     | '/forgot-password'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompanySettingsRoute: typeof CompanySettingsRoute
   CreateProfileRoute: typeof CreateProfileRoute
   DiscoverRoute: typeof DiscoverRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/company-settings': {
+      id: '/company-settings'
+      path: '/company-settings'
+      fullPath: '/company-settings'
+      preLoaderRoute: typeof CompanySettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create-profile': {
@@ -217,6 +237,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompanySettingsRoute: CompanySettingsRoute,
   CreateProfileRoute: CreateProfileRoute,
   DiscoverRoute: DiscoverRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,

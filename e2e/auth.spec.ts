@@ -11,6 +11,7 @@ async function registerAccount(
     email: string;
     title?: string;
     company?: string;
+    cnpj?: string;
   },
 ) {
   await page.goto("/register");
@@ -21,6 +22,7 @@ async function registerAccount(
     .click();
   await form.getByLabel("Nome completo").fill(account.name);
   if (account.company) await form.getByLabel("Empresa").fill(account.company);
+  if (account.cnpj) await form.getByLabel("CNPJ").fill(account.cnpj);
   if (account.title)
     await form
       .getByLabel(account.type === "developer" ? "Cargo profissional" : /Seu cargo/)
@@ -59,8 +61,17 @@ test("a developer signs up, lands on the profile form prefilled, and signs out",
 test("a hiring account needs a company and lands on Discover", async ({ page }) => {
   await registerAccount(page, { type: "company", name: "Bruno Lima", email: "bruno@acme.com" });
   await expect(main(page).getByText("Informe o nome da empresa.")).toBeVisible();
+  await expect(main(page).getByText("Informe um CNPJ válido.")).toBeVisible();
 
   await main(page).getByLabel("Empresa").fill("Acme");
+  // Typed digits get the CNPJ mask; the check digits must match.
+  const cnpj = main(page).getByLabel("CNPJ");
+  await cnpj.pressSequentially("11222333000182");
+  await expect(cnpj).toHaveValue("11.222.333/0001-82");
+  await main(page).getByRole("button", { name: "Criar conta" }).click();
+  await expect(main(page).getByText("Informe um CNPJ válido.")).toBeVisible();
+  await cnpj.fill("");
+  await cnpj.pressSequentially("11222333000181");
   await main(page).getByRole("button", { name: "Criar conta" }).click();
 
   await expect(page).toHaveURL(/\/discover$/);
@@ -91,6 +102,7 @@ test("signing in rejects a wrong password and honors the redirect", async ({ pag
     type: "company",
     name: "Bruno Lima",
     company: "Acme",
+    cnpj: "11222333000181",
     email: "bruno@acme.com",
   });
   await expect(page).toHaveURL(/\/discover$/);

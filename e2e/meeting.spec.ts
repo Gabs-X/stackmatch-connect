@@ -11,6 +11,7 @@ async function registerCompany(page: Page) {
   const form = page.getByRole("main");
   await form.getByLabel("Nome completo").fill("Bia Santos");
   await form.getByLabel("Empresa").fill("Acme");
+  await form.getByLabel("CNPJ").fill("11222333000181");
   await form.getByLabel("E-mail").fill("bia@acme.com");
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();

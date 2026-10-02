@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   AuthError,
+  formatCnpj,
   homeFor,
   passwordRules,
   safeRedirect,
@@ -48,6 +49,7 @@ function RegisterPage() {
   const ids = {
     name: useId(),
     company: useId(),
+    cnpj: useId(),
     jobTitle: useId(),
     email: useId(),
     password: useId(),
@@ -66,6 +68,7 @@ function RegisterPage() {
       accountType: type ?? "company",
       name: "",
       company: "",
+      cnpj: "",
       jobTitle: "",
       email: "",
       password: "",
@@ -75,6 +78,7 @@ function RegisterPage() {
   const accountType = watch("accountType");
   const password = watch("password");
   const isCompany = accountType === "company";
+  const cnpjField = register("cnpj");
   const message = (code?: string) => (code ? (t.auth.errors[code] ?? code) : undefined);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -208,6 +212,27 @@ function RegisterPage() {
               {...register("company")}
             />
             <FieldError id={`${ids.company}-error`} message={message(errors.company?.message)} />
+          </div>
+        )}
+
+        {isCompany && (
+          <div>
+            <Label htmlFor={ids.cnpj}>{t.auth.cnpj}</Label>
+            <Input
+              id={ids.cnpj}
+              inputMode="numeric"
+              maxLength={18}
+              className="mt-2"
+              placeholder={t.auth.cnpjPh}
+              aria-invalid={Boolean(errors.cnpj)}
+              aria-describedby={errors.cnpj ? `${ids.cnpj}-error` : undefined}
+              {...cnpjField}
+              onChange={(event) => {
+                event.target.value = formatCnpj(event.target.value);
+                void cnpjField.onChange(event);
+              }}
+            />
+            <FieldError id={`${ids.cnpj}-error`} message={message(errors.cnpj?.message)} />
           </div>
         )}
 

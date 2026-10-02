@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AuthError,
+  formatCnpj,
+  isValidCnpj,
   demoAccounts,
   demoPassword,
   hashPassword,
@@ -45,6 +47,7 @@ const developer: SignUpInput = {
   accountType: "developer",
   name: "Ana Souza",
   company: "",
+  cnpj: "",
   jobTitle: "Frontend Developer",
   email: "Ana@Example.com ",
   password: "segredo123",
@@ -61,8 +64,16 @@ describe("signUpSchema", () => {
 
   it("requires a professional title for developers and a company for hiring accounts", () => {
     expect(issues({ jobTitle: " " })).toEqual(["jobTitle"]);
-    expect(issues({ accountType: "company", jobTitle: "", company: "" })).toEqual(["company"]);
-    expect(issues({ accountType: "company", jobTitle: "", company: "Acme" })).toBeUndefined();
+    expect(issues({ accountType: "company", jobTitle: "", company: "" })).toEqual([
+      "company",
+      "cnpj",
+    ]);
+    expect(
+      issues({ accountType: "company", jobTitle: "", company: "Acme", cnpj: "11.222.333/0001-81" }),
+    ).toBeUndefined();
+    expect(issues({ accountType: "company", company: "Acme", cnpj: "11.222.333/0001-82" })).toEqual(
+      ["cnpj"],
+    );
   });
 
   it("enforces password length and a mix of letters and numbers", () => {
@@ -120,9 +131,15 @@ describe("signUp and signIn", () => {
 
   it("keeps a company account's company name", async () => {
     const session = await settle(
-      signUp({ ...developer, accountType: "company", company: " Acme ", jobTitle: "" }),
+      signUp({
+        ...developer,
+        accountType: "company",
+        company: " Acme ",
+        cnpj: "11.222.333/0001-81",
+        jobTitle: "",
+      }),
     );
-    expect(session.user.company).toBe("Acme");
+    expect(session.user).toMatchObject({ company: "Acme", cnpj: "11222333000181" });
   });
 });
 
@@ -187,8 +204,28 @@ describe("redirects", () => {
   });
 
   it("sends each account type to its own starting page", () => {
-    const base = { id: "1", name: "A", email: "a@a.com", company: "", jobTitle: "" };
+    const base = { id: "1", name: "A", email: "a@a.com", company: "", cnpj: "", jobTitle: "" };
     expect(homeFor({ ...base, accountType: "developer" })).toBe("/create-profile");
     expect(homeFor({ ...base, accountType: "company" })).toBe("/discover");
+  });
+});
+
+describe("CNPJ", () => {
+  it("accepts numbers with valid check digits, formatted or not", () => {
+    expect(isValidCnpj("11.222.333/0001-81")).toBe(true);
+    expect(isValidCnpj("11222333000181")).toBe(true);
+  });
+
+  it("rejects wrong check digits, wrong lengths and repeated digits", () => {
+    expect(isValidCnpj("11.222.333/0001-82")).toBe(false);
+    expect(isValidCnpj("1122233300018")).toBe(false);
+    expect(isValidCnpj("00.000.000/0000-00")).toBe(false);
+    expect(isValidCnpj("")).toBe(false);
+  });
+
+  it("formats as the digits are typed", () => {
+    expect(formatCnpj("11222")).toBe("11.222");
+    expect(formatCnpj("112223330001")).toBe("11.222.333/0001");
+    expect(formatCnpj("11a222333000181999")).toBe("11.222.333/0001-81");
   });
 });

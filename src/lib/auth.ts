@@ -15,6 +15,8 @@ export type AuthUser = {
   accountType: AccountType;
   /** Company name for hiring accounts; empty for developers. */
   company: string;
+  /** CNPJ digits for hiring accounts; empty for developers and accounts created before it. */
+  cnpj: string;
   /** Professional title for developers (required) or the recruiter's role (optional). */
   jobTitle: string;
 };
@@ -33,6 +35,39 @@ export class AuthError extends Error {
 // Form validation. Messages are codes the screens translate (t.auth.errors[code]).
 // Check the format only once something was typed, so an empty field reports just "required".
 const email = z.string().trim().min(1, "required").pipe(z.string().email("email"));
+export const onlyDigits = (value: string) => value.replace(/\D/g, "");
+
+/** Brazilian company registry number: 14 digits, the last two being check digits. */
+export function isValidCnpj(value: string) {
+  const digits = onlyDigits(value);
+  if (digits.length !== 14 || /^(\d)\1+$/.test(digits)) return false;
+  const checkDigit = (length: 12 | 13) => {
+    const weights =
+      length === 12
+        ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const sum = weights.reduce((total, weight, index) => total + Number(digits[index]) * weight, 0);
+    const rest = sum % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  return checkDigit(12) === Number(digits[12]) && checkDigit(13) === Number(digits[13]);
+}
+
+/** "11222333000181" -> "11.222.333/0001-81", formatting as far as the digits go. */
+export function formatCnpj(value: string) {
+  const digits = onlyDigits(value).slice(0, 14);
+  const separators = ["", ".", ".", "/", "-"];
+  return [
+    digits.slice(0, 2),
+    digits.slice(2, 5),
+    digits.slice(5, 8),
+    digits.slice(8, 12),
+    digits.slice(12),
+  ]
+    .map((part, index) => (part ? (separators[index] ?? "") + part : ""))
+    .join("");
+}
+
 export const passwordRules = {
   length: (value: string) => value.length >= 8,
   letter: (value: string) => /\p{L}/u.test(value),
@@ -51,6 +86,7 @@ export const signUpSchema = z
     accountType: z.enum(["company", "developer"]),
     name: z.string().trim().min(2, "name"),
     company: z.string().trim(),
+    cnpj: z.string().trim(),
     jobTitle: z.string().trim(),
     email,
     password: z
@@ -62,6 +98,10 @@ export const signUpSchema = z
   .refine((data) => data.accountType !== "company" || data.company.length > 0, {
     message: "company",
     path: ["company"],
+  })
+  .refine((data) => data.accountType !== "company" || isValidCnpj(data.cnpj), {
+    message: "cnpj",
+    path: ["cnpj"],
   })
   .refine((data) => data.accountType !== "developer" || data.jobTitle.length > 0, {
     message: "jobTitle",
@@ -83,6 +123,8 @@ const storedUserSchema = z.object({
   accountType: z.enum(["company", "developer"]),
   company: z.string(),
   jobTitle: z.string().default(""),
+  // Added after the first release; older accounts don't have it.
+  cnpj: z.string().default(""),
   passwordHash: z.string(),
 });
 type StoredUser = z.infer<typeof storedUserSchema>;
@@ -130,6 +172,7 @@ export const demoAccounts: (AuthUser & { username: string })[] = [
     email: "teste.dev@stackmatch.app",
     accountType: "developer",
     company: "",
+    cnpj: "",
     jobTitle: "Full Stack Developer",
   },
   {
@@ -139,6 +182,8 @@ export const demoAccounts: (AuthUser & { username: string })[] = [
     email: "teste.emp@stackmatch.app",
     accountType: "company",
     company: "Empresa Teste",
+    // A valid example number, not a real company.
+    cnpj: "11222333000181",
     jobTitle: "Tech Recruiter",
   },
 ];
@@ -163,6 +208,7 @@ export async function signUp(input: SignUpInput): Promise<AuthSession> {
     email: address,
     accountType: input.accountType,
     company: input.accountType === "company" ? input.company.trim() : "",
+    cnpj: input.accountType === "company" ? onlyDigits(input.cnpj) : "",
     jobTitle: input.jobTitle.trim(),
     passwordHash: await hashPassword(address, input.password),
   };

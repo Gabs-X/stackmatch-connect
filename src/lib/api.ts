@@ -6,7 +6,14 @@ import {
   type MeetingRequestInput,
 } from "./meeting-requests";
 import type { ProfileInterest } from "./profile-interests";
-import { demoDeveloperId } from "./auth";
+import { demoDeveloperId, type AuthUser } from "./auth";
+import {
+  companySettingsSchema,
+  readCompanySettings,
+  writeCompanySettings,
+  type CompanySettings,
+  type CompanySettingsInput,
+} from "./company-settings";
 
 /**
  * Simulated network latency for the mocked API, so loading states behave like a real backend.
@@ -72,3 +79,24 @@ export const companyActivityQuery = (accountId: string, name: string) =>
     queryKey: ["company-activity", accountId],
     queryFn: () => fetchCompanyActivity(accountId, name),
   });
+
+/**
+ * Stand-ins for `GET/PUT /company/settings`: what a hiring account shows developers. The mock keeps
+ * them in this browser, per account, starting from the sign-up details.
+ */
+export async function fetchCompanySettings(user: AuthUser): Promise<CompanySettings> {
+  await delay(MOCK_LATENCY_MS);
+  return readCompanySettings(user);
+}
+
+export async function saveCompanySettings(
+  accountId: string,
+  input: CompanySettingsInput,
+): Promise<CompanySettings> {
+  await delay(MOCK_LATENCY_MS);
+  const settings = companySettingsSchema.parse(input);
+  writeCompanySettings(accountId, settings);
+  return settings;
+}
+
+export const companySettingsKey = (accountId: string) => ["company-settings", accountId] as const;

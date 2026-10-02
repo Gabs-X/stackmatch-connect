@@ -33,6 +33,7 @@ import {
 } from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
+import { useCompanySettings } from "@/lib/use-company-settings";
 import { useDevelopers } from "@/lib/use-developers";
 
 export const Route = createFileRoute("/discover")({
@@ -78,6 +79,7 @@ function DiscoverPage() {
     removeProfileInterest,
   } = useApp();
   const { user } = useAuth();
+  const companySettings = useCompanySettings();
   const [feedback, setFeedback] = useState<{ action: "save" | "interest"; name: string } | null>(
     null,
   );
@@ -142,18 +144,20 @@ function DiscoverPage() {
   const next = (action: DiscoverAction) => {
     if (!current) return;
     const entry = createHistoryEntry(current, action, index, saved, interests);
-    // The developer sees which company marked them; anonymous visitors only keep a local mark.
+    // The developer sees which company marked them, signed with its contact details; anonymous
+    // visitors only keep a local mark.
     if (
       action === "interest" &&
       user?.accountType === "company" &&
+      companySettings &&
       recordProfileInterest({
         developerId: current.id,
         company: user.company,
-        contactName: user.name,
-        email: user.email,
+        contactName: companySettings.contactName,
+        email: companySettings.contactEmail,
       })
     )
-      entry.interestFrom = user.email;
+      entry.interestFrom = companySettings.contactEmail;
     updateHistory([...historyRef.current, entry]);
     if (action !== "pass") {
       addSaved(current.id);

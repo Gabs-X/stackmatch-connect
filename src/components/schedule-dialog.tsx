@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MeetingRequestError, sendMeetingRequest } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
+import { useCompanySettings } from "@/lib/use-company-settings";
 import { isProposedTimeValid, lastRequestTo, meetingTimes } from "@/lib/meeting-requests";
 
 type ScheduleDialogProps = {
@@ -49,6 +50,15 @@ export function ScheduleDialog({
 }: ScheduleDialogProps) {
   const { t, lang } = useI18n();
   const { user } = useAuth();
+  const settings = useCompanySettings();
+  // Proposals are signed with the contact set in the company details; replies go to its e-mail.
+  const sender = user
+    ? {
+        company: user.company,
+        name: settings?.contactName ?? user.name,
+        email: settings?.contactEmail ?? user.email,
+      }
+    : null;
   const { pathname } = useLocation();
   const { meetingRequests, recordMeetingRequest } = useApp();
   const [open, setOpen] = useState(false);
@@ -95,14 +105,14 @@ export function ScheduleDialog({
 
   const formattedDate = date ? format(date, t.schedule.dateFormat, { locale }) : "";
   const when = `${formattedDate}, ${t.schedule.at} ${time}`;
-  const previous = user ? lastRequestTo(meetingRequests, developerId, user.email) : undefined;
+  const previous = sender ? lastRequestTo(meetingRequests, developerId, sender.email) : undefined;
   const previousWhen = previous
     ? `${format(new Date(`${previous.date}T12:00:00`), t.schedule.dateFormat, { locale })}, ${t.schedule.at} ${previous.time}`
     : "";
 
   const sendProposal = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !date || !time || sending) return;
+    if (!sender || !date || !time || sending) return;
     setSending(true);
     try {
       const request = await sendMeetingRequest({
@@ -110,9 +120,9 @@ export function ScheduleDialog({
         developerName,
         date: format(date, "yyyy-MM-dd"),
         time,
-        company: user.company,
-        contactName: user.name,
-        email: user.email,
+        company: sender.company,
+        contactName: sender.name,
+        email: sender.email,
         message: message.trim(),
       });
       recordMeetingRequest(request);
@@ -254,7 +264,7 @@ export function ScheduleDialog({
               <p className="text-sm text-muted-foreground">
                 {t.schedule.sender}{" "}
                 <span className="font-semibold text-foreground">
-                  {user.name} · {user.company}
+                  {sender?.name} · {sender?.company}
                 </span>
               </p>
               <div>
@@ -278,15 +288,15 @@ export function ScheduleDialog({
                   <dt className="text-muted-foreground">{t.schedule.emailTo}</dt>
                   <dd className="min-w-0 break-words">{t.schedule.emailToValue(developerName)}</dd>
                   <dt className="text-muted-foreground">{t.schedule.emailReplyTo}</dt>
-                  <dd className="min-w-0 break-words">{user.email}</dd>
+                  <dd className="min-w-0 break-words">{sender?.email}</dd>
                   <dt className="text-muted-foreground">{t.schedule.emailSubject}</dt>
                   <dd className="min-w-0 break-words font-semibold">
-                    {t.schedule.subject(user.company)}
+                    {t.schedule.subject(sender?.company ?? "")}
                   </dd>
                 </dl>
                 <div className="space-y-3 px-4 py-3 text-sm leading-6">
                   <p>{t.schedule.greeting(firstName)}</p>
-                  <p>{t.schedule.intro(user.name, user.company, when)}</p>
+                  <p>{t.schedule.intro(sender?.name ?? "", sender?.company ?? "", when)}</p>
                   {message.trim() && (
                     <p className="whitespace-pre-line border-l-2 pl-3 text-muted-foreground">
                       {message.trim()}
@@ -355,7 +365,7 @@ export function ScheduleDialog({
             <div className="mx-auto mt-6 flex max-w-sm items-center gap-3 rounded-lg border bg-muted/60 p-4 text-left text-sm">
               <Mail className="size-5 shrink-0 text-primary" />
               <span>
-                {t.schedule.replyNote} <strong className="break-all">{user.email}</strong>.
+                {t.schedule.replyNote} <strong className="break-all">{sender?.email}</strong>.
               </span>
             </div>
             <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
