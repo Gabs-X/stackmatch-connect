@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { companyActivityQuery } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
-import { demoDeveloperId, type AuthUser } from "@/lib/auth";
+import type { AuthUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { loadLocalProfile, localDeveloperId, localProfileStorageKey } from "@/lib/local-profile";
+import { loadAccountProfile, profilesStorageKey } from "@/lib/local-profile";
 import { interestedCompanies } from "@/lib/profile-interests";
 
 export const Route = createFileRoute("/interests")({
@@ -42,29 +42,26 @@ function InterestsList({ user }: { user: AuthUser }) {
   const { t, lang } = useI18n();
   const locale = lang === "pt" ? ptBR : enUS;
   const { hydrated, profileInterests, meetingRequests } = useApp();
-  // This browser's profile is the developer's; companies reach it under localDeveloperId.
+  // Companies reach this developer's profile, and send their interest, under the account id.
   const [hasProfile, setHasProfile] = useState(true);
   useEffect(() => {
-    // The demo developer already has a published profile (see loadPublishedProfile).
-    const read = () => setHasProfile(loadLocalProfile() !== null || user.id === demoDeveloperId);
+    const read = () => setHasProfile(loadAccountProfile(user.id) !== null);
     read();
     const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === localProfileStorageKey) read();
+      if (event.key === null || event.key === profilesStorageKey) read();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [user.id]);
-  const { data, isPending, isError, refetch } = useQuery(
-    companyActivityQuery(user.id, localDeveloperId, user.name),
-  );
+  const { data, isPending, isError, refetch } = useQuery(companyActivityQuery(user.id, user.name));
   const companies = useMemo(
     () =>
       interestedCompanies(
-        localDeveloperId,
+        user.id,
         [...(data?.interests ?? []), ...profileInterests],
         [...(data?.meetings ?? []), ...meetingRequests],
       ),
-    [data, profileInterests, meetingRequests],
+    [user.id, data, profileInterests, meetingRequests],
   );
   const loading = !hydrated || (isPending && !isError);
 

@@ -24,9 +24,8 @@ export function DeveloperCard({
 }) {
   const { t, tv, formatCurrency } = useI18n();
   const { user } = useAuth();
-  // The profile saved in this browser belongs to its developer account, not to a company using
-  // the same browser: for companies it is just another candidate.
-  const own = developer.isLocal && user?.accountType === "developer";
+  // Profiles created in the app are identified by their owner's account id.
+  const own = developer.isLocal === true && developer.id === user?.id;
   // Spread, not passed as undefined: motion props reject an explicit undefined layoutId.
   const shared = (part?: string) =>
     layoutId ? { layoutId: part ? `${layoutId}-${part}` : layoutId } : {};

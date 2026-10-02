@@ -4,7 +4,7 @@ import { interestedCompanies, type ProfileInterest } from "./profile-interests";
 
 const interest = (fields: Partial<ProfileInterest>): ProfileInterest => ({
   id: "i",
-  developerId: "local-profile",
+  developerId: "demo-developer",
   company: "Acme",
   contactName: "Bruno",
   email: "bruno@acme.com",
@@ -14,7 +14,7 @@ const interest = (fields: Partial<ProfileInterest>): ProfileInterest => ({
 
 const meeting = (fields: Partial<MeetingRequest>): MeetingRequest => ({
   id: "m",
-  developerId: "local-profile",
+  developerId: "demo-developer",
   developerName: "Ana",
   date: "2026-10-05",
   time: "14:00",
@@ -29,7 +29,7 @@ const meeting = (fields: Partial<MeetingRequest>): MeetingRequest => ({
 describe("interestedCompanies", () => {
   it("keeps only this developer's activity, one entry per company, newest first", () => {
     const result = interestedCompanies(
-      "local-profile",
+      "demo-developer",
       [
         interest({}),
         interest({ email: "carla@nuvem.com", company: "Nuvem", at: "2026-10-03T08:00:00.000Z" }),
@@ -44,7 +44,7 @@ describe("interestedCompanies", () => {
 
   it("shows the latest proposal when a company sent more than one", () => {
     const [acme] = interestedCompanies(
-      "local-profile",
+      "demo-developer",
       [],
       [meeting({ id: "new", sentAt: "2026-10-04T00:00:00.000Z" }), meeting({ id: "old" })],
     );

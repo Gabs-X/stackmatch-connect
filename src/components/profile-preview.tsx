@@ -24,14 +24,17 @@ const reveal = (delay: number) => ({
  */
 export function ProfilePreview({
   profile,
+  accountId,
   showCard,
 }: {
   profile: LocalProfile;
+  /** Owner of the profile; the card is identified by it, as in Discover. */
+  accountId: string;
   showCard: boolean;
 }) {
   const { t } = useI18n();
   const developer = {
-    ...localProfileToDeveloper(profile),
+    ...localProfileToDeveloper(profile, accountId),
     name: profile.name.trim() || t.create.yourName,
     role: profile.role.trim() || t.create.yourRole,
   };

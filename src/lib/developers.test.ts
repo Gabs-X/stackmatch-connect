@@ -32,8 +32,8 @@ describe("developers catalog", () => {
 
   it("gives the demo developer account Gabriel's profile with real links and avatar", () => {
     expect(developers.some((developer) => developer.name === "Gabriel Botelho")).toBe(false);
-    const gabriel = localProfileToDeveloper(demoDeveloperProfile);
-    expect(gabriel).toMatchObject({ id: "local-profile", name: "Gabriel Botelho" });
+    const gabriel = localProfileToDeveloper(demoDeveloperProfile, "demo-developer");
+    expect(gabriel).toMatchObject({ id: "demo-developer", name: "Gabriel Botelho" });
     expect(gabriel.links.verified).toBe(true);
     expect(gabriel.links.website).toBe("https://gabrielanthony.vercel.app/");
     expect(gabriel.image).toBe("https://github.com/Gabs-X.png?size=768");

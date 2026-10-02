@@ -58,17 +58,17 @@ export async function sendMeetingRequest(input: MeetingRequestInput): Promise<Me
  */
 export async function fetchCompanyActivity(
   accountId: string,
-  developerId: string,
   developerName: string,
 ): Promise<{ interests: ProfileInterest[]; meetings: MeetingRequest[] }> {
   await delay(MOCK_LATENCY_MS);
+  // A developer's profile is identified by their account id.
   return accountId === demoDeveloperId
-    ? demoCompanyActivity(developerId, developerName)
+    ? demoCompanyActivity(accountId, developerName)
     : { interests: [], meetings: [] };
 }
 
-export const companyActivityQuery = (accountId: string, developerId: string, name: string) =>
+export const companyActivityQuery = (accountId: string, name: string) =>
   queryOptions({
-    queryKey: ["company-activity", accountId, developerId],
-    queryFn: () => fetchCompanyActivity(accountId, developerId, name),
+    queryKey: ["company-activity", accountId],
+    queryFn: () => fetchCompanyActivity(accountId, name),
   });

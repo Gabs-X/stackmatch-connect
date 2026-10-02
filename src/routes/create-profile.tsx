@@ -1,4 +1,3 @@
-import { demoDeveloperId } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -39,19 +38,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   emptyProfile,
-  loadLocalProfile,
+  loadAccountProfile,
   newProject,
-  saveLocalProfile,
+  saveAccountProfile,
   profileLink,
   type LocalProfile,
   type LocalProject,
 } from "@/lib/local-profile";
-import {
-  availabilityOptions,
-  demoDeveloperProfile,
-  seniorityOptions,
-  workModeOptions,
-} from "@/lib/developers";
+import { availabilityOptions, seniorityOptions, workModeOptions } from "@/lib/developers";
 
 export const Route = createFileRoute("/create-profile")({
   head: () => ({
@@ -94,19 +88,20 @@ function CreateProfile() {
   const bioId = useId();
   const skillId = useId();
   const { user } = useAuth();
+  // RequireAccount only renders this page for a signed-in developer.
+  const accountId = user?.id ?? "";
   useEffect(() => {
-    // The demo developer account opens with its ready-made profile until it saves its own.
-    const stored =
-      loadLocalProfile() ?? (user?.id === demoDeveloperId ? demoDeveloperProfile : null);
+    // Each account edits its own profile; the demo developer starts from its ready-made one.
+    const stored = accountId ? loadAccountProfile(accountId) : null;
     if (stored) {
       setProfile(stored);
       setCompleted(true);
       setPreview(true);
     }
-  }, [user?.id]);
+  }, [accountId]);
   // A developer account starts its first profile with the name and title from sign-up.
   useEffect(() => {
-    if (user?.accountType !== "developer" || loadLocalProfile()) return;
+    if (user?.accountType !== "developer" || loadAccountProfile(user.id)) return;
     setProfile((current) =>
       current.name || current.role ? current : { ...current, name: user.name, role: user.jobTitle },
     );
@@ -122,7 +117,7 @@ function CreateProfile() {
       return;
     }
     try {
-      const saved = saveLocalProfile(profile);
+      const saved = saveAccountProfile(accountId, profile);
       setProfile(saved);
       setCompleted(true);
       setPreview(true);
@@ -218,7 +213,7 @@ function CreateProfile() {
             {t.create.finishToast} {t.create.finishDesc}
           </p>
         )}
-        <ProfilePreview profile={profile} showCard={showCard} />
+        <ProfilePreview profile={profile} accountId={accountId} showCard={showCard} />
       </main>
     );
   return (

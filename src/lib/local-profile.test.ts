@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   emptyProfile,
-  loadLocalProfile,
-  localDeveloperId,
-  localProfileStorageKey,
+  loadAccountProfile,
+  loadPublishedProfiles,
+  loadSavedProfile,
   localProfileToDeveloper,
   newProject,
   profileLink,
-  saveLocalProfile,
+  profilesStorageKey,
+  saveAccountProfile,
 } from "./local-profile";
 
 let storage: Map<string, string>;
@@ -18,12 +19,15 @@ beforeEach(() => {
     localStorage: {
       getItem: (key: string) => storage.get(key) ?? null,
       setItem: (key: string, value: string) => void storage.set(key, value),
+      removeItem: (key: string) => void storage.delete(key),
     },
   });
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const store = (value: unknown) => storage.set(localProfileStorageKey, JSON.stringify(value));
+/** Stores one account's profile as written by an older or newer version of the app. */
+const store = (value: unknown, accountId = "ana") =>
+  storage.set(profilesStorageKey, JSON.stringify({ [accountId]: value }));
 
 describe("profileLink", () => {
   it("adds https to bare addresses", () => {
@@ -41,18 +45,18 @@ describe("profileLink", () => {
   });
 });
 
-describe("loadLocalProfile", () => {
+describe("loadSavedProfile", () => {
   it("returns null when nothing valid is stored", () => {
-    expect(loadLocalProfile()).toBeNull();
-    storage.set(localProfileStorageKey, "{not json");
-    expect(loadLocalProfile()).toBeNull();
+    expect(loadSavedProfile("ana")).toBeNull();
+    storage.set(profilesStorageKey, "{not json");
+    expect(loadSavedProfile("ana")).toBeNull();
     store({ name: "Ana" });
-    expect(loadLocalProfile()).toBeNull();
+    expect(loadSavedProfile("ana")).toBeNull();
   });
 
   it("upgrades profiles saved before projects had details", () => {
     store({ ...emptyProfile, name: "Ana", role: "Dev", projects: ["Legacy App"] });
-    const profile = loadLocalProfile();
+    const profile = loadSavedProfile("ana");
     expect(profile?.projects).toHaveLength(1);
     expect(profile?.projects[0]).toMatchObject({
       name: "Legacy App",
@@ -66,7 +70,7 @@ describe("loadLocalProfile", () => {
   it("adds the work mode field missing from older profiles", () => {
     const { workMode: _workMode, ...older } = emptyProfile;
     store({ ...older, name: "Ana", role: "Dev" });
-    expect(loadLocalProfile()?.workMode).toBe("");
+    expect(loadSavedProfile("ana")?.workMode).toBe("");
   });
 
   it("maps free-text answers onto catalog values and keeps unknown ones", () => {
@@ -76,24 +80,51 @@ describe("loadLocalProfile", () => {
       availability: "disponível agora",
       workMode: "REMOTO",
     });
-    expect(loadLocalProfile()).toMatchObject({
+    expect(loadSavedProfile("ana")).toMatchObject({
       seniority: "Pleno",
       availability: "Disponível agora",
       workMode: "Remoto",
     });
     store({ ...emptyProfile, seniority: "Estagiário" });
-    expect(loadLocalProfile()?.seniority).toBe("Estagiário");
+    expect(loadSavedProfile("ana")?.seniority).toBe("Estagiário");
   });
 
-  it("reads back what saveLocalProfile wrote", () => {
-    const profile = {
-      ...emptyProfile,
-      name: "Ana",
-      role: "Dev",
-      projects: [newProject({ name: "Clinic Booking", tech: ["Vue"] })],
-    };
-    saveLocalProfile(profile);
-    expect(loadLocalProfile()).toEqual(profile);
+  it("drops the ownerless profile older versions kept for the whole browser", () => {
+    storage.set("stackmatch-profile", JSON.stringify({ ...emptyProfile, name: "Diego" }));
+    expect(loadSavedProfile("ana")).toBeNull();
+    expect(storage.has("stackmatch-profile")).toBe(false);
+  });
+});
+
+describe("profiles by account", () => {
+  const ana = {
+    ...emptyProfile,
+    name: "Ana",
+    role: "Dev",
+    projects: [newProject({ name: "Clinic Booking", tech: ["Vue"] })],
+  };
+
+  it("keeps each account's profile apart", () => {
+    saveAccountProfile("ana", ana);
+    saveAccountProfile("bia", { ...ana, name: "Bia" });
+    expect(loadSavedProfile("ana")).toEqual(ana);
+    expect(loadSavedProfile("bia")?.name).toBe("Bia");
+    expect(loadSavedProfile("caio")).toBeNull();
+  });
+
+  it("gives the demo developer its ready-made profile until it saves its own", () => {
+    expect(loadAccountProfile("demo-developer")?.name).toBe("Gabriel Botelho");
+    expect(loadAccountProfile("ana")).toBeNull();
+    saveAccountProfile("demo-developer", { ...ana, name: "Gabriel B." });
+    expect(loadAccountProfile("demo-developer")?.name).toBe("Gabriel B.");
+  });
+
+  it("publishes every developer account's profile under its account id", () => {
+    saveAccountProfile("ana", ana);
+    expect(loadPublishedProfiles().map(({ id, name }) => ({ id, name }))).toEqual([
+      { id: "demo-developer", name: "Gabriel Botelho" },
+      { id: "ana", name: "Ana" },
+    ]);
   });
 });
 
@@ -107,18 +138,21 @@ describe("newProject", () => {
 });
 
 describe("localProfileToDeveloper", () => {
-  const developer = localProfileToDeveloper({
-    ...emptyProfile,
-    name: " Ana Souza ",
-    role: "Frontend Developer",
-    seniority: "Pleno",
-    github: "github.com/anasouza",
-    linkedin: "not a link ::",
-    projects: [newProject({ name: "Clinic Booking", demo: "clinic.vercel.app", github: "x y" })],
-  });
+  const developer = localProfileToDeveloper(
+    {
+      ...emptyProfile,
+      name: " Ana Souza ",
+      role: "Frontend Developer",
+      seniority: "Pleno",
+      github: "github.com/anasouza",
+      linkedin: "not a link ::",
+      projects: [newProject({ name: "Clinic Booking", demo: "clinic.vercel.app", github: "x y" })],
+    },
+    "ana-account",
+  );
 
-  it("marks the entry as the local profile", () => {
-    expect(developer.id).toBe(localDeveloperId);
+  it("identifies the entry by its owner's account", () => {
+    expect(developer.id).toBe("ana-account");
     expect(developer.isLocal).toBe(true);
     expect(developer.name).toBe("Ana Souza");
   });
@@ -130,7 +164,7 @@ describe("localProfileToDeveloper", () => {
 
   it("uses the GitHub avatar as the photo when a GitHub profile is filled in", () => {
     expect(developer.image).toBe("https://github.com/anasouza.png?size=768");
-    expect(localProfileToDeveloper({ ...emptyProfile, name: "Ana" }).image).toBe("");
+    expect(localProfileToDeveloper({ ...emptyProfile, name: "Ana" }, "ana").image).toBe("");
   });
 
   it("keeps only valid links", () => {

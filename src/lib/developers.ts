@@ -36,7 +36,7 @@ export type Developer = {
   rate: number;
   projects: Project[];
   links: ProfessionalLinks;
-  /** Profile created in this browser; it has no server page, so it links to its preview. */
+  /** Created by a developer account in the app, not the fictional catalog; `id` is the account id. */
   isLocal?: true;
 };
 

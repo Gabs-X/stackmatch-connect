@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { demoDeveloperId } from "./auth";
 import {
   availabilityOptions,
   demoDeveloperProfile,
@@ -82,31 +83,59 @@ export const emptyProfile: LocalProfile = {
   projects: [],
 };
 
-export const localProfileStorageKey = "stackmatch-profile";
+/**
+ * Front-end stand-in for the profile API: each developer account owns one profile, kept here by
+ * account id. When the backend exists, swap these for `GET/PUT /me/profile` and `GET /profiles`.
+ */
+export const profilesStorageKey = "stackmatch-profiles";
+/** Before profiles belonged to accounts, the browser kept a single one with no owner. */
+const ownerlessProfileKey = "stackmatch-profile";
 
-export function loadLocalProfile(): LocalProfile | null {
+function readProfiles(): Record<string, LocalProfile> {
   try {
-    const stored = window.localStorage.getItem(localProfileStorageKey);
-    if (!stored) return null;
-    const result = profileSchema.safeParse(JSON.parse(stored));
-    return result.success ? result.data : null;
+    window.localStorage.removeItem(ownerlessProfileKey);
+    const value: unknown = JSON.parse(window.localStorage.getItem(profilesStorageKey) ?? "{}");
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const profiles: Record<string, LocalProfile> = {};
+    for (const [accountId, stored] of Object.entries(value)) {
+      const result = profileSchema.safeParse(stored);
+      if (result.success) profiles[accountId] = result.data;
+    }
+    return profiles;
   } catch {
-    return null;
+    return {};
   }
 }
 
-/**
- * The developer profile this browser shows to companies: the one saved here or, until a developer
- * saves one, the demo account's profile.
- */
-export function loadPublishedProfile(): LocalProfile {
-  return loadLocalProfile() ?? demoDeveloperProfile;
+/** The profile this account saved, if any. */
+export function loadSavedProfile(accountId: string): LocalProfile | null {
+  return readProfiles()[accountId] ?? null;
 }
 
-export function saveLocalProfile(profile: LocalProfile): LocalProfile {
+/** The account's profile: what it saved or, for the demo developer, its ready-made profile. */
+export function loadAccountProfile(accountId: string): LocalProfile | null {
+  return (
+    loadSavedProfile(accountId) ?? (accountId === demoDeveloperId ? demoDeveloperProfile : null)
+  );
+}
+
+export function saveAccountProfile(accountId: string, profile: LocalProfile): LocalProfile {
   const saved = profileSchema.parse(profile);
-  window.localStorage.setItem(localProfileStorageKey, JSON.stringify(saved));
+  window.localStorage.setItem(
+    profilesStorageKey,
+    JSON.stringify({ ...readProfiles(), [accountId]: saved }),
+  );
   return saved;
+}
+
+/** Every developer profile companies can find, newest accounts' edits included. */
+export function loadPublishedProfiles(): Developer[] {
+  const profiles = readProfiles();
+  const owners = new Set([demoDeveloperId, ...Object.keys(profiles)]);
+  return [...owners].flatMap((accountId) => {
+    const profile = loadAccountProfile(accountId);
+    return profile ? [localProfileToDeveloper(profile, accountId)] : [];
+  });
 }
 
 export function profileLink(value: string): string | undefined {
@@ -160,21 +189,19 @@ export function readProjectImage(file: File): Promise<string> {
   });
 }
 
-export const localDeveloperId = "local-profile";
-
 const projectColors = ["project-blue", "project-green", "project-violet", "project-ink"];
 
 /**
- * Presents the browser-saved profile as a catalog entry. Fields the form doesn't collect stay
- * empty (rate is NaN), so filters on them exclude this profile instead of guessing.
+ * Presents an account's profile as a catalog entry, identified by the account id. Fields the form
+ * doesn't collect stay empty (rate is NaN), so filters on them exclude it instead of guessing.
  */
-export function localProfileToDeveloper(profile: LocalProfile): Developer {
+export function localProfileToDeveloper(profile: LocalProfile, accountId: string): Developer {
   return {
-    id: localDeveloperId,
+    id: accountId,
     isLocal: true,
     name: profile.name.trim(),
     role: profile.role.trim(),
-    // loadLocalProfile already mapped these onto catalog values.
+    // The schema already mapped these onto catalog values.
     seniority: profile.seniority,
     location: profile.location.trim(),
     workMode: profile.workMode,

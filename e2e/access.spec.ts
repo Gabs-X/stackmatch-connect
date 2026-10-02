@@ -65,28 +65,42 @@ test("visitors see no app areas until they sign in", async ({ page }) => {
   await expect(page).toHaveURL(/\/login\?redirect=%2Fdiscover$/);
 });
 
-test("a company sees the developer's profile from this browser as a regular candidate", async ({
-  page,
-}) => {
-  await signInAs(page, "developer");
-  // teste.dev opens on its published profile; edit it from the form.
-  await page.getByRole("button", { name: "Voltar à edição" }).click();
-  await page.getByLabel("Nome completo").fill("Diego Fernandes");
+test("each developer account has its own profile, and companies see them all", async ({ page }) => {
+  // A second developer signs up in the same browser and publishes their profile.
+  await page.goto("/register?type=developer");
+  const form = page.getByRole("main");
+  await form.getByLabel("Nome completo").fill("Diego Fernandes");
+  await form.getByLabel("Cargo profissional").fill("Backend Developer");
+  await form.getByLabel("E-mail").fill("diego@example.com");
+  await form.getByLabel("Senha", { exact: true }).fill("segredo123");
+  await form.getByLabel(/Li e aceito/).check();
+  await form.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL(/\/create-profile$/);
   await page.getByRole("button", { name: "4 Links" }).click();
   await page.getByRole("button", { name: "Concluir perfil" }).click();
   await page.getByRole("button", { name: "Ver como card" }).click();
-  // The developer still sees it as their own.
+  await expect(page.getByRole("article")).toContainText("Diego Fernandes");
   await expect(page.getByRole("article")).toContainText("Seu perfil");
+  await page.getByRole("button", { name: "Menu da conta de Diego Fernandes" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  // teste.dev still has Gabriel's profile.
+  await signInAs(page, "developer");
+  await expect(page.getByRole("heading", { level: 1, name: "Gabriel Botelho" })).toBeVisible();
   await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
+  // A company finds both, neither marked as its own.
   await signInAs(page, "company");
-  const card = page.locator("main section article").first();
-  await expect(card).toContainText("Diego Fernandes");
-  await expect(card).not.toContainText("Seu perfil");
+  const cards = page.locator("main section article");
+  await expect(cards.first()).toContainText("Gabriel Botelho");
+  await expect(cards.first()).not.toContainText("Seu perfil");
+  await expect(page.getByText(/^1 de 9 perfis$/)).toBeVisible();
+  await page.getByRole("button", { name: "Passar" }).click();
+  await expect(cards.first()).toContainText("Diego Fernandes");
 
-  await card.getByRole("link", { name: "Ver perfil" }).click();
-  await expect(page).toHaveURL(/\/developer\/local-profile$/);
+  await cards.first().getByRole("link", { name: "Ver perfil" }).click();
+  await expect(page).toHaveURL(/\/developer\/[\w-]+$/);
   await expect(page.getByRole("heading", { level: 1, name: "Diego Fernandes" })).toBeVisible();
   await expect(page.getByRole("main")).not.toContainText("Seu perfil");
   await expect(page.getByRole("button", { name: "Propor reunião" })).toBeVisible();
