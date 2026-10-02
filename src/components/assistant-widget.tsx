@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp, MessageCircle, RotateCcw, Sparkles, Square, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { useScrollingDown } from "@/hooks/use-scrolling-down";
 import {
   assistantApiUrl,
   createHttpTransport,
@@ -17,6 +18,9 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
   const reduceMotion = useReducedMotion();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  // Get out of the way of what's being read; never while the chat is open or the button focused.
+  const hidden = useScrollingDown() && !open && !focused;
   const [draft, setDraft] = useState("");
   const titleId = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -291,10 +295,15 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
         aria-expanded={open}
         title={open ? t.assistant.close : t.assistant.open}
         onClick={() => (open ? close() : setOpen(true))}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        // Hidden while scrolling down: out of the tab order and the accessibility tree too.
+        inert={hidden}
         className={cn(
           "assistant-fab fixed right-4 z-50 sm:bottom-6 sm:right-6",
           raised ? "bottom-[6.5rem]" : "bottom-4",
           open && "max-sm:hidden",
+          hidden && "assistant-fab-hidden",
         )}
       >
         <AnimatePresence initial={false} mode="wait">

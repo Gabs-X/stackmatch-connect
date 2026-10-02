@@ -327,7 +327,8 @@ a {
     0 8px 24px -8px color-mix(in oklab, var(--primary) 60%, transparent);
   cursor: pointer;
   transition:
-    transform 0.2s,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s,
     box-shadow 0.2s;
   &:hover {
     transform: translateY(-2px) scale(1.03);
@@ -336,6 +337,12 @@ a {
     outline: 2px solid var(--primary);
     outline-offset: 3px;
   }
+}
+/* Slides out of the way while the page scrolls down; scrolling up brings it back. */
+@utility assistant-fab-hidden {
+  transform: translateY(calc(100% + 1.5rem)) scale(0.9);
+  opacity: 0;
+  pointer-events: none;
 }
 @utility assistant-fab-spark {
   position: absolute;

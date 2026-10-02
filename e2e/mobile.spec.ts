@@ -79,3 +79,19 @@ test.describe("on a narrow phone", () => {
     await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
   });
 });
+
+test("the assistant button steps aside while scrolling down", async ({ page }) => {
+  await page.goto("/");
+  // Located by class, since its name is the same whether it shows or not.
+  const fab = page.locator(".assistant-fab");
+  await expect(fab).toBeInViewport();
+
+  await page.mouse.wheel(0, 900);
+  await expect(fab).not.toBeInViewport();
+  // Hidden, it also leaves the tab order.
+  await expect(fab).toHaveAttribute("inert");
+
+  await page.mouse.wheel(0, -300);
+  await expect(fab).toBeInViewport();
+  await expect(fab).not.toHaveAttribute("inert");
+});
