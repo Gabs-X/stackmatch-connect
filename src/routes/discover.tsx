@@ -1,5 +1,5 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AnimatePresence,
   motion,
@@ -8,7 +8,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
@@ -64,10 +64,10 @@ function DiscoverPage() {
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
   const { developers = noDevelopers, isPending, isError, refetch } = useDevelopers();
-  const loading = isPending && !isError;
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [index, setIndex] = useState(0);
   const {
+    hydrated,
     saved,
     interests,
     addSaved,
@@ -93,14 +93,33 @@ function DiscoverPage() {
   const rotate = useTransform(x, [-220, 220], [-8, 8]);
   const yesOpacity = useTransform(x, [30, 120], [0, 1]);
   const noOpacity = useTransform(x, [-120, -30], [1, 0]);
-  const filtered = useMemo(
+  // Profiles already in the shortlist when this round started stay out of Discover. Ones saved
+  // during the round stay in place, so the position, the counter and undo keep working.
+  const [hiddenIds, setHiddenIds] = useState<readonly string[] | null>(null);
+  useEffect(() => {
+    if (hydrated) setHiddenIds((current) => current ?? saved);
+  }, [hydrated, saved]);
+  const loading = (isPending && !isError) || hiddenIds === null;
+  const matching = useMemo(
     () => developers.filter((developer) => matchesFilters(developer, filters)),
     [filters, developers],
   );
+  const filtered = useMemo(
+    () => matching.filter((developer) => !hiddenIds?.includes(developer.id)),
+    [matching, hiddenIds],
+  );
+  const hiddenCount = matching.length - filtered.length;
   const current = filtered[index];
+  const startRound = () => {
+    setHiddenIds(saved);
+    setIndex(0);
+    setFeedback(null);
+    updateHistory([]);
+  };
   const changeFilters = (next: Filters) => {
     setFeedback(null);
     setFilters(next);
+    setHiddenIds(saved);
     setIndex(0);
     updateHistory([]);
   };
@@ -213,13 +232,20 @@ function DiscoverPage() {
           </aside>
           <section className="stagger-item stagger-2 mx-auto min-w-0 w-full max-w-[500px]">
             <div className="mb-3 flex items-center justify-between text-xs font-semibold text-muted-foreground">
-              <span>
-                {loading ? (
-                  <Skeleton className="h-4 w-24" />
-                ) : filtered.length ? (
-                  `${Math.min(index + 1, filtered.length)} ${t.discover.of} ${filtered.length} ${t.discover.profiles(filtered.length)}`
-                ) : (
-                  t.discover.none
+              <span className="flex flex-wrap items-center gap-x-2">
+                <span>
+                  {loading ? (
+                    <Skeleton className="h-4 w-24" />
+                  ) : filtered.length ? (
+                    `${Math.min(index + 1, filtered.length)} ${t.discover.of} ${filtered.length} ${t.discover.profiles(filtered.length)}`
+                  ) : (
+                    t.discover.none
+                  )}
+                </span>
+                {!loading && hiddenCount > 0 && filtered.length > 0 && (
+                  <Link to="/saved" className="font-normal underline-offset-4 hover:underline">
+                    {t.discover.hiddenSaved(hiddenCount)}
+                  </Link>
                 )}
               </span>
               <span className="flex items-center gap-3">
@@ -287,16 +313,20 @@ function DiscoverPage() {
                     <Check className="mx-auto size-12 text-positive" />
                     <h2 className="mt-4 text-xl font-bold">{t.discover.finishedTitle}</h2>
                     <p className="mt-2 text-sm text-muted-foreground">{t.discover.finishedSub}</p>
-                    <Button
-                      className="mt-5"
-                      onClick={() => {
-                        setIndex(0);
-                        setFeedback(null);
-                        updateHistory([]);
-                      }}
-                    >
+                    <Button className="mt-5" onClick={startRound}>
                       <RotateCcw />
                       {t.discover.restart}
+                    </Button>
+                  </div>
+                </div>
+              ) : !current && hiddenCount > 0 ? (
+                <div className="grid min-h-[500px] place-items-center rounded-lg border border-dashed bg-card p-8 text-center">
+                  <div>
+                    <Bookmark className="mx-auto size-12 text-primary" />
+                    <h2 className="mt-4 text-xl font-bold">{t.discover.allSavedTitle}</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">{t.discover.allSavedSub}</p>
+                    <Button asChild className="mt-5">
+                      <Link to="/saved">{t.discover.viewSaved}</Link>
                     </Button>
                   </div>
                 </div>

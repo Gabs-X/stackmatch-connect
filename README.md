@@ -17,7 +17,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 
 ## Principais funcionalidades
 
-- **Discover:** filtros por tecnologias, senioridade, modelo de trabalho, contratação, disponibilidade e valor máximo por hora. Chips permitem remover seleções.
+- **Discover:** filtros por tecnologias, senioridade, modelo de trabalho, contratação, disponibilidade e valor máximo por hora. Chips permitem remover seleções. Perfis que já estão nos talentos salvos ficam fora da lista (os salvos durante a rodada continuam até a próxima, para o desfazer funcionar).
 - **Ações distintas:** passar avança; salvar adiciona à shortlist; interessado registra interesse separadamente e também salva o perfil. Nenhuma ação envia contato ao profissional.
 - **Navegação por cards:** botões e arraste, opção de desfazer e encerramento explícito da lista, com reinício manual.
 - **Contas:** telas de entrar, criar conta (empresa ou desenvolvedor) e recuperar senha, com validação por campo, menu da conta no cabeçalho e retorno à página de origem após o login.

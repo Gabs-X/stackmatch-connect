@@ -50,18 +50,39 @@ test("undo brings the card back and removes the save it created", async ({ page 
   await expect(savedBadge(page)).toBeHidden();
 });
 
-test("undo keeps a profile that was saved before the action", async ({ page }) => {
+test("profiles already saved stay out of Discover", async ({ page }) => {
   await page.evaluate(() =>
     localStorage.setItem("stackmatch-saved", JSON.stringify(["gabriel-botelho"])),
   );
   await page.reload();
-  await expect(savedBadge(page)).toHaveText("1");
 
-  await page.getByRole("button", { name: "Interessado" }).click();
+  await expect(counter(page)).toHaveText("1 de 7 perfis");
+  await expect(card(page)).not.toContainText("Gabriel Botelho");
+  await expect(page.getByRole("link", { name: "· 1 já salvo fora da lista" })).toBeVisible();
+
+  // Saving during the round keeps the card in the list, so undo still brings it back.
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(counter(page)).toHaveText("2 de 7 perfis");
   await page.getByRole("main").getByRole("button", { name: "Desfazer" }).click();
-
-  await expect(card(page)).toContainText("Gabriel Botelho");
+  await expect(counter(page)).toHaveText("1 de 7 perfis");
   await expect(savedBadge(page)).toHaveText("1");
+});
+
+test("a search whose talents are all saved points to the shortlist", async ({ page }) => {
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "stackmatch-saved",
+      JSON.stringify(["marina-costa", "rafael-lima", "amanda-rocha"]),
+    ),
+  );
+  await page.reload();
+  await filterChip(page, "Sênior").click();
+
+  await expect(
+    page.getByRole("heading", { name: "Você já salvou todos estes talentos" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Ver talentos salvos" }).click();
+  await expect(page).toHaveURL(/\/saved$/);
 });
 
 test("filters narrow the list and active chips can be removed", async ({ page }) => {

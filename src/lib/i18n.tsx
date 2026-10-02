@@ -94,6 +94,12 @@ const pt = {
     emptyTitle: "Nenhum talento encontrado",
     emptySub: "Tente remover alguns filtros para ampliar a busca.",
     clearFilters: "Limpar filtros",
+    allSavedTitle: "Você já salvou todos estes talentos",
+    allSavedSub:
+      "Os perfis que já estão na sua lista de salvos não aparecem no Discover. Ajuste os filtros ou confira sua shortlist.",
+    viewSaved: "Ver talentos salvos",
+    hiddenSaved: (n: number) =>
+      n === 1 ? "· 1 já salvo fora da lista" : `· ${n} já salvos fora da lista`,
     interested: "Interessado",
     pass: "Passar",
     save: "Salvar",
@@ -549,6 +555,12 @@ const en: Dict = {
     emptyTitle: "No talent found",
     emptySub: "Try removing some filters to broaden your search.",
     clearFilters: "Clear filters",
+    allSavedTitle: "You already saved all of these talents",
+    allSavedSub:
+      "Profiles already in your saved list don't show up in Discover. Adjust the filters or check your shortlist.",
+    viewSaved: "View saved talent",
+    hiddenSaved: (n: number) =>
+      n === 1 ? "· 1 already saved, not listed" : `· ${n} already saved, not listed`,
     interested: "Interested",
     pass: "Pass",
     save: "Save",
