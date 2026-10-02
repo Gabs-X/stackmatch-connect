@@ -52,6 +52,7 @@ test("a developer signs up, lands on the profile form prefilled, and signs out",
   await menu.getByRole("menuitem", { name: "Sair" }).click();
 
   await expect(page.getByText("Você saiu da sua conta")).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("banner").getByRole("link", { name: "Entrar" })).toBeVisible();
 });
 

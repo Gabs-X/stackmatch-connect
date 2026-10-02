@@ -105,3 +105,24 @@ test("each developer account has its own profile, and companies see them all", a
   await expect(page.getByRole("main")).not.toContainText("Seu perfil");
   await expect(page.getByRole("button", { name: "Propor reunião" })).toBeVisible();
 });
+
+test("signing out always lands on the home page, also from another tab", async ({
+  page,
+  context,
+}) => {
+  await signInAs(page, "company");
+  await page.goto("/saved");
+  await page.getByRole("button", { name: "Menu da conta de Recrutadora Teste" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await signInAs(page, "company");
+  await page.goto("/saved");
+  const other = await context.newPage();
+  await other.goto("/login");
+  await other.waitForSelector("html[data-hydrated]", { state: "attached" });
+  await other.getByRole("button", { name: "Sair" }).click();
+  await expect(other).toHaveURL(/\/$/);
+  // The first tab follows, instead of falling back to the login.
+  await expect(page).toHaveURL(/\/$/);
+});

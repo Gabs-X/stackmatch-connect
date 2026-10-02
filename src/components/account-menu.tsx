@@ -100,8 +100,7 @@ export function AccountMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => {
-            signOut();
-            toast(t.auth.signedOut);
+            void signOut().then(() => toast(t.auth.signedOut));
           }}
         >
           <LogOut />

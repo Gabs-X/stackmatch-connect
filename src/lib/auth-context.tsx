@@ -1,5 +1,6 @@
 import type React from "react";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   loadSession,
   saveSession,
@@ -18,7 +19,8 @@ type AuthState = {
   ready: boolean;
   signIn: (input: SignInInput) => Promise<AuthUser>;
   signUp: (input: SignUpInput) => Promise<AuthUser>;
-  signOut: () => void;
+  /** Ends the session and takes the user to the home page. */
+  signOut: () => Promise<void>;
 };
 
 // Keep a single context instance across hot reloads so provider/consumers never diverge.
@@ -28,16 +30,34 @@ const AuthContext = (store.__stackmatchAuth ??= createContext<AuthState | null>(
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [ready, setReady] = useState(false);
+  const router = useRouter();
+  // Read by the storage listener, which is set up once.
+  const signedIn = useRef(false);
+  signedIn.current = session !== null;
+
+  /**
+   * Every sign-out lands on the home page. Navigate before clearing the session, so account-only
+   * pages leave instead of sending the user to the login.
+   */
+  const leave = async () => {
+    await router.navigate({ to: "/" });
+    setSession(null);
+  };
 
   useEffect(() => {
     setSession(loadSession());
     setReady(true);
     // Keep tabs in sync when the user signs in or out elsewhere.
     const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === sessionStorageKey) setSession(loadSession());
+      if (event.key !== null && event.key !== sessionStorageKey) return;
+      const next = loadSession();
+      if (next) setSession(next);
+      else if (signedIn.current) void leave();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
+    // The listener reads the latest state through refs; it is set up once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const start = (next: AuthSession) => {
@@ -51,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ready,
     signIn: async (input) => start(await apiSignIn(input)),
     signUp: async (input) => start(await apiSignUp(input)),
-    signOut: () => {
+    signOut: async () => {
       saveSession(null);
-      setSession(null);
+      await leave();
     },
   };
 

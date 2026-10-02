@@ -86,7 +86,7 @@ function LoginPage() {
             <Button onClick={() => void router.navigate({ href: homeFor(user) })}>
               {t.auth.continue}
             </Button>
-            <Button variant="outline" onClick={signOut}>
+            <Button variant="outline" onClick={() => void signOut()}>
               {t.auth.menu.signOut}
             </Button>
           </div>
