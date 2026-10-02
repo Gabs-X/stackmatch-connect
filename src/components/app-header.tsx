@@ -17,12 +17,19 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, type Lang } from "@/lib/i18n";
+import { useDevelopers } from "@/lib/use-developers";
 
 export function AppHeader() {
   const { t, lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   const { saved } = useApp();
   const { user, ready } = useAuth();
+  // Count only saved ids that still match a profile, as the list does: older versions may have
+  // left ids of profiles that no longer exist.
+  const { developers } = useDevelopers({ enabled: user?.accountType === "company" });
+  const savedCount = developers
+    ? saved.filter((id) => developers.some((developer) => developer.id === id)).length
+    : 0;
   // The app areas need an account, so visitors only get the sign-in buttons; each account type
   // sees just its own areas.
   const links = !user
@@ -53,8 +60,8 @@ export function AppHeader() {
             <Link key={to} to={to} activeProps={{ className: "nav-active" }} className="nav-link">
               <Icon className="size-4" />
               {label}
-              {to === "/saved" && saved.length > 0 && (
-                <span className="count-badge">{saved.length}</span>
+              {to === "/saved" && savedCount > 0 && (
+                <span className="count-badge">{savedCount}</span>
               )}
             </Link>
           ))}

@@ -20,8 +20,8 @@ const unknownOnServer = () => undefined;
  * first so they're easy to find. Browser navigation reads them right away, so the list doesn't
  * flash a loading state on every visit; only the first, server-rendered load waits for storage.
  */
-export function useDevelopers() {
-  const { data, isPending, isError, refetch } = useQuery(developersQuery);
+export function useDevelopers({ enabled = true }: { enabled?: boolean } = {}) {
+  const { data, isPending, isError, refetch } = useQuery({ ...developersQuery, enabled });
   const stored = useSyncExternalStore(subscribe, readStored, unknownOnServer);
   const profiles = useMemo(
     () => (stored === undefined ? undefined : loadPublishedProfiles()),

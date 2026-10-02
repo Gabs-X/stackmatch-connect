@@ -113,3 +113,24 @@ test("reaching the end of the list offers to review again", async ({ page }) => 
   await page.getByRole("button", { name: "Rever perfis" }).click();
   await expect(card(page)).toContainText("Diego Santos");
 });
+
+test("the saved counter matches the list, even with ids left by older versions", async ({
+  page,
+}) => {
+  // A profile that no longer exists, and Gabriel under the id he had in the old catalog.
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "stackmatch-saved",
+      JSON.stringify(["perfil-removido", "gabriel-botelho"]),
+    ),
+  );
+  await page.reload();
+  await expect(savedBadge(page)).toHaveText("1");
+
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: /Talentos salvos/ })
+    .click();
+  await expect(page.getByRole("main").getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("main")).toContainText("Gabriel Botelho");
+});

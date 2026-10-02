@@ -1,4 +1,5 @@
 import type React from "react";
+import { demoDeveloperId } from "./auth";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import {
@@ -39,6 +40,14 @@ const globalStore = globalThis as unknown as {
 };
 const AppContext = (globalStore.__stackmatchAppContext ??= createContext<AppState | null>(null));
 
+/** Gabriel's profile moved from the fictional catalog to the demo developer account. */
+const renamedIds: Record<string, string> = { "gabriel-botelho": demoDeveloperId };
+
+/** Keeps the stored ids that are strings, under their current names and without duplicates. */
+function upgradeIds(value: unknown[]) {
+  const ids = value.filter((id): id is string => typeof id === "string");
+  return [...new Set(ids.map((id) => renamedIds[id] ?? id))];
+}
 export function AppProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
@@ -50,15 +59,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const value: unknown = JSON.parse(
         window.localStorage.getItem("stackmatch-interests") ?? "[]",
       );
-      if (Array.isArray(value))
-        setInterests(value.filter((id): id is string => typeof id === "string"));
+      if (Array.isArray(value)) setInterests(upgradeIds(value));
     } catch {
       /* Keep session state if storage is unavailable. */
     }
     try {
       const value: unknown = JSON.parse(window.localStorage.getItem("stackmatch-saved") ?? "[]");
-      if (Array.isArray(value))
-        setSaved(value.filter((id): id is string => typeof id === "string"));
+      if (Array.isArray(value)) setSaved(upgradeIds(value));
     } catch {
       /* Keep session state if storage is unavailable or corrupted. */
     }
