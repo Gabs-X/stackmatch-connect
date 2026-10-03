@@ -20,7 +20,6 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { ThemeProvider, themeInitScript, useTheme } from "@/lib/theme";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 // Vercel Analytics only collects on Vercel hosting; elsewhere its script 404s, so opt in per deploy.
 const vercelAnalyticsEnabled = import.meta.env.VITE_VERCEL_ANALYTICS === "true";
@@ -51,9 +50,6 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const { t } = useI18n();
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

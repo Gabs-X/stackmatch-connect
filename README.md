@@ -1,6 +1,6 @@
 # StackMatch
 
-Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo. O projeto utilizou **Lovable conforme orientação do teste**, com ajustes no código para completar fluxos e revisar comportamento, acessibilidade e consistência dos dados.
+Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
 **Backend não fazia parte do escopo.** Os fluxos de produto usam dados fictícios e estado no navegador.
 
@@ -37,7 +37,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 
 - React 19 e TypeScript em modo estrito.
 - TanStack Start e TanStack Router para estrutura da aplicação e rotas por arquivos.
-- Vite 8, com configuração fornecida pelo Lovable.
+- Vite 8, com Nitro gerando o servidor para o deploy (a Vercel é detectada automaticamente).
 - Tailwind CSS 4 e componentes baseados em Radix UI.
 - Framer Motion para animações e arraste dos cards.
 - Lucide para ícones e Sonner para notificações.
@@ -143,7 +143,7 @@ A resposta pode ser texto em streaming (`text/plain`, exibido conforme chega) ou
 
 ## Analytics de visitas (Vercel)
 
-O projeto inclui o [Vercel Analytics](https://vercel.com/docs/analytics), desativado por padrão. Ele só coleta dados quando o site está hospedado na Vercel; em outros hosts, como o Lovable, o script de coleta não existe.
+O projeto inclui o [Vercel Analytics](https://vercel.com/docs/analytics), desativado por padrão. Ele só coleta dados quando o site está hospedado na Vercel; em outros hosts, o script de coleta não existe.
 
 Para ativar em um deploy na Vercel:
 
@@ -180,12 +180,3 @@ Sem essa variável, o componente não é incluído no build.
 3. Refinar validações do formulário e ampliar o cadastro de projetos, conforme feedback de uso.
 4. Em uma etapa com backend, definir contratos de API, autenticação, publicação de perfis e persistência por usuário.
 5. Integrar o GitHub e o envio de e-mails apenas após definir permissões, privacidade e limites contra spam nas propostas de reunião.
-
-## Lovable
-
-O uso do Lovable integrou o desenvolvimento conforme a orientação do teste. O repositório permanece conectado à ferramenta.
-
-- [Aplicação publicada](https://stackmatch-connect.lovable.app)
-- [Projeto no Lovable](https://lovable.dev/projects/eaaacb72-e979-5df1-babb-b0232a2fdea4)
-
-Ao colaborar, preserve o histórico publicado: evite force push ou reescrita de commits já enviados, pois isso interfere na sincronização com o Lovable.
