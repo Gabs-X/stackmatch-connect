@@ -7,9 +7,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 
 /**
- * Shows its children only to signed-in accounts, of the given type when one is set. Visitors go to
- * the login with a redirect back here; the other account type sees a notice. The session lives in
- * the browser, so this runs on the client; a real backend must also enforce it on its endpoints.
+ * Shows its children only to signed-in accounts that confirmed their e-mail, of the given type when
+ * one is set. Visitors go to the login and unconfirmed accounts to the confirmation, both with a
+ * redirect back here; the other account type sees a notice. The server enforces the same rules.
  */
 export function RequireAccount({ type, children }: { type?: AccountType; children: ReactNode }) {
   const { t } = useI18n();
@@ -20,11 +20,14 @@ export function RequireAccount({ type, children }: { type?: AccountType; childre
   const route = useMatch({ strict: false, select: (match) => match.pathname });
 
   useEffect(() => {
-    if (!ready || user || pathname !== route) return;
-    void router.navigate({ to: "/login", search: { redirect: route }, replace: true });
+    if (!ready || user?.emailVerified || pathname !== route) return;
+    // Signed in but not confirmed yet: the code first, then back here.
+    if (user)
+      void router.navigate({ to: "/verify-email", search: { redirect: route }, replace: true });
+    else void router.navigate({ to: "/login", search: { redirect: route }, replace: true });
   }, [ready, user, pathname, route, router]);
 
-  if (!ready || !user)
+  if (!ready || !user?.emailVerified)
     return (
       <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4">
         <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">

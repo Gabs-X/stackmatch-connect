@@ -49,7 +49,8 @@ type AccountLists = { owner: string | null; saved: string[]; interests: string[]
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user, ready } = useAuth();
   // Only hiring accounts save talents and mark interest; other sessions get empty lists.
-  const owner = user?.accountType === "company" ? user.id : null;
+  // Only confirmed company accounts have lists; the server refuses anyone else.
+  const owner = user?.accountType === "company" && user.emailVerified ? user.id : null;
   // Tagged with their owner, so a previous account's lists never show after switching accounts.
   const [accountLists, setAccountLists] = useState<AccountLists | null>(null);
   const current = accountLists?.owner === owner ? accountLists : null;

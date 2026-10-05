@@ -30,14 +30,14 @@ export async function currentUser() {
 
 export class AccessError extends Error {
   constructor() {
-    super("This action needs a signed-in account of another type.");
+    super("This action needs a signed-in, confirmed account of another type.");
     this.name = "AccessError";
   }
 }
 
-/** The signed-in account, which must be of `type`; anything else is refused. */
+/** The signed-in account, which must be of `type` and have confirmed its e-mail; else refused. */
 export async function requireAccount(type: AccountType) {
   const user = await currentUser();
-  if (user?.accountType !== type) throw new AccessError();
+  if (user?.accountType !== type || !user.emailVerified) throw new AccessError();
   return user;
 }

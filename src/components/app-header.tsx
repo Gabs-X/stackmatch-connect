@@ -27,7 +27,9 @@ export function AppHeader() {
   const { user, ready } = useAuth();
   // Count only saved ids that still match a profile, as the list does: older versions may have
   // left ids of profiles that no longer exist.
-  const { developers } = useDevelopers({ enabled: user?.accountType === "company" });
+  const { developers } = useDevelopers({
+    enabled: user?.accountType === "company" && user.emailVerified,
+  });
   const savedCount = developers
     ? saved.filter((id) => developers.some((developer) => developer.id === id)).length
     : 0;

@@ -70,7 +70,15 @@ describe("redirects", () => {
   });
 
   it("sends each account type to its own starting page", () => {
-    const base = { id: "1", name: "A", email: "a@a.com", company: "", cnpj: "", jobTitle: "" };
+    const base = {
+      id: "1",
+      name: "A",
+      email: "a@a.com",
+      company: "",
+      cnpj: "",
+      jobTitle: "",
+      emailVerified: true,
+    };
     expect(homeFor({ ...base, accountType: "developer" })).toBe("/create-profile");
     expect(homeFor({ ...base, accountType: "company" })).toBe("/discover");
   });

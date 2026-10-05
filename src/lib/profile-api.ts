@@ -14,7 +14,9 @@ import { profileInputSchema, type LocalProfile } from "./local-profile";
 /** Stands for `GET /me/profile`: the signed-in developer's profile, or null before the first save. */
 export const fetchMyProfile = createServerFn({ method: "GET" }).handler(async () => {
   const user = await currentUser();
-  return user?.accountType === "developer" ? loadProfile(await database(), user.id) : null;
+  return user?.accountType === "developer" && user.emailVerified
+    ? loadProfile(await database(), user.id)
+    : null;
 });
 
 /** Stands for `PUT /me/profile`. Only developer accounts have a profile. */

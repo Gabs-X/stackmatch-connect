@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { chooseLocation, expect, signInAs, test, uniqueEmail } from "./fixtures";
+import { confirmEmail, chooseLocation, expect, signInAs, test, uniqueEmail } from "./fixtures";
 
 test("changing the state clears the city and only offers cities from that state", async ({
   page,
@@ -158,6 +158,7 @@ test("a developer can publish a profile without projects", async ({ page }) => {
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
+  await confirmEmail(page);
   await expect(page).toHaveURL(/\/create-profile$/);
 
   await chooseLocation(page, "Natal", "RN");
@@ -265,6 +266,7 @@ test("skills suggest what others use, and a new one becomes a suggestion for eve
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
+  await confirmEmail(page);
   await expect(page).toHaveURL(/\/create-profile$/);
   // Step 1's required fields come first.
   await chooseLocation(page, "Natal", "RN");

@@ -64,6 +64,13 @@
       "when": 1791220000224,
       "tag": "0008_skills_case_insensitive",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791227586971,
+      "tag": "0009_email_verification",
+      "breakpoints": true
     }
   ]
 }

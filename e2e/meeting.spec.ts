@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test, uniqueEmail } from "./fixtures";
+import { confirmEmail, expect, test, uniqueEmail } from "./fixtures";
 
 // Thursday noon in Brasília, so the next day (Friday) has every time open. The server checks the
 // proposed time against its own clock, so the browser's is set to a date still ahead.
@@ -17,6 +17,7 @@ async function registerCompany(page: Page, email: string) {
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
+  await confirmEmail(page);
   await expect(page).toHaveURL(/\/discover$/);
 }
 
@@ -71,6 +72,7 @@ test("developer accounts can't send proposals", async ({ page }) => {
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
+  await confirmEmail(page);
   await expect(page).toHaveURL(/\/create-profile$/);
 
   await page.goto("/developer/marina-costa");

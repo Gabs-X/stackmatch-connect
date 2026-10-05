@@ -18,6 +18,8 @@ import { Route as InterestsRouteImport } from './routes/interests'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as ApiTestEmailsRouteImport } from './routes/api.test-emails'
 import { Route as ApiTestResetRouteImport } from './routes/api.test-reset'
 import { Route as ApiTestSeedRouteImport } from './routes/api.test-seed'
 import { Route as CompanyIdRouteImport } from './routes/company.$id'
@@ -69,6 +71,16 @@ const SavedRoute = SavedRouteImport.update({
   path: '/saved',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTestEmailsRoute = ApiTestEmailsRouteImport.update({
+  id: '/api/test-emails',
+  path: '/api/test-emails',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTestResetRoute = ApiTestResetRouteImport.update({
   id: '/api/test-reset',
   path: '/api/test-reset',
@@ -105,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
@@ -121,6 +135,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
@@ -138,6 +154,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
@@ -156,6 +174,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/verify-email'
+    | '/api/test-emails'
     | '/api/test-reset'
     | '/api/test-seed'
     | '/company/$id'
@@ -172,6 +192,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/verify-email'
+    | '/api/test-emails'
     | '/api/test-reset'
     | '/api/test-seed'
     | '/company/$id'
@@ -188,6 +210,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/verify-email'
+    | '/api/test-emails'
     | '/api/test-reset'
     | '/api/test-seed'
     | '/company/$id'
@@ -205,6 +229,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  ApiTestEmailsRoute: typeof ApiTestEmailsRoute
   ApiTestResetRoute: typeof ApiTestResetRoute
   ApiTestSeedRoute: typeof ApiTestSeedRoute
   CompanyIdRoute: typeof CompanyIdRoute
@@ -277,6 +303,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SavedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/test-emails': {
+      id: '/api/test-emails'
+      path: '/api/test-emails'
+      fullPath: '/api/test-emails'
+      preLoaderRoute: typeof ApiTestEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/test-reset': {
       id: '/api/test-reset'
       path: '/api/test-reset'
@@ -325,6 +365,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
+  ApiTestEmailsRoute: ApiTestEmailsRoute,
   ApiTestResetRoute: ApiTestResetRoute,
   ApiTestSeedRoute: ApiTestSeedRoute,
   CompanyIdRoute: CompanyIdRoute,

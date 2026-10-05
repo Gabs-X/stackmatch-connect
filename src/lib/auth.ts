@@ -18,9 +18,14 @@ export type AuthUser = {
   cnpj: string;
   /** Professional title for developers (required) or the recruiter's role (optional). */
   jobTitle: string;
+  /** False until the account confirms its e-mail with the code it received; it can't act before. */
+  emailVerified: boolean;
 };
 
 export type AuthErrorCode = "email-taken" | "invalid-credentials";
+
+/** Why a code from an e-mail wasn't accepted. */
+export type CodeErrorCode = "invalid-code" | "expired-code" | "too-many-attempts";
 
 export class AuthError extends Error {
   constructor(readonly code: AuthErrorCode) {
@@ -77,6 +82,11 @@ export const signInSchema = z.object({
 });
 export type SignInInput = z.infer<typeof signInSchema>;
 
+const newPassword = z
+  .string()
+  .refine(passwordRules.length, "passwordLength")
+  .refine((value) => passwordRules.letter(value) && passwordRules.number(value), "passwordMix");
+
 export const signUpSchema = z
   .object({
     accountType: z.enum(["company", "developer"]),
@@ -85,10 +95,7 @@ export const signUpSchema = z
     cnpj: z.string().trim(),
     jobTitle: z.string().trim(),
     email,
-    password: z
-      .string()
-      .refine(passwordRules.length, "passwordLength")
-      .refine((value) => passwordRules.letter(value) && passwordRules.number(value), "passwordMix"),
+    password: newPassword,
     acceptTerms: z.boolean().refine(Boolean, "terms"),
   })
   .refine((data) => data.accountType !== "company" || data.company.length > 0, {
@@ -105,15 +112,22 @@ export const signUpSchema = z
   });
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
+/** The six digits e-mailed to confirm an address or reset a password. */
+const emailCode = z
+  .string()
+  .trim()
+  .min(1, "required")
+  .regex(/^\d{6}$/, "code");
+
+export const verifyEmailSchema = z.object({ code: emailCode });
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+/** Step 1 of password recovery: where to send the code. */
 export const passwordResetSchema = z.object({ email });
 
-/**
- * Stand-in for the password reset e-mail: there is no e-mail service yet. Always resolves, whether
- * or not the account exists, so the screen can't be used to probe.
- */
-export async function requestPasswordReset(_email: string): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 600));
-}
+/** Step 2: the code and the new password, with the same rules as at sign-up. */
+export const newPasswordSchema = z.object({ code: emailCode, password: newPassword });
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;
 
 /** Broadcasts sign-ins and sign-outs to the other tabs; the session itself is a server cookie. */
 export const sessionStorageKey = "stackmatch-session";
@@ -127,3 +141,12 @@ export function safeRedirect(value: unknown, fallback: string) {
 
 export const homeFor = (user: AuthUser) =>
   user.accountType === "developer" ? "/create-profile" : "/discover";
+
+/**
+ * Where to go after signing in or up: the requested page, or the account's home; an account that
+ * hasn't confirmed its e-mail goes to the confirmation first, which then sends it there.
+ */
+export function landingFor(user: AuthUser, redirect?: unknown) {
+  const target = safeRedirect(redirect, homeFor(user));
+  return user.emailVerified ? target : `/verify-email?redirect=${encodeURIComponent(target)}`;
+}

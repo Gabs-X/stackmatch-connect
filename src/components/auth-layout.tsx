@@ -1,6 +1,7 @@
-import { Check, Eye, EyeOff, Info } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff, X } from "lucide-react";
 import { forwardRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
+import { passwordRules } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -25,10 +26,6 @@ export function AuthLayout({
           <p className="mt-2 text-muted-foreground">{subtitle}</p>
           <div className="mt-8">{children}</div>
           {footer && <div className="mt-8 text-center text-sm text-muted-foreground">{footer}</div>}
-          <p className="mt-8 flex items-start gap-2 rounded-md bg-muted px-3 py-2.5 text-xs text-muted-foreground">
-            <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-            {t.auth.demoNote}
-          </p>
         </div>
       </section>
       <aside className="stagger-item stagger-2 auth-panel hidden items-center px-12 py-16 lg:flex">
@@ -88,3 +85,43 @@ export const PasswordInput = forwardRef<HTMLInputElement, ComponentProps<"input"
   },
 );
 PasswordInput.displayName = "PasswordInput";
+
+/** What a new password needs, checked off as it's typed. */
+export function PasswordRules({ id, password }: { id: string; password: string }) {
+  const { t } = useI18n();
+  const rules = [
+    [t.auth.ruleLength, passwordRules.length(password)],
+    [t.auth.ruleLetter, passwordRules.letter(password)],
+    [t.auth.ruleNumber, passwordRules.number(password)],
+  ] as const;
+  return (
+    <div id={id} className="mt-2 text-xs text-muted-foreground">
+      <span className="sr-only">{t.auth.passwordRules}</span>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">
+        {rules.map(([label, ok]) => (
+          <li key={label} className={cn("flex items-center gap-1", ok && "text-positive")}>
+            {ok ? (
+              <Check className="size-3.5" aria-hidden="true" />
+            ) : (
+              <X className="size-3.5" aria-hidden="true" />
+            )}
+            {label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** The error at the top of an account form, like the login's. */
+export function FormAlert({ children }: { children: ReactNode }) {
+  return (
+    <p
+      role="alert"
+      className="flex items-center gap-2 rounded-md border border-destructive/30 bg-danger-soft px-3 py-2.5 text-sm text-destructive"
+    >
+      <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
+      {children}
+    </p>
+  );
+}

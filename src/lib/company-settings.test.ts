@@ -10,6 +10,7 @@ const acme: AuthUser = {
   company: "Acme",
   cnpj: "11222333000181",
   jobTitle: "Tech Lead",
+  emailVerified: true,
 };
 
 describe("company settings", () => {

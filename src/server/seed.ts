@@ -88,7 +88,10 @@ export async function seedDatabase(db: Db) {
   const passwordHash = await hashPassword(seedPassword);
   await db
     .insert(users)
-    .values(seedAccounts.map((account) => ({ ...account, passwordHash })))
+    // Confirmed from the start: nobody receives e-mails at these addresses.
+    .values(
+      seedAccounts.map((account) => ({ ...account, passwordHash, emailVerifiedAt: new Date() })),
+    )
     .onConflictDoNothing();
   if (!(await loadProfile(db, seedDeveloperId)))
     await saveProfile(db, seedDeveloperId, seedDeveloperProfile);

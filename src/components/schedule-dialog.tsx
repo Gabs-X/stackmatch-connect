@@ -65,7 +65,7 @@ export function ScheduleDialog({
   const sentQuery = sentMeetingRequestsQuery(user?.id ?? "");
   const { data: meetingRequests = [] } = useQuery({
     ...sentQuery,
-    enabled: user?.accountType === "company",
+    enabled: user?.accountType === "company" && user.emailVerified,
   });
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"schedule" | "details" | "success">("schedule");

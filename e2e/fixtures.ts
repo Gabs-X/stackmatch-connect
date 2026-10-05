@@ -1,4 +1,4 @@
-import { test as base, type Page } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { testCompanies, testDevelopers } from "./test-data";
 
@@ -92,4 +92,27 @@ export async function signInAs(page: Page, type: "developer" | "company") {
   await form.getByLabel("Senha", { exact: true }).fill("teste1234");
   await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(type === "developer" ? /\/create-profile$/ : /\/discover$/);
+}
+
+/** The code in the last e-mail the server "sent" to the address (see /api/test-emails). */
+export async function emailCode(page: Page, to: string) {
+  let code: string | null = null;
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/test-emails?to=${encodeURIComponent(to)}`);
+      code = ((await response.json()) as { code: string | null }).code;
+      return code;
+    })
+    .toMatch(/^\d{6}$/);
+  return code ?? "";
+}
+
+/** On the confirmation screen after signing up: enters the e-mailed code. */
+export async function confirmEmail(page: Page) {
+  await page.waitForURL(/\/verify-email/);
+  const sentTo = await page.getByText(/Enviamos um código de 6 dígitos para /).textContent();
+  const email = sentTo?.match(/para (\S+@\S+?)\. /)?.[1] ?? "";
+  await page.getByLabel("Código").fill(await emailCode(page, email));
+  await page.getByRole("button", { name: "Confirmar e-mail" }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/verify-email"));
 }

@@ -21,6 +21,8 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Ações distintas:** passar avança; salvar adiciona à shortlist; interessado registra interesse separadamente e também salva o perfil. Nenhuma ação envia contato ao profissional.
 - **Navegação por cards:** botões e arraste, opção de desfazer e encerramento explícito da lista, com reinício manual.
 - **Contas:** telas de entrar, criar conta (empresa ou desenvolvedor) e recuperar senha, com validação por campo, menu da conta no cabeçalho e retorno à página de origem após o login.
+- **Confirmação de e-mail:** depois do cadastro, a conta recebe um código de 6 dígitos por e-mail e só passa a usar o app depois de digitá-lo na tela de confirmação (`/verify-email`). Até lá, as páginas da conta levam para essa tela e o servidor recusa as ações dela. O código vale por 15 minutos, aceita até 5 tentativas e pode ser reenviado a cada minuto. Entrar com uma conta não confirmada envia um código novo.
+- **Recuperação de senha:** a pessoa informa o e-mail, recebe um código e define a nova senha na mesma tela; as sessões abertas da conta são encerradas. A tela responde igual exista ou não a conta, e um código para um e-mail sem conta falha como um código errado.
 - **Acesso por tipo de conta:** Discover e Talentos salvos são exclusivos de empresas; Meu perfil e Empresas interessadas são exclusivos de desenvolvedores. Visitantes são levados ao login (voltando à página depois) e a conta do outro tipo vê um aviso. A página individual de cada perfil continua aberta para links compartilhados. Sem login, o cabeçalho mostra apenas Entrar e Criar conta; com login, só as áreas da conta conectada.
 - **Empresas interessadas:** aba do desenvolvedor com as empresas que marcaram interesse no perfil dele pelo Discover ou propuseram uma conversa, com contato, horário sugerido, mensagem e botão para responder por e-mail.
 - **Detalhes da empresa:** em Empresas interessadas, o nome da empresa ou o botão "Ver empresa" abre `/company/<id da conta>`, com a descrição, a localização e o site que a empresa preencheu em Dados da empresa, o contato (nome, cargo, e-mail e telefone), o que ela fez (interesse ou proposta) e o botão de resposta. O desenvolvedor só vê empresas que entraram em contato com ele, o que o servidor também confere; outros endereços mostram "Empresa não encontrada".
@@ -82,7 +84,7 @@ npm run test:e2e
 npm run build
 ```
 
-Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos, com banco em memória, e rodam um de cada vez: antes de cada teste, o banco volta ao seed pela rota `/api/test-reset` e recebe os dados de teste de `e2e/test-data.ts` (quatro desenvolvedores e três empresas que contataram o Gabriel) pela `/api/test-seed`; as duas só existem com `E2E=1`. Se já houver um servidor na porta 5299, ele é reaproveitado e o reset falha; encerre-o antes. Os testes usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro, login e recuperação de senha; acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
+Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos, com banco em memória, e rodam um de cada vez: antes de cada teste, o banco volta ao seed pela rota `/api/test-reset` e recebe os dados de teste de `e2e/test-data.ts` (quatro desenvolvedores e três empresas que contataram o Gabriel) pela `/api/test-seed`; as duas só existem com `E2E=1`. Se já houver um servidor na porta 5299, ele é reaproveitado e o reset falha; encerre-o antes. Os testes usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro com confirmação de e-mail, login e recuperação de senha (lendo os códigos pela rota `/api/test-emails`, que também só existe com `E2E=1`); acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
 
 Para rodar o build de produção localmente, use o servidor gerado pelo Nitro (o `npm run preview` procura o build em `dist/` e não funciona com essa configuração):
 
@@ -129,7 +131,8 @@ As opções do perfil (senioridade, modelo de trabalho, disponibilidade e contra
 
 ## Dados e regras no servidor
 
-- **Contas e login:** o cadastro e a entrada gravam no banco (tabela `users`), com a senha em hash scrypt, e abrem uma sessão guardada num cookie httpOnly (o banco guarda só o hash do token, tabela `sessions`, com validade de 30 dias). Há dois tipos de conta: **empresa** (com nome da empresa e CNPJ; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido).
+- **Contas e login:** o cadastro e a entrada gravam no banco (tabela `users`), com a senha em hash scrypt, e abrem uma sessão guardada num cookie httpOnly (o banco guarda só o hash do token, tabela `sessions`, com validade de 30 dias). Há dois tipos de conta: **empresa** (com nome da empresa e CNPJ; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido). A conta guarda quando confirmou o e-mail (`email_verified_at`); os códigos ficam em `email_codes`, só como hash, um por conta e finalidade.
+- **E-mails:** enviados pelo [Resend](https://resend.com) quando `RESEND_API_KEY` está definida, com o remetente de `EMAIL_FROM`; saem no idioma da tela. Sem a chave, no desenvolvimento e nos testes, cada e-mail vai para o log do servidor (com o código); em produção, enviar falha.
 - **Controle de acesso:** o guard `RequireAccount` (`src/components/require-account.tsx`) organiza a interface, e as server functions conferem o tipo de conta (`requireAccount` em `src/server/session.ts`).
 - **Perfis:** um por conta de desenvolvedor, em `developer_profiles`, com skills e projetos em tabelas próprias. A tabela `skills` é o catálogo compartilhado das sugestões, com uma grafia por skill (índice único em `lower(name)`); skills que nenhum perfil ou projeto usa mais deixam de ser sugeridas. A foto é a que o desenvolvedor enviou no formulário (recortada em quadrado e reduzida para 512 px no navegador); sem ela, vem o avatar público do GitHub (`github.com/<usuário>.png`), e sem os dois, ou se a imagem não carregar, aparecem as iniciais. Os links abrem em nova aba.
 - **Imagens:** fotos de perfil e capas de projeto ficam num armazenamento de arquivos, e o banco guarda só a URL. O formulário envia cada imagem nova como data URL ao salvar o perfil; o servidor a grava no armazenamento, mantém as que não mudaram e apaga as que o perfil deixou de usar. Uma URL só é aceita se já for uma imagem daquele perfil. Com `BLOB_READ_WRITE_TOKEN` (o Blob store conectado ao projeto na Vercel), o armazenamento é o [Vercel Blob](https://vercel.com/docs/vercel-blob); sem ela, no desenvolvimento e nos testes, as imagens vão para a pasta `.uploads/` (ou `UPLOADS_DIR`) e são servidas pela rota `/uploads/...`. Em produção, sem o token, salvar uma imagem nova falha. `npm run images:migrate` move para o armazenamento as imagens gravadas no banco como data URL por versões anteriores.
@@ -140,7 +143,6 @@ As opções do perfil (senioridade, modelo de trabalho, disponibilidade e contra
 ## O que ainda é simulado
 
 - O **e-mail** da proposta de reunião: a proposta fica no banco, com o nome da empresa, o contato e o endereço de resposta do momento do envio, mas nenhum e-mail é enviado. O ponto para ligar um serviço de e-mail, com `Reply-To` da empresa, é `sendMeetingRequest` em `src/server/meetings.ts`.
-- A recuperação de senha: a tela confirma o pedido, mas nenhum e-mail é enviado.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Dados salvos no navegador por versões anteriores (perfis, shortlist, interesses, propostas e dados da empresa) não são migrados.
 
@@ -190,7 +192,7 @@ Sem essa variável, o componente não é incluído no build.
 
 ## Limitações conhecidas
 
-- Contas, perfis de desenvolvedor, dados da empresa, shortlist, interesses e propostas ficam no servidor, que confere o tipo de conta antes de ler ou salvar. Não há verificação de profissionais, e a recuperação de senha e o envio de e-mails ainda não existem.
+- Contas, perfis de desenvolvedor, dados da empresa, shortlist, interesses e propostas ficam no servidor, que confere o tipo de conta antes de ler ou salvar. Não há verificação de profissionais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
 - Os perfis de desenvolvedor ficam no banco (tabelas `developer_profiles`, `skills`, `developer_skills`, `projects` e `project_skills`), um por conta e identificados pelo id dela. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor, na ordem em que foram publicados. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos.
 - O Discover mostra só os perfis publicados no banco; com poucos perfis, algumas opções de filtro não retornam resultados. Não há busca geográfica, ranking ou recomendação automática.
@@ -203,6 +205,6 @@ Sem essa variável, o componente não é incluído no build.
 1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
 2. Definir uma regra de compatibilidade entre vaga e perfil, para que o "match" do produto seja calculado.
 3. Rodar as suítes automaticamente a cada push (CI).
-4. Ligar um serviço de e-mail para as propostas de reunião e a recuperação de senha.
+4. Enviar por e-mail as propostas de reunião, com o serviço que já envia os códigos.
 5. Mostrar o status das propostas de reunião para os dois lados (enviada, vista, respondida).
 6. Integrar o GitHub (importar projetos) e o envio de e-mails apenas após definir permissões, privacidade e limites contra spam nas propostas de reunião.

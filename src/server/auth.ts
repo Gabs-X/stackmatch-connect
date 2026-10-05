@@ -44,6 +44,7 @@ export function toAuthUser(row: UserRow): AuthUser {
     company: row.companyName ?? "",
     cnpj: row.cnpj ?? "",
     jobTitle: row.jobTitle,
+    emailVerified: row.emailVerifiedAt !== null,
   };
 }
 

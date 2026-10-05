@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test, uniqueEmail } from "./fixtures";
+import { confirmEmail, emailCode, expect, test, uniqueEmail } from "./fixtures";
 
 const main = (page: Page) => page.getByRole("main");
 
@@ -42,6 +42,7 @@ test("a developer signs up, lands on the profile form prefilled, and signs out",
     title: "Frontend Developer",
     email: uniqueEmail("ana@example.com"),
   });
+  await confirmEmail(page);
 
   await expect(page).toHaveURL(/\/create-profile$/);
   await expect(page.getByLabel("Nome completo")).toHaveValue("Ana Souza");
@@ -79,6 +80,7 @@ test("a hiring account needs a company and lands on Discover", async ({ page }) 
   await cnpj.fill("");
   await cnpj.pressSequentially("11222333000181");
   await main(page).getByRole("button", { name: "Criar conta" }).click();
+  await confirmEmail(page);
 
   await expect(page).toHaveURL(/\/discover$/);
   await page.getByRole("button", { name: "Menu da conta de Bruno Lima" }).click();
@@ -112,6 +114,7 @@ test("signing in rejects a wrong password and honors the redirect", async ({ pag
     cnpj: "11222333000181",
     email,
   });
+  await confirmEmail(page);
   await expect(page).toHaveURL(/\/discover$/);
   await page.getByRole("button", { name: "Menu da conta de Bruno Lima" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
@@ -136,7 +139,7 @@ test("an e-mail can only be registered once", async ({ page, context }) => {
     email: uniqueEmail("ana@example.com"),
   };
   await registerAccount(page, account);
-  await expect(page).toHaveURL(/\/create-profile$/);
+  await expect(page).toHaveURL(/\/verify-email/);
   // Signs out by dropping the session cookie, without going through the menu.
   await context.clearCookies();
 
@@ -144,16 +147,96 @@ test("an e-mail can only be registered once", async ({ page, context }) => {
   await expect(main(page).getByRole("alert")).toHaveText("Já existe uma conta com esse e-mail.");
 });
 
-test("password recovery confirms without revealing whether the account exists", async ({
-  page,
-}) => {
+test("password recovery answers the same whether or not the account exists", async ({ page }) => {
   await page.goto("/login");
   await main(page).getByRole("link", { name: "Esqueci minha senha" }).click();
   await expect(page.getByRole("heading", { name: "Recuperar senha" })).toBeVisible();
   await main(page).getByLabel("E-mail").fill("ninguem@example.com");
-  await main(page).getByRole("button", { name: "Enviar instruções" }).click();
+  await main(page).getByRole("button", { name: "Enviar código" }).click();
 
-  await expect(main(page).getByRole("status")).toContainText(
-    "Se existir uma conta para ninguem@example.com",
-  );
+  await expect(
+    page.getByText("Se existir uma conta para ninguem@example.com, enviamos um código"),
+  ).toBeVisible();
+  // A code nobody received fails like a wrong one.
+  await main(page).getByLabel("Código").fill("123456");
+  await main(page).getByLabel("Nova senha").fill("novasenha1");
+  await main(page).getByRole("button", { name: "Salvar nova senha" }).click();
+  await expect(main(page).getByRole("alert")).toHaveText("Código incorreto.");
+});
+
+test("a forgotten password is reset with the e-mailed code", async ({ page }) => {
+  const email = "teste.emp@stackmatch.app";
+  await page.goto("/forgot-password");
+  await main(page).getByLabel("E-mail").fill(email);
+  await main(page).getByRole("button", { name: "Enviar código" }).click();
+  await main(page)
+    .getByLabel("Código")
+    .fill(await emailCode(page, email));
+  const password = main(page).getByLabel("Nova senha");
+  await password.fill("curta");
+  await main(page).getByRole("button", { name: "Salvar nova senha" }).click();
+  await expect(main(page).getByText("A senha precisa ter pelo menos 8 caracteres.")).toBeVisible();
+  await password.fill("novasenha1");
+  await main(page).getByRole("button", { name: "Salvar nova senha" }).click();
+
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText("Senha alterada. Entre com a nova senha.")).toBeVisible();
+  await main(page).getByLabel("E-mail").fill(email);
+  await main(page).getByLabel("Senha", { exact: true }).fill("teste1234");
+  await main(page).getByRole("button", { name: "Entrar" }).click();
+  await expect(main(page).getByRole("alert")).toHaveText("E-mail ou senha incorretos.");
+  await main(page).getByLabel("Senha", { exact: true }).fill("novasenha1");
+  await main(page).getByRole("button", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/discover$/);
+});
+
+test("a new account confirms its e-mail before using the app", async ({ page }) => {
+  const email = uniqueEmail("ana@example.com");
+  await registerAccount(page, {
+    type: "developer",
+    name: "Ana Souza",
+    title: "Frontend Developer",
+    email,
+  });
+  await expect(page).toHaveURL(/\/verify-email/);
+  await expect(page.getByText(`Enviamos um código de 6 dígitos para ${email}.`)).toBeVisible();
+  // A code was just sent, so another one waits a minute.
+  await expect(main(page).getByRole("button", { name: /Reenviar código em \d+s/ })).toBeDisabled();
+
+  const code = await emailCode(page, email);
+  await main(page)
+    .getByLabel("Código")
+    .fill(code === "000000" ? "111111" : "000000");
+  await main(page).getByRole("button", { name: "Confirmar e-mail" }).click();
+  await expect(main(page).getByRole("alert")).toHaveText("Código incorreto.");
+
+  // Account pages send it back here until it's confirmed.
+  await page.goto("/create-profile");
+  await expect(page).toHaveURL(/\/verify-email\?redirect=%2Fcreate-profile$/);
+
+  await main(page).getByLabel("Código").fill(code);
+  await main(page).getByRole("button", { name: "Confirmar e-mail" }).click();
+  await expect(page).toHaveURL(/\/create-profile$/);
+  await expect(page.getByText("E-mail confirmado!")).toBeVisible();
+});
+
+test("signing in before confirming asks for the code again", async ({ page }) => {
+  const email = uniqueEmail("bruno@acme.com");
+  await registerAccount(page, {
+    type: "company",
+    name: "Bruno Lima",
+    company: "Acme",
+    cnpj: "11222333000181",
+    email,
+  });
+  await expect(page).toHaveURL(/\/verify-email/);
+  await main(page).getByRole("button", { name: "Sair" }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto("/login?redirect=/saved");
+  await main(page).getByLabel("E-mail").fill(email);
+  await main(page).getByLabel("Senha", { exact: true }).fill("segredo123");
+  await main(page).getByRole("button", { name: "Entrar" }).click();
+  await confirmEmail(page);
+  await expect(page).toHaveURL(/\/saved$/);
 });

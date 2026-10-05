@@ -9,6 +9,7 @@ import {
   type SignUpInput,
 } from "./auth";
 import { fetchCurrentUser, signInFn, signOutFn, signUpFn } from "./auth-api";
+import { useI18n } from "./i18n";
 
 type AuthState = {
   user: AuthUser | null;
@@ -18,6 +19,8 @@ type AuthState = {
   signUp: (input: SignUpInput) => Promise<AuthUser>;
   /** Ends the session and takes the user to the home page. */
   signOut: () => Promise<void>;
+  /** Shows the account as the server returned it after a change, such as confirming the e-mail. */
+  updateUser: (user: AuthUser) => void;
 };
 
 // Keep a single context instance across hot reloads so provider/consumers never diverge.
@@ -37,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const { lang } = useI18n();
   // Read by the storage listener, which is set up once.
   const signedIn = useRef(false);
   signedIn.current = user !== null;
@@ -83,8 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthState = {
     user,
     ready,
-    signIn: async (input) => start(await signInFn({ data: input })),
-    signUp: async (input) => start(await signUpFn({ data: input })),
+    // The confirmation e-mail goes out in the language of the screen.
+    signIn: async (input) => start(await signInFn({ data: { ...input, language: lang } })),
+    signUp: async (input) => start(await signUpFn({ data: { ...input, language: lang } })),
+    updateUser: (next) => {
+      setUser(next);
+      announceSessionChange();
+    },
     signOut: async () => {
       await signOutFn();
       announceSessionChange();

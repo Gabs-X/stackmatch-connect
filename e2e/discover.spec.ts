@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, seedSavedTalents, signInAs, test, uniqueEmail } from "./fixtures";
+import { confirmEmail, expect, seedSavedTalents, signInAs, test, uniqueEmail } from "./fixtures";
 
 const card = (page: Page) => page.locator("main section article").first();
 const counter = (page: Page) => page.getByText(/^\d+ de \d+ perf(il|is)$/);
@@ -126,6 +126,7 @@ test("each company keeps its own shortlist in a shared browser", async ({ page }
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
+  await confirmEmail(page);
   await expect(page).toHaveURL(/\/discover$/);
   await expect(card(page)).toContainText("Gabriel Botelho");
   await expect(savedBadge(page)).toBeHidden();

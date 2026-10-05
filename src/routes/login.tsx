@@ -8,7 +8,7 @@ import { AuthLayout, FieldError, PasswordInput } from "@/components/auth-layout"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AuthError, homeFor, safeRedirect, signInSchema, type SignInInput } from "@/lib/auth";
+import { AuthError, landingFor, signInSchema, type SignInInput } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 
@@ -48,7 +48,7 @@ function LoginPage() {
     try {
       const signedIn = await signIn(values);
       toast.success(t.auth.welcome(signedIn.name.split(" ")[0] ?? signedIn.name));
-      await router.navigate({ href: safeRedirect(redirect, homeFor(signedIn)) });
+      await router.navigate({ href: landingFor(signedIn, redirect) });
     } catch (caught) {
       setError(caught instanceof AuthError ? caught.code : "unknown");
     }
@@ -74,7 +74,7 @@ function LoginPage() {
         <div className="space-y-4 rounded-lg border bg-card p-5">
           <p>{t.auth.alreadySignedIn(user.name)}</p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void router.navigate({ href: homeFor(user) })}>
+            <Button onClick={() => void router.navigate({ href: landingFor(user, redirect) })}>
               {t.auth.continue}
             </Button>
             <Button variant="outline" onClick={() => void signOut()}>

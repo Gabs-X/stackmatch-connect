@@ -4,16 +4,14 @@ import { AlertCircle, BriefcaseBusiness, Check, Code2, Loader2, X } from "lucide
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AuthLayout, FieldError, PasswordInput } from "@/components/auth-layout";
+import { AuthLayout, FieldError, PasswordInput, PasswordRules } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   AuthError,
   formatCnpj,
-  homeFor,
-  passwordRules,
-  safeRedirect,
+  landingFor,
   signUpSchema,
   type AccountType,
   type SignUpInput,
@@ -88,7 +86,7 @@ function RegisterPage() {
       toast.success(t.auth.accountCreated, {
         description: t.auth.welcome(created.name.split(" ")[0] ?? created.name),
       });
-      await router.navigate({ href: safeRedirect(redirect, homeFor(created)) });
+      await router.navigate({ href: landingFor(created, redirect) });
     } catch (caught) {
       setError(caught instanceof AuthError ? caught.code : "unknown");
     }
@@ -108,11 +106,6 @@ function RegisterPage() {
       sub: t.auth.accountDeveloperSub,
     },
   ];
-  const rules = [
-    [t.auth.ruleLength, passwordRules.length(password)],
-    [t.auth.ruleLetter, passwordRules.letter(password)],
-    [t.auth.ruleNumber, passwordRules.number(password)],
-  ] as const;
 
   return (
     <AuthLayout
@@ -279,21 +272,7 @@ function RegisterPage() {
               {...register("password")}
             />
           </div>
-          <div id={ids.rules} className="mt-2 text-xs text-muted-foreground">
-            <span className="sr-only">{t.auth.passwordRules}</span>
-            <ul className="flex flex-wrap gap-x-4 gap-y-1">
-              {rules.map(([label, ok]) => (
-                <li key={label} className={cn("flex items-center gap-1", ok && "text-positive")}>
-                  {ok ? (
-                    <Check className="size-3.5" aria-hidden="true" />
-                  ) : (
-                    <X className="size-3.5" aria-hidden="true" />
-                  )}
-                  {label}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <PasswordRules id={ids.rules} password={password} />
           <FieldError id={`${ids.password}-error`} message={message(errors.password?.message)} />
         </div>
 

@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   companyName: text("company_name"),
   /** Hiring accounts only: 14 digits, no punctuation. */
   cnpj: text("cnpj"),
+  /** When the account confirmed its e-mail with a code; null until then, and it can't act. */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -49,6 +51,26 @@ export const sessions = pgTable(
 );
 
 export type UserRow = typeof users.$inferSelect;
+
+export const emailCodePurpose = pgEnum("email_code_purpose", ["VERIFY_EMAIL", "RESET_PASSWORD"]);
+
+/** The code e-mailed to an account, one per purpose; a new one replaces the previous. */
+export const emailCodes = pgTable(
+  "email_codes",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    purpose: emailCodePurpose("purpose").notNull(),
+    /** SHA-256 of the code, never the code itself. */
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Wrong guesses so far; the code stops working after a few. */
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.purpose] })],
+);
 
 /**
  * How a hiring account shows up to developers: the company details and the person they talk to.

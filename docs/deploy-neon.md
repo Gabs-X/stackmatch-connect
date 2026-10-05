@@ -74,18 +74,31 @@ Fotos de perfil e capas de projeto ficam no Vercel Blob; o banco guarda só a UR
 
 O token dá acesso de escrita ao Blob store: as mesmas regras da connection string valem para ele.
 
-## 5. Fazer um novo deploy
+## 5. Configurar o envio de e-mails
+
+Os códigos de confirmação de e-mail e de recuperação de senha saem pelo [Resend](https://resend.com). Sem ele, quem se cadastra no site publicado não recebe o código e não consegue usar a conta. Contas que já existiam antes da confirmação de e-mail ficam marcadas como confirmadas.
+
+1. Crie uma conta no Resend e, em **API Keys**, gere uma chave com permissão de envio.
+2. Em **Domains**, adicione um domínio seu e crie no DNS os registros que o Resend mostrar. Sem domínio verificado, o Resend só entrega para o e-mail da sua própria conta Resend, então ninguém mais recebe os códigos.
+3. No projeto da Vercel, em **Settings → Environment Variables**, crie:
+   - `RESEND_API_KEY`: a chave do passo 1;
+   - `EMAIL_FROM`: o remetente, de um domínio verificado, como `StackMatch <nao-responda@seudominio.com.br>`. Sem ela, o remetente é `onboarding@resend.dev`, que só serve para testes.
+
+A chave dá acesso ao envio de e-mails em nome do seu domínio: as mesmas regras da connection string valem para ela.
+
+## 6. Fazer um novo deploy
 
 A integração não refaz o deploy sozinha. Em **Deployments**, abra o último deploy e use **⋯ → Redeploy**.
 
-## 6. Conferir
+## 7. Conferir
 
 No site publicado:
 
 1. Se rodou o seed, entre com `teste.emp@stackmatch.app` / `teste1234`. O Discover deve mostrar o Gabriel Botelho.
-2. Crie uma conta nova, saia e entre de novo.
-3. Como empresa, salve um talento e recarregue a página: ele continua em Talentos salvos.
-4. Como desenvolvedor, envie uma foto no perfil e conclua: no Discover, a foto deve vir de um endereço `*.public.blob.vercel-storage.com`.
+2. Crie uma conta nova com um e-mail seu: o código deve chegar, e a conta só entra no app depois de confirmá-lo. Saia e entre de novo.
+3. Em **Esqueci minha senha**, peça um código para essa conta e troque a senha.
+4. Como empresa, salve um talento e recarregue a página: ele continua em Talentos salvos.
+5. Como desenvolvedor, envie uma foto no perfil e conclua: no Discover, a foto deve vir de um endereço `*.public.blob.vercel-storage.com`.
 
 Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os mais comuns:
 
@@ -93,7 +106,9 @@ Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os m
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL must point to a Postgres server in production` | A variável não está no ambiente do deploy. Confira o passo 1 e refaça o deploy.                    |
 | `relation "users" does not exist`                            | As migrações não foram aplicadas nesse banco. Rode o passo 2.                                      |
-| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 5).                                      |
+| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 6).                                      |
+| `No e-mail service: set RESEND_API_KEY`                      | A chave do Resend não está no projeto. Confira o passo 5 e refaça o deploy.                        |
+| `Resend refused the e-mail (403)`                            | O remetente de `EMAIL_FROM` não é de um domínio verificado no Resend (passo 5).                    |
 | `No Blob store connected`                                    | O Blob store não está conectado ao projeto. Confira o passo 4 e refaça o deploy.                   |
 | `Profile not saved:` seguido de um erro do Blob              | A `BLOB_READ_WRITE_TOKEN` do projeto não é a do store público. Copie a do store e refaça o deploy. |
 

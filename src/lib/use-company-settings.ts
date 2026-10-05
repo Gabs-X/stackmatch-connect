@@ -6,7 +6,8 @@ import { defaultCompanySettings, type CompanySettings } from "./company-settings
 /** The signed-in company account's settings query; disabled for anyone else. */
 export function useCompanySettingsQuery() {
   const { user } = useAuth();
-  const company = user?.accountType === "company" ? user : null;
+  // Only a confirmed company account can read its settings.
+  const company = user?.accountType === "company" && user.emailVerified ? user : null;
   return {
     company,
     ...useQuery({ ...companySettingsQuery(company?.id ?? ""), enabled: !!company }),
