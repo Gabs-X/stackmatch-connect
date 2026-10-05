@@ -4,8 +4,10 @@ test("visitors are sent to the login before account-only pages", async ({ page }
   await page.goto("/interests");
   await expect(page).toHaveURL(/\/login\?redirect=%2Finterests$/);
 
-  await page.getByRole("button", { name: "Preencher com a conta de teste: Desenvolvedor" }).click();
-  await page.getByRole("main").getByRole("button", { name: "Entrar", exact: true }).click();
+  const form = page.getByRole("main");
+  await form.getByLabel("E-mail ou usuário").fill("teste.dev");
+  await form.getByLabel("Senha", { exact: true }).fill("teste1234");
+  await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(page).toHaveURL(/\/interests$/);
 });
 
