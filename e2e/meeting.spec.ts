@@ -1,9 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, test, uniqueEmail } from "./fixtures";
 
-// Thursday noon in Brasília, so the next day (Friday) has every time open.
+// Thursday noon in Brasília, so the next day (Friday) has every time open. The server checks the
+// proposed time against its own clock, so the browser's is set to a date still ahead.
 test.beforeEach(async ({ page }) => {
-  await page.clock.setFixedTime(new Date("2026-10-01T12:00:00-03:00"));
+  await page.clock.setFixedTime(new Date("2030-10-03T12:00:00-03:00"));
 });
 
 async function registerCompany(page: Page, email: string) {
@@ -36,7 +37,7 @@ test("a company proposes one time and sees the e-mail the developer will get", a
   await page.getByRole("button", { name: "Propor reunião" }).click();
 
   const dialog = page.getByRole("dialog");
-  await dialog.locator('[data-day="02/10/2026"]').click();
+  await dialog.locator('[data-day="04/10/2030"]').click();
   // 10:30 on Friday is still ahead; earlier times today would be disabled.
   await dialog.getByRole("button", { name: "10:30" }).click();
   await dialog.getByRole("button", { name: "Continuar" }).click();
@@ -45,7 +46,7 @@ test("a company proposes one time and sees the e-mail the developer will get", a
   const preview = dialog.getByRole("region", { name: "Prévia do e-mail" });
   await expect(preview).toContainText("Acme quer conversar com você pelo StackMatch");
   await expect(preview).toContainText(email);
-  await expect(preview).toContainText("sexta-feira, 2 de outubro, às 10:30");
+  await expect(preview).toContainText("sexta-feira, 4 de outubro, às 10:30");
   await expect(preview).toContainText("Projeto de dashboard em React.");
 
   await dialog.getByRole("button", { name: "Enviar proposta" }).click();
@@ -56,7 +57,7 @@ test("a company proposes one time and sees the e-mail the developer will get", a
   // The proposal is remembered, but another one can still be sent.
   await page.getByRole("button", { name: "Propor reunião" }).click();
   await expect(page.getByRole("dialog")).toContainText(
-    "Você já enviou uma proposta para este profissional (sexta-feira, 2 de outubro, às 10:30)",
+    "Você já enviou uma proposta para este profissional (sexta-feira, 4 de outubro, às 10:30)",
   );
 });
 

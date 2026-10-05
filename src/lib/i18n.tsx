@@ -329,7 +329,7 @@ const pt = {
     doneDesc: (name: string, when: string) => `${name} vai receber sua proposta para ${when}.`,
     replyNote: "As respostas chegam em",
     demoNote:
-      "Demonstração: nenhum e-mail foi enviado de verdade; a proposta ficou registrada neste navegador.",
+      "Demonstração: nenhum e-mail foi enviado de verdade; a proposta ficou registrada no StackMatch.",
     finish: "Concluir",
     dateFormat: "EEEE, d 'de' MMMM",
   },
@@ -859,7 +859,7 @@ const en: Dict = {
     done: "Proposal sent",
     doneDesc: (name: string, when: string) => `${name} will receive your proposal for ${when}.`,
     replyNote: "Replies will arrive at",
-    demoNote: "Demo: no e-mail was actually sent; the proposal was recorded in this browser.",
+    demoNote: "Demo: no e-mail was actually sent; the proposal was recorded in StackMatch.",
     finish: "Done",
     dateFormat: "EEEE, MMMM d",
   },

@@ -1,4 +1,5 @@
 import {
+  date,
   doublePrecision,
   index,
   integer,
@@ -98,6 +99,38 @@ export const interests = pgTable(
   (table) => [
     uniqueIndex("interests_company_developer_idx").on(table.companyId, table.developerId),
     index("interests_developer_id_idx").on(table.developerId),
+  ],
+);
+
+/**
+ * A company proposed one time for a call. The developer gets it by e-mail and replies straight to
+ * the company, so names and the reply address are kept as they were sent.
+ */
+export const meetingRequests = pgTable(
+  "meeting_requests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // No foreign key: besides developer accounts, it can be a profile of the fictional catalog.
+    developerId: text("developer_id").notNull(),
+    developerName: text("developer_name").notNull(),
+    /** Brasília time (GMT-3), as offered in the dialog. */
+    date: date("date", { mode: "string" }).notNull(),
+    time: text("time").notNull(),
+    message: text("message").notNull().default(""),
+    companyName: text("company_name").notNull(),
+    contactName: text("contact_name").notNull(),
+    /** Reply-To of the e-mail the developer receives. */
+    replyToEmail: text("reply_to_email").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("meeting_requests_company_id_idx").on(table.companyId),
+    index("meeting_requests_developer_id_idx").on(table.developerId),
   ],
 );
 

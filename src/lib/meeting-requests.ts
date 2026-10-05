@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * A company proposes one time for a call; the developer gets it by e-mail and replies straight to
  * the company. StackMatch doesn't manage the meeting, so there are no bookings or blocked slots.
@@ -19,10 +21,20 @@ export type MeetingRequest = {
   sentAt: string;
 };
 
-export type MeetingRequestInput = Omit<MeetingRequest, "id" | "sentAt">;
-
 export const meetingTimes = ["09:00", "10:30", "14:00", "15:30", "17:00"];
-export const meetingRequestStorageKey = "stackmatch-meeting-requests";
+
+/**
+ * What a company sends. The server adds who it is from (the company and the contact in its
+ * details) and the developer's name, as the e-mail will show them.
+ */
+export const meetingRequestInputSchema = z.object({
+  developerId: z.string().min(1).max(200),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string(),
+  message: z.string().trim().max(1000),
+});
+
+export type MeetingRequestInput = z.infer<typeof meetingRequestInputSchema>;
 
 /** Times are offered in Brasília time (GMT-3); a proposal must point to the future. */
 export function isProposedTimeValid(date: string, time: string, now = Date.now()) {
@@ -38,29 +50,4 @@ export function lastRequestTo(requests: MeetingRequest[], developerId: string, c
       (latest, item) => (!latest || item.sentAt > latest.sentAt ? item : latest),
       undefined,
     );
-}
-
-const requiredKeys = [
-  "id",
-  "developerId",
-  "developerName",
-  "date",
-  "time",
-  "company",
-  "contactName",
-  "email",
-  "message",
-  "sentAt",
-] as const;
-
-export function readMeetingRequests(): MeetingRequest[] {
-  const value: unknown = JSON.parse(window.localStorage.getItem(meetingRequestStorageKey) ?? "[]");
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item: Record<string, unknown> | null) => {
-    if (!item || !requiredKeys.every((key) => typeof item[key] === "string")) return [];
-    const request = item as Omit<MeetingRequest, "companyId"> & { companyId?: unknown };
-    // Proposals sent before senders were tracked by account only know the reply e-mail.
-    const companyId = typeof request.companyId === "string" ? request.companyId : request.email;
-    return [{ ...request, companyId }];
-  });
 }

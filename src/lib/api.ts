@@ -1,10 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { demoCompanyActivity, developers, type Developer } from "./developers";
-import {
-  isProposedTimeValid,
-  type MeetingRequest,
-  type MeetingRequestInput,
-} from "./meeting-requests";
+import type { MeetingRequest } from "./meeting-requests";
 import type { ProfileInterest } from "./profile-interests";
 import { demoDeveloperId } from "./auth";
 
@@ -29,32 +25,9 @@ export const developersQuery = queryOptions({
   staleTime: Infinity,
 });
 
-export class MeetingRequestError extends Error {
-  constructor(readonly code: "time-passed") {
-    super(code);
-    this.name = "MeetingRequestError";
-  }
-}
-
 /**
- * Stand-in for `POST /meeting-requests`. The backend e-mails the developer the company, the
- * proposed time and the message, with Reply-To set to `input.email`, so the conversation continues
- * by e-mail outside StackMatch. Here nothing is sent; the caller keeps a local record.
- */
-export async function sendMeetingRequest(input: MeetingRequestInput): Promise<MeetingRequest> {
-  await delay(MOCK_LATENCY_MS);
-  if (!isProposedTimeValid(input.date, input.time)) throw new MeetingRequestError("time-passed");
-  return {
-    ...input,
-    id: `${input.developerId}-${Date.now()}`,
-    sentAt: new Date().toISOString(),
-  };
-}
-
-/**
- * Stand-in for `GET /me/interested-companies`: interest marks and meeting proposals other
- * companies sent to the signed-in developer. Only the demo developer account has mock activity;
- * what companies do in this browser is merged in by the page from shared client state.
+ * Demo activity of the demo developer account (teste.dev): interest marks and a proposal from
+ * fictional companies, merged with what real companies did on the server.
  */
 export async function fetchCompanyActivity(
   accountId: string,

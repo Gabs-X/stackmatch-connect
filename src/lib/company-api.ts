@@ -2,8 +2,11 @@ import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { loadCompanyProfile, loadCompanySettings, saveCompanySettings } from "@/server/companies";
+import { companyReachedDeveloper } from "@/server/meetings";
 import { database, requireAccount } from "@/server/session";
+import { demoDeveloperId } from "./auth";
 import { companySettingsSchema, type CompanySettingsInput } from "./company-settings";
+import { demoCompanyProfiles } from "./developers";
 
 /** Stands for `GET /company/settings`: what the signed-in company shows developers. */
 export const fetchMyCompanySettings = createServerFn({ method: "GET" }).handler(async () =>
@@ -20,14 +23,17 @@ export const saveMyCompanySettings = createServerFn({ method: "POST" })
   });
 
 /**
- * Stands for `GET /companies/:id`, which only developers open. Checking that the company reached
- * this developer waits for interest marks and proposals to move to the server.
+ * Stands for `GET /companies/:id`. Developers only see companies that reached them, by an interest
+ * mark or a proposal; the demo developer also sees the fictional companies of its demo activity.
  */
 export const fetchCompanyProfile = createServerFn({ method: "GET" })
   .validator(z.string())
   .handler(async ({ data }) => {
-    await requireAccount("developer");
-    return loadCompanyProfile(await database(), data);
+    const developer = await requireAccount("developer");
+    const db = await database();
+    const demo = developer.id === demoDeveloperId && data in demoCompanyProfiles;
+    if (!demo && !(await companyReachedDeveloper(db, data, developer.id))) return null;
+    return loadCompanyProfile(db, data);
   });
 
 export const companySettingsKey = (accountId: string) => ["company-settings", accountId] as const;

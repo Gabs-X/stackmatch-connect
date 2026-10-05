@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   isProposedTimeValid,
   lastRequestTo,
-  meetingRequestStorageKey,
-  readMeetingRequests,
+  meetingRequestInputSchema,
   type MeetingRequest,
 } from "./meeting-requests";
 
@@ -68,31 +67,16 @@ describe("lastRequestTo", () => {
   });
 });
 
-describe("readMeetingRequests", () => {
-  afterEach(() => vi.unstubAllGlobals());
+describe("meetingRequestInputSchema", () => {
+  const input = { developerId: "marina-costa", date: "2026-10-02", time: "09:00", message: " Oi " };
 
-  const withStorage = (value: string | null) =>
-    vi.stubGlobal("window", { localStorage: { getItem: () => value } });
-
-  it("returns an empty list when nothing is stored", () => {
-    withStorage(null);
-    expect(readMeetingRequests()).toEqual([]);
-  });
-
-  it("drops malformed entries and keeps valid ones", () => {
-    withStorage(JSON.stringify([request(), { id: 2 }, null, "x"]));
-    expect(readMeetingRequests()).toEqual([request()]);
-    expect(meetingRequestStorageKey).toBe("stackmatch-meeting-requests");
-  });
-
-  it("identifies proposals saved before account ids by their e-mail", () => {
-    const { companyId: _companyId, ...older } = request();
-    withStorage(JSON.stringify([older]));
-    expect(readMeetingRequests()).toEqual([request({ companyId: "rh@acme.com" })]);
-  });
-
-  it("ignores stored values that aren't a list", () => {
-    withStorage(JSON.stringify({ id: "1" }));
-    expect(readMeetingRequests()).toEqual([]);
+  it("trims the message and takes ISO dates", () => {
+    expect(meetingRequestInputSchema.parse(input).message).toBe("Oi");
+    expect(meetingRequestInputSchema.safeParse({ ...input, date: "02/10/2026" }).success).toBe(
+      false,
+    );
+    expect(
+      meetingRequestInputSchema.safeParse({ ...input, message: "x".repeat(1001) }).success,
+    ).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import { useI18n } from "@/lib/i18n";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { addDays, format, isBefore, isWeekend, startOfDay } from "date-fns";
@@ -27,9 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MeetingRequestError, sendMeetingRequest } from "@/lib/api";
-import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
+import { sendMeetingRequestFn, sentMeetingRequestsQuery } from "@/lib/meetings-api";
 import { useCompanySettings } from "@/lib/use-company-settings";
 import { isProposedTimeValid, lastRequestTo, meetingTimes } from "@/lib/meeting-requests";
 
@@ -61,7 +61,12 @@ export function ScheduleDialog({
       }
     : null;
   const { pathname } = useLocation();
-  const { meetingRequests, recordMeetingRequest } = useApp();
+  const queryClient = useQueryClient();
+  const sentQuery = sentMeetingRequestsQuery(user?.id ?? "");
+  const { data: meetingRequests = [] } = useQuery({
+    ...sentQuery,
+    enabled: user?.accountType === "company",
+  });
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"schedule" | "details" | "success">("schedule");
   const [date, setDate] = useState<Date>();
@@ -116,29 +121,24 @@ export function ScheduleDialog({
     if (!sender || !date || !time || sending) return;
     setSending(true);
     try {
-      const request = await sendMeetingRequest({
-        developerId,
-        developerName,
-        companyId: sender.id,
-        date: format(date, "yyyy-MM-dd"),
-        time,
-        company: sender.company,
-        contactName: sender.name,
-        email: sender.email,
-        message: message.trim(),
+      // The server signs the proposal with the company's contact, as the preview shows.
+      const result = await sendMeetingRequestFn({
+        data: { developerId, date: format(date, "yyyy-MM-dd"), time, message: message.trim() },
       });
-      recordMeetingRequest(request);
+      if ("error" in result) {
+        if (result.error === "time-passed") {
+          toast.error(t.schedule.timePassed);
+          setNow(Date.now());
+          setTime("");
+          setStep("schedule");
+        } else toast.error(t.schedule.sendError);
+        return;
+      }
+      queryClient.setQueryData(sentQuery.queryKey, (current = []) => [...current, result.request]);
       setStep("success");
       toast.success(t.schedule.done, { description: when });
-    } catch (caught) {
-      if (caught instanceof MeetingRequestError) {
-        toast.error(t.schedule.timePassed);
-        setNow(Date.now());
-        setTime("");
-        setStep("schedule");
-      } else {
-        toast.error(t.schedule.sendError);
-      }
+    } catch {
+      toast.error(t.schedule.sendError);
     } finally {
       setSending(false);
     }
