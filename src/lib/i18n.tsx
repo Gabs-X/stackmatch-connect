@@ -149,11 +149,6 @@ const pt = {
     rate: "Valor por hora",
     links: "Links profissionais",
     portfolioLink: "Portfólio",
-    demoNote: "Perfil fictício: os links mostram endereços de exemplo.",
-    demoLinkTitle: "Link de demonstração",
-    demoLinkDesc: (url: string) =>
-      `Este perfil é fictício. Em um perfil real, este link abriria ${url}.`,
-    openLink: (label: string, url: string) => `${label}: ${url} (demonstração)`,
     openRealLink: (label: string, url: string) => `${label}: ${url} (abre em nova aba)`,
   },
   create: {
@@ -200,28 +195,6 @@ const pt = {
     projectSaved: "Projeto salvo",
     projectRemoved: "Projeto removido",
     noDescription: "Sem descrição ainda. Edite o projeto para contar mais sobre ele.",
-    importRepos: [
-      {
-        name: "Ecommerce API",
-        description: "API de pedidos, pagamentos e estoque para lojas virtuais.",
-        tech: ["Node.js", "NestJS", "PostgreSQL"],
-      },
-      {
-        name: "Portfolio",
-        description: "Site pessoal com projetos, artigos e formulário de contato.",
-        tech: ["Next.js", "Tailwind"],
-      },
-      {
-        name: "Task Manager",
-        description: "Gerenciador de tarefas com quadros, prazos e colaboração em tempo real.",
-        tech: ["React", "Node.js", "MongoDB"],
-      },
-      {
-        name: "Finance Dashboard",
-        description: "Painel de finanças pessoais com gráficos de gastos e metas.",
-        tech: ["React", "TypeScript", "Recharts"],
-      },
-    ],
     kicker: "Seu mini portfólio",
     title: "Crie um perfil que se destaca",
     sub: "Leva apenas alguns minutos para ficar pronto.",
@@ -252,11 +225,6 @@ const pt = {
     addWork: "Adicione seus melhores trabalhos",
     addWorkSub: "Inclua projetos que mostrem suas habilidades na prática.",
     addManual: "Adicionar manualmente",
-    importGh: "Simular importação do GitHub",
-    importTitle: "Importar do GitHub",
-    importDesc: "Simulação local: selecione projetos fictícios para mostrar no perfil.",
-    importSelected: "Importar selecionados",
-    importToast: "Projetos importados com sucesso",
     site: "Site pessoal",
     sitePh: "seusite.dev",
     ghPh: "github.com/seuusuario",
@@ -371,8 +339,8 @@ const pt = {
     demoNote: "Demonstração: a recuperação de senha ainda não envia e-mails.",
     email: "E-mail",
     emailPh: "voce@empresa.com",
-    loginId: "E-mail ou usuário",
-    loginIdPh: "voce@empresa.com ou seu usuário",
+    loginId: "E-mail",
+    loginIdPh: "voce@empresa.com",
     password: "Senha",
     passwordPh: "Sua senha",
     newPasswordPh: "Crie uma senha",
@@ -680,11 +648,6 @@ const en: Dict = {
     rate: "Hourly rate",
     links: "Professional links",
     portfolioLink: "Portfolio",
-    demoNote: "Fictional profile: links show example addresses.",
-    demoLinkTitle: "Demo link",
-    demoLinkDesc: (url: string) =>
-      `This profile is fictional. On a real profile, this link would open ${url}.`,
-    openLink: (label: string, url: string) => `${label}: ${url} (demo)`,
     openRealLink: (label: string, url: string) => `${label}: ${url} (opens in a new tab)`,
   },
   create: {
@@ -732,28 +695,6 @@ const en: Dict = {
     projectSaved: "Project saved",
     projectRemoved: "Project removed",
     noDescription: "No description yet. Edit the project to tell more about it.",
-    importRepos: [
-      {
-        name: "Ecommerce API",
-        description: "Orders, payments and inventory API for online stores.",
-        tech: ["Node.js", "NestJS", "PostgreSQL"],
-      },
-      {
-        name: "Portfolio",
-        description: "Personal site with projects, articles and a contact form.",
-        tech: ["Next.js", "Tailwind"],
-      },
-      {
-        name: "Task Manager",
-        description: "Task manager with boards, deadlines and real-time collaboration.",
-        tech: ["React", "Node.js", "MongoDB"],
-      },
-      {
-        name: "Finance Dashboard",
-        description: "Personal finance dashboard with spending charts and goals.",
-        tech: ["React", "TypeScript", "Recharts"],
-      },
-    ],
     kicker: "Your mini portfolio",
     title: "Create a profile that stands out",
     sub: "It only takes a few minutes.",
@@ -784,11 +725,6 @@ const en: Dict = {
     addWork: "Add your best work",
     addWorkSub: "Include projects that show your skills in practice.",
     addManual: "Add manually",
-    importGh: "Simulate GitHub import",
-    importTitle: "Import from GitHub",
-    importDesc: "Local simulation: select sample projects to show on your profile.",
-    importSelected: "Import selected",
-    importToast: "Projects imported successfully",
     site: "Personal website",
     sitePh: "yoursite.dev",
     ghPh: "github.com/yourusername",
@@ -901,8 +837,8 @@ const en: Dict = {
     demoNote: "Demo: password recovery doesn't send e-mails yet.",
     email: "E-mail",
     emailPh: "you@company.com",
-    loginId: "E-mail or username",
-    loginIdPh: "you@company.com or your username",
+    loginId: "E-mail",
+    loginIdPh: "you@company.com",
     password: "Password",
     passwordPh: "Your password",
     newPasswordPh: "Create a password",
@@ -1066,87 +1002,10 @@ const en: Dict = {
   },
 };
 
-// Translations for mock data values (stored in Portuguese).
+// English for values stored in Portuguese: the profile options and the seed profile's texts.
 const dataEn: Record<string, string> = {
-  "Painel de notas fiscais com filtros e exportação.": "Invoice dashboard with filters and export.",
-  "Calendário escolar com avisos para pais e professores.":
-    "School calendar with notices for parents and teachers.",
-  "API de divisão de pagamentos entre parceiros.": "API that splits payments between partners.",
-  "Serviço de notificações por e-mail e push com filas.":
-    "Queue-based e-mail and push notification service.",
-  "Sistema de prontuários e agenda para clínicas.":
-    "Medical records and scheduling system for clinics.",
-  "Rastreamento de cargas com mapas em tempo real.": "Freight tracking with real-time maps.",
-  "Modelo que prevê cancelamentos de clientes.": "Model that predicts customer churn.",
-  "Extração automática de dados de documentos digitalizados.":
-    "Automatic data extraction from scanned documents.",
-  "Site pessoal com blog e modo escuro.": "Personal website with a blog and dark mode.",
-  "Catálogo de receitas com busca por ingredientes.": "Recipe catalog with search by ingredient.",
-  "Integração de sistemas públicos com alto volume de acessos.":
-    "Integration of high-traffic public sector systems.",
-  "Motor de faturamento para operadoras de telecom.": "Billing engine for telecom carriers.",
-  "Padronização de clusters Kubernetes para vários times.":
-    "Standardized Kubernetes clusters for multiple teams.",
-  "Alertas de custo de nuvem por time e projeto.": "Cloud cost alerts per team and project.",
-  "App de lista de compras compartilhada.": "Shared shopping list app.",
-  "App de trilhas de bicicleta com mapas offline.": "Bike trail app with offline maps.",
-  "Controle de estoque para redes de varejo.": "Inventory control for retail chains.",
-  "Área do cliente com segunda via e chamados.":
-    "Customer portal with invoice copies and support tickets.",
-  "Desenvolvo interfaces em Angular e TypeScript para sistemas de gestão, com atenção a formulários complexos e performance.":
-    "I build Angular and TypeScript interfaces for management systems, with attention to complex forms and performance.",
-  "Construo APIs em Node.js e NestJS, com filas, cache e testes automatizados para serviços que precisam escalar.":
-    "I build Node.js and NestJS APIs with queues, caching and automated tests for services that need to scale.",
-  "Atuo de ponta a ponta com React e Node.js e já liderei times pequenos na entrega de produtos para saúde e logística.":
-    "I work end to end with React and Node.js and have led small teams shipping products for healthcare and logistics.",
-  "Treino e coloco em produção modelos de machine learning com Python, do experimento ao monitoramento em AWS.":
-    "I train and ship machine learning models with Python, from experimentation to monitoring on AWS.",
-  "Estou no início da carreira e gosto de transformar layouts em interfaces acessíveis com React, Next.js e Tailwind.":
-    "I am early in my career and enjoy turning layouts into accessible interfaces with React, Next.js and Tailwind.",
-  "Trabalho com Java e Spring Boot há mais de dez anos em sistemas críticos de governo e telecom, com foco em estabilidade.":
-    "I have worked with Java and Spring Boot for over ten years on critical government and telecom systems, focused on stability.",
-  "Cuido de infraestrutura como código, Kubernetes e pipelines de CI/CD, ajudando times a fazer deploy com segurança.":
-    "I handle infrastructure as code, Kubernetes and CI/CD pipelines, helping teams deploy safely.",
-  "Desenvolvo apps em Flutter e estou aprofundando integração com Firebase, testes e publicação nas lojas.":
-    "I build Flutter apps and am deepening my work on Firebase integration, testing and store releases.",
-  "Desenvolvo sistemas em C# e .NET com front-end em Vue, integrando ERPs e serviços em Azure.":
-    "I build C# and .NET systems with Vue front ends, integrating ERPs and Azure services.",
-  "Fintech de pagamentos digitais para pequenos e médios negócios. Nosso time de tecnologia tem 40 pessoas, divididas entre produto, plataforma e dados.":
-    "Digital payments fintech for small and mid-sized businesses. Our tech team has 40 people across product, platform and data.",
-  "Estúdio de produto que cria aplicativos web e mobile para startups de saúde e educação. Time enxuto, 100% remoto e com bastante autonomia.":
-    "Product studio building web and mobile apps for health and education startups. A lean, fully remote team with plenty of autonomy.",
-  "Plataforma de gestão para o agronegócio, com monitoramento de lavouras e logística em tempo real. Estamos ampliando o time de produto.":
-    "Management platform for agribusiness, with real-time crop monitoring and logistics. We are growing our product team.",
-  "Head de Engenharia": "Head of Engineering",
-  "Aplicativo de rotas com autenticação e favoritos.":
-    "Route planning app with authentication and favorites.",
-  "Registro de hábitos com sincronização entre dispositivos.":
-    "Habit tracking with synchronization across devices.",
-  "Integração de pedidos entre sistemas corporativos.":
-    "Order integration across enterprise systems.",
-  "Portal de atendimento com APIs hospedadas em Azure.":
-    "Support portal with APIs hosted on Azure.",
-  "Ingestão e transformação de dados com execução agendada.":
-    "Scheduled data ingestion and transformation.",
-  "Validação de qualidade em tabelas analíticas.": "Quality validation for analytics tables.",
-  "Organizador de estudos com tarefas e progresso.": "Study organizer with tasks and progress.",
-  "Catálogo de produtos com cadastro e busca.": "Product catalog with entry forms and search.",
   "Desenvolvo aplicações full stack com React e Node.js, integrando interfaces, APIs e bancos relacionais.":
     "I build full stack applications with React and Node.js, connecting interfaces, APIs and relational databases.",
-  "Sou especialista em interfaces React, acessibilidade e design systems. Colaboro com produto e design para evoluir experiências web.":
-    "I specialize in React interfaces, accessibility and design systems, collaborating with product and design to improve web experiences.",
-  "Projeto APIs e serviços backend com Java e Node.js, com foco em observabilidade, integração e confiabilidade.":
-    "I design APIs and backend services with Java and Node.js, focusing on observability, integration and reliability.",
-  "Automatizo infraestrutura em AWS com Terraform e Python e mantenho pipelines de deploy para aplicações em containers.":
-    "I automate AWS infrastructure with Terraform and Python and maintain deployment pipelines for containerized applications.",
-  "Crio aplicativos em React Native com TypeScript, integrando autenticação, notificações e sincronização com Firebase.":
-    "I build React Native apps with TypeScript, integrating authentication, notifications and Firebase synchronization.",
-  "Desenvolvo sistemas corporativos em C# e .NET, modernizando APIs e integrações com Azure e SQL Server.":
-    "I build enterprise systems in C# and .NET, modernizing APIs and integrations with Azure and SQL Server.",
-  "Construo pipelines de dados com Python e Airflow, organizando ingestão, transformação e qualidade de dados em AWS.":
-    "I build data pipelines with Python and Airflow, organizing ingestion, transformation and data quality on AWS.",
-  "Estou consolidando minha experiência com Vue e Node.js em aplicações de pequeno porte, com revisão de código e colaboração do time.":
-    "I am developing my Vue and Node.js experience on small applications, supported by code reviews and team collaboration.",
   Júnior: "Junior",
   Pleno: "Mid-level",
   Sênior: "Senior",
@@ -1157,22 +1016,11 @@ const dataEn: Record<string, string> = {
   "Em 15 dias": "In 15 days",
   "Em 30 dias": "In 30 days",
   Contrato: "Contract",
-  "Transformo desafios de produto em experiências digitais simples, confiáveis e orientadas a resultados. Gosto de trabalhar próximo ao negócio e colaborar com times multidisciplinares.":
-    "I turn product challenges into simple, reliable, results-driven digital experiences. I enjoy working close to the business and collaborating with cross-functional teams.",
   "Checkout modular que reduziu o abandono em 24%.":
     "Modular checkout that cut cart abandonment by 24%.",
   "Plataforma comercial com automações e analytics.":
     "Sales platform with automations and analytics.",
   "APIs resilientes para operações financeiras.": "Resilient APIs for financial operations.",
-  "Biblioteca acessível usada por 12 squads.": "Accessible library used by 12 squads.",
-  "Dashboard de métricas em tempo real.": "Real-time metrics dashboard.",
-  "Experiência de agendamento para clínicas.": "Booking experience for clinics.",
-  "Serviços de conciliação com alta disponibilidade.": "Highly available reconciliation services.",
-  "Motor logístico para entregas nacionais.": "Logistics engine for nationwide deliveries.",
-  "Monitoramento distribuído para microsserviços.": "Distributed monitoring for microservices.",
-  "Governança multi-cloud e controle de custos.": "Multi-cloud governance and cost control.",
-  "Portal interno para deploys autônomos.": "Internal portal for self-service deploys.",
-  "Pipeline orientado a eventos em grande escala.": "Large-scale event-driven pipeline.",
 };
 
 type I18nState = {

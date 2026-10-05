@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeveloperCard } from "@/components/developer-card";
-import { developers } from "@/lib/developers";
+import { fetchFeaturedProfile } from "@/lib/profile-api";
 
 export const Route = createFileRoute("/")({
+  loader: () => fetchFeaturedProfile(),
   head: () => ({
     meta: [
       { title: "Stack Match" },
@@ -46,7 +47,7 @@ function Index() {
     [Layers3, t.home.benefits[2]],
     [Sparkles, t.home.benefits[3]],
   ] as const;
-  const featuredDeveloper = developers.find((developer) => developer.id === "marina-costa");
+  const featuredDeveloper = Route.useLoaderData();
   return (
     <main>
       <section className="hero-band">
@@ -80,12 +81,15 @@ function Index() {
           </div>
           {featuredDeveloper && (
             <div className="relative mx-auto w-full max-w-md animate-scale-in">
-              <div className="absolute -left-7 top-16 z-10 hidden rounded-lg border bg-card p-3 shadow-soft sm:block">
-                <p className="text-xs text-muted-foreground">{t.profile.experience}</p>
-                <p className="font-display text-2xl font-bold text-primary">
-                  {tv(featuredDeveloper.experience)}
-                </p>
-              </div>
+              {/* Experience is optional in the profile form. */}
+              {featuredDeveloper.experience && (
+                <div className="absolute -left-7 top-16 z-10 hidden rounded-lg border bg-card p-3 shadow-soft sm:block">
+                  <p className="text-xs text-muted-foreground">{t.profile.experience}</p>
+                  <p className="font-display text-2xl font-bold text-primary">
+                    {tv(featuredDeveloper.experience)}
+                  </p>
+                </div>
+              )}
               <DeveloperCard developer={featuredDeveloper} />
               <div className="absolute -bottom-5 right-3 z-10 rounded-lg border bg-card p-3 shadow-soft sm:-right-5">
                 <p className="flex items-center gap-2 text-sm font-semibold">

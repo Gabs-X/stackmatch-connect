@@ -4,12 +4,17 @@ import { createAccount } from "./auth";
 import type { Db } from "./db";
 import { saveProfile } from "./profiles";
 import { listSavedTalents, removeSavedTalent, saveTalent } from "./saved-talents";
-import { createTestDb } from "./test-db";
+import { createDeveloper, createTestDb } from "./test-db";
 
 let db: Db;
+let rafael: string;
+let marina: string;
 
 beforeEach(async () => {
   db = await createTestDb();
+  // Companies only reach developers with a published profile.
+  rafael = await createDeveloper(db, "rafael@example.com", "Rafael Lima");
+  marina = await createDeveloper(db, "marina@example.com", "Marina Costa");
 });
 
 async function account(accountType: "company" | "developer", email: string) {
@@ -31,16 +36,16 @@ describe("saved talents", () => {
   it("keep each company's shortlist in the order it was saved", async () => {
     const acme = await account("company", "bruno@acme.com");
     const other = await account("company", "ana@other.com");
-    expect(await saveTalent(db, acme, "rafael-lima")).toBe(true);
-    expect(await saveTalent(db, acme, "marina-costa")).toBe(true);
+    expect(await saveTalent(db, acme, rafael)).toBe(true);
+    expect(await saveTalent(db, acme, marina)).toBe(true);
     // Saving again changes nothing.
-    expect(await saveTalent(db, acme, "rafael-lima")).toBe(true);
+    expect(await saveTalent(db, acme, rafael)).toBe(true);
 
-    expect(await listSavedTalents(db, acme)).toEqual(["rafael-lima", "marina-costa"]);
+    expect(await listSavedTalents(db, acme)).toEqual([rafael, marina]);
     expect(await listSavedTalents(db, other)).toEqual([]);
 
-    await removeSavedTalent(db, acme, "rafael-lima");
-    expect(await listSavedTalents(db, acme)).toEqual(["marina-costa"]);
+    await removeSavedTalent(db, acme, rafael);
+    expect(await listSavedTalents(db, acme)).toEqual([marina]);
   });
 
   it("only take profiles companies can find", async () => {

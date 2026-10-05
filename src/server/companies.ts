@@ -5,7 +5,6 @@ import {
   type CompanyProfile,
   type CompanySettings,
 } from "@/lib/company-settings";
-import { demoCompanyProfiles } from "@/lib/developers";
 import type { Db } from "./db";
 import { companyProfiles } from "./db/schema";
 
@@ -35,17 +34,15 @@ export async function saveCompanySettings(db: Db, userId: string, settings: Comp
 }
 
 /**
- * What developers see about a company, besides the contact it signed with: the fictional companies
- * of the demo activity, or what an account saved. Null while the company never saved its details.
+ * What developers see about a company, besides the contact it signed with. Null while the company
+ * never saved its details.
  */
 export async function loadCompanyProfile(
   db: Db,
   companyId: string,
 ): Promise<CompanyProfile | null> {
-  const demo = demoCompanyProfiles[companyId];
-  if (demo) return demo;
   const settings = await savedSettings(db, companyId);
   if (!settings) return null;
   const { about, website, location, contactRole, phone } = settings;
-  return { about, website, location, contactRole, phone, demo: false };
+  return { about, website, location, contactRole, phone };
 }

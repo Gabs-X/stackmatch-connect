@@ -1,6 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { demoAccounts, demoDeveloperId } from "@/lib/auth";
-import { demoDeveloperProfile, type Developer } from "@/lib/developers";
+import type { Developer } from "@/lib/developers";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
 import { developerProfiles, developerSkills, projectSkills, projects, skills } from "./db/schema";
@@ -183,9 +182,12 @@ export async function loadPublishedProfile(db: Db, userId: string): Promise<Deve
   return profile && localProfileToDeveloper(profile, userId);
 }
 
-/** The demo developer (teste.dev) starts with Gabriel's profile, until it saves its own. */
-export async function ensureDemoProfile(db: Db) {
-  if (!demoAccounts.some((account) => account.id === demoDeveloperId)) return;
-  if (await loadProfile(db, demoDeveloperId)) return;
-  await saveProfile(db, demoDeveloperId, demoDeveloperProfile);
+/** The first profile ever published, which the home page shows as an example. */
+export async function loadFirstPublishedProfile(db: Db): Promise<Developer | null> {
+  const [first] = await db
+    .select({ userId: developerProfiles.userId })
+    .from(developerProfiles)
+    .orderBy(asc(developerProfiles.createdAt), asc(developerProfiles.userId))
+    .limit(1);
+  return first ? loadPublishedProfile(db, first.userId) : null;
 }

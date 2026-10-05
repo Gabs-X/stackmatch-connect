@@ -1,17 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { demoDeveloperId } from "@/lib/auth";
-import { demoDeveloperProfile } from "@/lib/developers";
 import { emptyProfile, newProject, type LocalProfile } from "@/lib/local-profile";
-import { createAccount, ensureDemoAccounts } from "./auth";
+import { createAccount } from "./auth";
 import type { Db } from "./db";
 import * as schema from "./db/schema";
-import {
-  ensureDemoProfile,
-  loadProfile,
-  loadPublishedProfile,
-  loadPublishedProfiles,
-  saveProfile,
-} from "./profiles";
+import { loadProfile, loadPublishedProfile, loadPublishedProfiles, saveProfile } from "./profiles";
+import { seedDatabase, seedDeveloperId, seedDeveloperProfile } from "./seed";
 import { createTestDb } from "./test-db";
 
 let db: Db;
@@ -117,7 +110,6 @@ describe("published profiles", () => {
       { id: biaId, name: "Bia" },
     ]);
     expect(published[0]).toMatchObject({
-      isLocal: true,
       role: "Staff Engineer",
       experience: "4 anos",
       rate: 95.5,
@@ -134,16 +126,15 @@ describe("published profiles", () => {
   });
 });
 
-describe("demo profile", () => {
+describe("seed", () => {
   it("gives teste.dev Gabriel's profile once, without overwriting its edits", async () => {
-    await ensureDemoAccounts(db);
-    await ensureDemoProfile(db);
-    expect(withoutProjectIds(await loadProfile(db, demoDeveloperId))).toEqual(
-      withoutProjectIds(demoDeveloperProfile),
+    await seedDatabase(db);
+    expect(withoutProjectIds(await loadProfile(db, seedDeveloperId))).toEqual(
+      withoutProjectIds(seedDeveloperProfile),
     );
 
-    await saveProfile(db, demoDeveloperId, { ...demoDeveloperProfile, name: "Gabriel B." });
-    await ensureDemoProfile(db);
-    expect((await loadProfile(db, demoDeveloperId))?.name).toBe("Gabriel B.");
+    await saveProfile(db, seedDeveloperId, { ...seedDeveloperProfile, name: "Gabriel B." });
+    await seedDatabase(db);
+    expect((await loadProfile(db, seedDeveloperId))?.name).toBe("Gabriel B.");
   });
 });

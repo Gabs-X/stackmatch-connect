@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Shared by the screens and the server: account shapes, form validation and the demo accounts.
+ * Shared by the screens and the server: account shapes and form validation.
  * Sign-up, sign-in and sessions run on the server (src/lib/auth-api.ts).
  */
 
@@ -72,8 +72,7 @@ export const passwordRules = {
 };
 
 export const signInSchema = z.object({
-  // An e-mail, or a demo account's username ("teste.dev").
-  email: z.string().trim().min(1, "required"),
+  email,
   password: z.string().min(1, "required"),
 });
 export type SignInInput = z.infer<typeof signInSchema>;
@@ -107,41 +106,6 @@ export const signUpSchema = z
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
 export const passwordResetSchema = z.object({ email });
-
-/**
- * Ready-made accounts for trying each side of the app without signing up. The server creates them
- * in the database on startup (src/server/auth.ts). Sign in with the e-mail or the username.
- *
- * Public deployments should set VITE_DEMO_ACCOUNTS=false: the password is in the source code.
- */
-export const demoPassword = "teste1234";
-export const demoDeveloperId = "demo-developer";
-export const demoAccountsEnabled = import.meta.env.VITE_DEMO_ACCOUNTS !== "false";
-const allDemoAccounts: (AuthUser & { username: string })[] = [
-  {
-    id: demoDeveloperId,
-    username: "teste.dev",
-    name: "Gabriel Botelho",
-    email: "teste.dev@stackmatch.app",
-    accountType: "developer",
-    company: "",
-    cnpj: "",
-    jobTitle: "Full Stack Developer",
-  },
-  {
-    id: "demo-company",
-    username: "teste.emp",
-    name: "Recrutadora Teste",
-    email: "teste.emp@stackmatch.app",
-    accountType: "company",
-    company: "Empresa Teste",
-    // A valid example number, not a real company.
-    cnpj: "11222333000181",
-    jobTitle: "Tech Recruiter",
-  },
-];
-
-export const demoAccounts = demoAccountsEnabled ? allDemoAccounts : [];
 
 /**
  * Stand-in for the password reset e-mail: there is no e-mail service yet. Always resolves, whether

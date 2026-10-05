@@ -50,7 +50,6 @@ describe("localProfileToDeveloper", () => {
 
   it("identifies the entry by its owner's account", () => {
     expect(developer.id).toBe("ana-account");
-    expect(developer.isLocal).toBe(true);
     expect(developer.name).toBe("Ana Souza");
   });
 
@@ -69,7 +68,6 @@ describe("localProfileToDeveloper", () => {
     expect(developer.links).toEqual({
       github: "https://github.com/anasouza",
       linkedin: "",
-      verified: true,
     });
     expect(developer.projects[0]?.links).toEqual({
       github: "",

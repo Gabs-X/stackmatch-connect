@@ -5,7 +5,7 @@ test("visitors are sent to the login before account-only pages", async ({ page }
   await expect(page).toHaveURL(/\/login\?redirect=%2Finterests$/);
 
   const form = page.getByRole("main");
-  await form.getByLabel("E-mail ou usuário").fill("teste.dev");
+  await form.getByLabel("E-mail").fill("teste.dev@stackmatch.app");
   await form.getByLabel("Senha", { exact: true }).fill("teste1234");
   await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(page).toHaveURL(/\/interests$/);
@@ -52,7 +52,7 @@ test("a developer sees the companies interested in their profile", async ({ page
     "href",
     /^mailto:teste\.emp@stackmatch\.app\?subject=/,
   );
-  // The demo account also has mock activity from the (future) API.
+  // Plus the three companies of the test data.
   await expect(list.filter({ hasText: "VerdeTech" })).toContainText("Propôs uma conversa");
   await expect(list).toHaveCount(4);
 });
@@ -102,8 +102,10 @@ test("each developer account has its own profile, and companies see them all", a
   const cards = page.locator("main section article");
   await expect(cards.first()).toContainText("Gabriel Botelho");
   await expect(cards.first()).not.toContainText("Seu perfil");
-  await expect(page.getByText(/^1 de 18 perfis$/)).toBeVisible();
-  await page.getByRole("button", { name: "Passar" }).click();
+  await expect(page.getByText(/^1 de 6 perfis$/)).toBeVisible();
+  // Published last, after the test data.
+  for (let passed = 0; passed < 5; passed++)
+    await page.getByRole("button", { name: "Passar" }).click();
   await expect(cards.first()).toContainText("Diego Fernandes");
 
   await cards.first().getByRole("link", { name: "Ver perfil" }).click();

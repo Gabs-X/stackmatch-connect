@@ -190,7 +190,6 @@ const projectColors = ["project-blue", "project-green", "project-violet", "proje
 export function localProfileToDeveloper(profile: LocalProfile, accountId: string): Developer {
   return {
     id: accountId,
-    isLocal: true,
     name: profile.name.trim(),
     role: profile.role.trim(),
     // The schema already mapped these onto catalog values.
@@ -205,12 +204,10 @@ export function localProfileToDeveloper(profile: LocalProfile, accountId: string
     image: githubAvatarUrl(profileLink(profile.github) ?? "") ?? "",
     rate: profile.rate ?? Number.NaN,
     hiringTypes: profile.hiringTypes,
-    // Addresses the developer typed themselves, so they open for real.
     links: {
       github: profileLink(profile.github) ?? "",
       linkedin: profileLink(profile.linkedin) ?? "",
       ...(profileLink(profile.website) ? { website: profileLink(profile.website) ?? "" } : {}),
-      verified: true,
     },
     projects: profile.projects.map((project, index) => ({
       name: project.name,

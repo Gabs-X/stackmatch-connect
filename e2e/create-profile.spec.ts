@@ -76,18 +76,12 @@ test("removing a project can be undone", async ({ page }) => {
   // teste.dev opens on its published profile; edit it from the form.
   await page.getByRole("button", { name: "Voltar à edição" }).click();
   await page.getByRole("button", { name: "Projetos" }).click();
-  await page.getByRole("button", { name: "Simular importação do GitHub" }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: /Portfolio/ })
-    .click();
-  await page.getByRole("button", { name: "Importar selecionados" }).click();
 
-  await page.getByRole("button", { name: "Remover Portfolio" }).click();
-  await expect(page.getByRole("button", { name: "Remover Portfolio" })).toBeHidden();
+  await page.getByRole("button", { name: "Remover Atlas CRM" }).click();
+  await expect(page.getByRole("button", { name: "Remover Atlas CRM" })).toBeHidden();
 
   await page.locator("[data-sonner-toast]").getByRole("button", { name: "Desfazer" }).click();
-  await expect(page.getByRole("button", { name: "Remover Portfolio" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remover Atlas CRM" })).toBeVisible();
 });
 
 test("required fields block the next step until they are filled", async ({ page }) => {

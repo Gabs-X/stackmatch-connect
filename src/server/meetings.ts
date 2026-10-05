@@ -1,6 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { AuthUser } from "@/lib/auth";
-import { developers } from "@/lib/developers";
 import {
   isProposedTimeValid,
   type MeetingRequest,
@@ -28,8 +27,6 @@ const toMeetingRequest = (row: MeetingRow): MeetingRequest => ({
 
 /** Name of a profile companies can find, or null when there is no such profile. */
 async function developerName(db: Db, developerId: string) {
-  const fictional = developers.find((developer) => developer.id === developerId);
-  if (fictional) return fictional.name;
   const [row] = await db
     .select({ name: developerProfiles.name })
     .from(developerProfiles)

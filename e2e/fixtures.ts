@@ -1,8 +1,9 @@
 import { test as base, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { testCompanies, testDevelopers } from "./test-data";
 
 // Stand-in for GitHub avatars so tests never depend on the network.
-const avatar = readFileSync(new URL("../src/assets/developer-rafael.jpg", import.meta.url));
+const avatar = readFileSync(new URL("./github-avatar.jpg", import.meta.url));
 
 /**
  * Pages are server-rendered, so buttons exist before React attaches their handlers; a click in
@@ -34,9 +35,10 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
         : route.fulfill({ status: 404, body: "" }),
     );
     waitForHydrationOnNavigation(page);
-    // Every test starts from the demo data, whatever the previous one saved on the server.
+    // Every test starts from the seed plus the test data, whatever the previous one saved.
     const reset = await page.request.post("/api/test-reset");
     if (!reset.ok()) throw new Error(`Database reset failed: ${reset.status()}`);
+    await seed(page, { developers: testDevelopers, companies: testCompanies });
     await provide(page);
   },
 });
@@ -50,19 +52,22 @@ export { expect } from "@playwright/test";
 export const uniqueEmail = (address: string) =>
   address.replace("@", `+${crypto.randomUUID().slice(0, 8)}@`);
 
-/** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
-export async function seedSavedTalents(page: Page, developerIds: string[]) {
-  const seed = await page.request.post("/api/test-seed", {
-    data: { companyId: "demo-company", savedTalents: developerIds },
-  });
-  if (!seed.ok()) throw new Error(`Seeding failed: ${seed.status()}`);
+async function seed(page: Page, data: object) {
+  const response = await page.request.post("/api/test-seed", { data });
+  if (!response.ok()) throw new Error(`Seeding failed: ${response.status()}`);
 }
 
-/** Signs in with a built-in test account through the login form and waits for its home page. */
+/** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
+export const seedSavedTalents = (page: Page, developerIds: string[]) =>
+  seed(page, { savedTalents: { companyId: "demo-company", developerIds } });
+
+/** Signs in with a seed account through the login form and waits for its home page. */
 export async function signInAs(page: Page, type: "developer" | "company") {
   await page.goto("/login");
   const form = page.getByRole("main");
-  await form.getByLabel("E-mail ou usuário").fill(type === "developer" ? "teste.dev" : "teste.emp");
+  await form
+    .getByLabel("E-mail")
+    .fill(type === "developer" ? "teste.dev@stackmatch.app" : "teste.emp@stackmatch.app");
   await form.getByLabel("Senha", { exact: true }).fill("teste1234");
   await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(type === "developer" ? /\/create-profile$/ : /\/discover$/);

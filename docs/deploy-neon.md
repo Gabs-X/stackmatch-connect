@@ -46,14 +46,17 @@ $env:DATABASE_URL = "postgresql://...cole-aqui..."
 npm run db:migrate
 ```
 
-## 3. Decidir sobre as contas de teste
+## 3. Criar as contas de teste (opcional)
 
-As contas `teste.dev` e `teste.emp` (senha `teste1234`) são criadas no banco quando o servidor sobe, a menos que `VITE_DEMO_ACCOUNTS=false`.
+O app não cria nenhum dado sozinho. Para ter as contas de teste no banco, rode o seed, que usa a mesma `DATABASE_URL` do `.env.migrate.local`:
 
-- **Deixar ativas** (não definir a variável): a demonstração funciona como no roteiro da apresentação. Como a senha está no código público, qualquer pessoa pode entrar nessas contas e alterar os dados delas.
-- **Desativar** (`VITE_DEMO_ACCOUNTS=false` em **Settings → Environment Variables**): é mais seguro, mas as contas de demonstração precisam ser criadas na hora pelo cadastro.
+```sh
+npm run db:seed
+```
 
-A variável entra no build, então qualquer mudança só vale depois de um novo deploy. Desativar depois não apaga contas já criadas no banco.
+Ele cria `teste.dev@stackmatch.app` (desenvolvedor, com o perfil do Gabriel Botelho) e `teste.emp@stackmatch.app` (empresa), com a senha `teste1234`, e termina com `Seed applied to <host>`. O que já existe no banco não é alterado, então rodar de novo não faz mal.
+
+A senha está no código público: qualquer pessoa pode entrar nessas contas e alterar os dados delas. Rode o seed só se elas forem úteis nesse banco, por exemplo para uma demonstração.
 
 ## 4. Fazer um novo deploy
 
@@ -63,7 +66,7 @@ A integração não refaz o deploy sozinha. Em **Deployments**, abra o último d
 
 No site publicado:
 
-1. Entre com `teste.emp` / `teste1234` (se as contas de teste estiverem ativas). O Discover deve mostrar o Gabriel Botelho primeiro.
+1. Se rodou o seed, entre com `teste.emp@stackmatch.app` / `teste1234`. O Discover deve mostrar o Gabriel Botelho.
 2. Crie uma conta nova, saia e entre de novo.
 3. Como empresa, salve um talento e recarregue a página: ele continua em Talentos salvos.
 
@@ -79,6 +82,6 @@ Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os m
 
 1. Altere `src/server/db/schema.ts`.
 2. Gere a migração com `npm run db:generate` e faça commit da pasta `drizzle/`.
-3. Antes ou logo depois do deploy, rode `npm run db:migrate` (passo 2) para aplicá-la no Neon.
+3. Antes do deploy, rode `npm run db:migrate` (passo 2) para aplicá-la no Neon. Uma migração que cria uma coluna ou tabela que o código novo usa precisa estar no banco antes de o código chegar à produção.
 
 O PGlite local aplica as migrações sozinho ao iniciar.

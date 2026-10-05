@@ -14,7 +14,7 @@ import {
   RotateCcw,
   UserRound,
 } from "lucide-react";
-import { DemoLink } from "@/components/demo-link";
+import { ProfileLink } from "@/components/profile-link";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
@@ -136,14 +136,7 @@ function CompanyDetails({ user }: { user: AuthUser }) {
                   {details.location}
                 </span>
               )}
-              {website && (
-                <DemoLink
-                  url={website}
-                  label={t.company.website}
-                  icon={Globe}
-                  real={!details?.demo}
-                />
-              )}
+              {website && <ProfileLink url={website} label={t.company.website} icon={Globe} />}
             </div>
           </div>
         </div>

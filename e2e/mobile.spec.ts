@@ -14,7 +14,7 @@ test("the Discover action bar stays usable above the assistant button", async ({
   expect(fab!.y + fab!.height).toBeLessThanOrEqual(bar!.y);
 
   await interested.click();
-  await expect(page.getByText(/^2 de 17 perfis$/)).toBeVisible();
+  await expect(page.getByText(/^2 de 5 perfis$/)).toBeVisible();
 });
 
 test("filters open in a drawer on small screens", async ({ page }) => {
@@ -24,7 +24,7 @@ test("filters open in a drawer on small screens", async ({ page }) => {
   await drawer.getByRole("button", { name: "Sênior", exact: true }).click();
   await page.keyboard.press("Escape");
 
-  await expect(page.getByText(/^1 de 6 perfis$/)).toBeVisible();
+  await expect(page.getByText(/^1 de 2 perfis$/)).toBeVisible();
 });
 
 test("the assistant opens full screen", async ({ page }) => {

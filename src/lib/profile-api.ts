@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
+  loadFirstPublishedProfile,
   loadProfile,
   loadPublishedProfile,
   loadPublishedProfiles,
@@ -36,6 +37,11 @@ export const fetchPublishedProfiles = createServerFn({ method: "GET" }).handler(
 export const fetchPublishedProfile = createServerFn({ method: "GET" })
   .validator(z.string())
   .handler(async ({ data }) => loadPublishedProfile(await database(), data));
+
+/** The profile the home page shows as an example, or null while none is published. */
+export const fetchFeaturedProfile = createServerFn({ method: "GET" }).handler(async () =>
+  loadFirstPublishedProfile(await database()),
+);
 
 export const myProfileQuery = (accountId: string) =>
   queryOptions({ queryKey: ["my-profile", accountId], queryFn: () => fetchMyProfile() });

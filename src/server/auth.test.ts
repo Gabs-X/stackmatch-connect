@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { demoPassword, type SignUpInput } from "@/lib/auth";
+import type { SignUpInput } from "@/lib/auth";
 import {
   authenticate,
   createAccount,
   createSession,
   deleteSession,
-  ensureDemoAccounts,
   hashPassword,
   sessionDurationMs,
   userForSession,
@@ -13,6 +12,7 @@ import {
 } from "./auth";
 import type { Db } from "./db";
 import * as schema from "./db/schema";
+import { seedCompanyId, seedDatabase, seedDeveloperId, seedPassword } from "./seed";
 import { createTestDb } from "./test-db";
 
 let db: Db;
@@ -118,24 +118,26 @@ describe("sessions", () => {
   });
 });
 
-describe("demo accounts", () => {
-  it("sign in by username or e-mail with the shared password, keeping their fixed ids", async () => {
-    await ensureDemoAccounts(db);
-    await ensureDemoAccounts(db);
-    expect(await authenticate(db, "teste.dev", demoPassword)).toMatchObject({
-      id: "demo-developer",
+describe("seed accounts", () => {
+  it("sign in by e-mail with the seed password, keeping their fixed ids", async () => {
+    await seedDatabase(db);
+    await seedDatabase(db);
+    expect(await authenticate(db, "teste.dev@stackmatch.app", seedPassword)).toMatchObject({
+      id: seedDeveloperId,
       accountType: "developer",
     });
-    expect(await authenticate(db, " TESTE.EMP@stackmatch.app", demoPassword)).toMatchObject({
-      id: "demo-company",
+    expect(await authenticate(db, " TESTE.EMP@stackmatch.app", seedPassword)).toMatchObject({
+      id: seedCompanyId,
       accountType: "company",
       company: "Empresa Teste",
     });
-    expect(await authenticate(db, "teste.dev", "1234")).toBeNull();
+    expect(await authenticate(db, "teste.dev@stackmatch.app", "1234")).toBeNull();
+    // No usernames: only e-mails sign in.
+    expect(await authenticate(db, "teste.dev", seedPassword)).toBeNull();
   });
 
   it("can't have their e-mails taken by a sign-up", async () => {
-    await ensureDemoAccounts(db);
+    await seedDatabase(db);
     expect(await createAccount(db, { ...developer, email: "teste.dev@stackmatch.app" })).toBeNull();
   });
 });

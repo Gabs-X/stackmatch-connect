@@ -62,15 +62,10 @@ describe("company profile", () => {
       location: "",
       contactRole: "Tech Lead",
       phone: "",
-      demo: false,
     });
   });
 
-  it("knows the fictional companies of the demo activity", async () => {
-    expect(await loadCompanyProfile(db, "demo-company-verdetech")).toMatchObject({
-      location: "Campinas, SP",
-      demo: true,
-    });
+  it("is null for an unknown company", async () => {
     expect(await loadCompanyProfile(db, "unknown")).toBeNull();
   });
 });

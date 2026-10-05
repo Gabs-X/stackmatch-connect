@@ -43,6 +43,13 @@
       "when": 1791209822169,
       "tag": "0005_meeting_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791214595568,
+      "tag": "0006_developer_foreign_keys",
+      "breakpoints": true
     }
   ]
 }

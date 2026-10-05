@@ -1,5 +1,4 @@
 import { and, asc, eq } from "drizzle-orm";
-import { developers } from "@/lib/developers";
 import type { Db } from "./db";
 import { developerProfiles, savedTalents } from "./db/schema";
 
@@ -13,9 +12,8 @@ export async function listSavedTalents(db: Db, companyId: string): Promise<strin
   return rows.map((row) => row.developerId);
 }
 
-/** A profile companies can find: from the fictional catalog or a developer account. */
+/** A profile companies can find: a developer account that published its profile. */
 export async function developerExists(db: Db, developerId: string) {
-  if (developers.some((developer) => developer.id === developerId)) return true;
   const [row] = await db
     .select({ userId: developerProfiles.userId })
     .from(developerProfiles)

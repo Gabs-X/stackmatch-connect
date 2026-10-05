@@ -1,25 +1,10 @@
 import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
-import { ensureDemoAccounts, sessionDurationMs, userForSession } from "./auth";
+import { sessionDurationMs, userForSession } from "./auth";
 import type { AccountType } from "@/lib/auth";
-import { getDb, type Db } from "./db";
-import { ensureDemoProfile } from "./profiles";
+import { getDb } from "./db";
 
-const store = globalThis as unknown as { __stackmatchReadyDb?: Promise<Db> | undefined };
-
-/** The database, with the demo accounts and profile in place before the first request uses it. */
-export function database(): Promise<Db> {
-  store.__stackmatchReadyDb ??= getDb()
-    .then(async (db) => {
-      await ensureDemoAccounts(db);
-      await ensureDemoProfile(db);
-      return db;
-    })
-    .catch((error: unknown) => {
-      store.__stackmatchReadyDb = undefined;
-      throw error;
-    });
-  return store.__stackmatchReadyDb;
-}
+/** The database. */
+export const database = getDb;
 
 const cookieName = "stackmatch_session";
 

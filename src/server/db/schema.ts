@@ -75,8 +75,9 @@ export const savedTalents = pgTable(
     companyId: text("company_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    // No foreign key: besides developer accounts, it can be a profile of the fictional catalog.
-    developerId: text("developer_id").notNull(),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.companyId, table.developerId] })],
@@ -92,8 +93,9 @@ export const interests = pgTable(
     companyId: text("company_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    // No foreign key: besides developer accounts, it can be a profile of the fictional catalog.
-    developerId: text("developer_id").notNull(),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -115,8 +117,9 @@ export const meetingRequests = pgTable(
     companyId: text("company_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    // No foreign key: besides developer accounts, it can be a profile of the fictional catalog.
-    developerId: text("developer_id").notNull(),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     developerName: text("developer_name").notNull(),
     /** Brasília time (GMT-3), as offered in the dialog. */
     date: date("date", { mode: "string" }).notNull(),

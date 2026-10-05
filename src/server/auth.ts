@@ -1,13 +1,6 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { eq, lte } from "drizzle-orm";
-import {
-  demoAccounts,
-  demoPassword,
-  onlyDigits,
-  type AccountType,
-  type AuthUser,
-  type SignUpInput,
-} from "@/lib/auth";
+import { onlyDigits, type AccountType, type AuthUser, type SignUpInput } from "@/lib/auth";
 import type { Db } from "./db";
 import { sessions, users, type UserRow } from "./db/schema";
 
@@ -74,15 +67,13 @@ export async function createAccount(db: Db, input: SignUpInput): Promise<AuthUse
   return row ? toAuthUser(row) : null;
 }
 
-/** The account for an e-mail (or a demo account's username) and password, or null. */
+/** The account for an e-mail and password, or null. */
 export async function authenticate(
   db: Db,
   login: string,
   password: string,
 ): Promise<AuthUser | null> {
-  const normalized = normalizeEmail(login);
-  const email =
-    demoAccounts.find((account) => account.username === normalized)?.email ?? normalized;
+  const email = normalizeEmail(login);
   const [row] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   const valid = await verifyPassword(password, row?.passwordHash ?? (await unknownUserHash));
   return row && valid ? toAuthUser(row) : null;
@@ -122,29 +113,4 @@ export async function userForSession(
 
 export async function deleteSession(db: Db, token: string) {
   await db.delete(sessions).where(eq(sessions.id, hashToken(token)));
-}
-
-/**
- * The ready-made test accounts, created once per database while VITE_DEMO_ACCOUNTS isn't "false".
- * They keep their fixed ids, which the front's demo data refers to.
- */
-export async function ensureDemoAccounts(db: Db) {
-  if (!demoAccounts.length) return;
-  const passwordHash = await hashPassword(demoPassword);
-  await db
-    .insert(users)
-    .values(
-      demoAccounts.map((account) => ({
-        id: account.id,
-        email: account.email,
-        passwordHash,
-        accountType:
-          account.accountType === "company" ? ("COMPANY" as const) : ("DEVELOPER" as const),
-        name: account.name,
-        jobTitle: account.jobTitle,
-        companyName: account.company || null,
-        cnpj: account.cnpj || null,
-      })),
-    )
-    .onConflictDoNothing();
 }

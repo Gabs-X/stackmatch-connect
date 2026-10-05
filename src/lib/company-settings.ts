@@ -31,10 +31,7 @@ export type CompanySettingsInput = z.input<typeof companySettingsSchema>;
 export type CompanyProfile = Pick<
   CompanySettings,
   "about" | "website" | "location" | "contactRole" | "phone"
-> & {
-  /** Fictional company: its website is an example address. */
-  demo: boolean;
-};
+>;
 
 /** Until the company edits them, settings come from what it filled in at sign-up. */
 export function defaultCompanySettings(user: AuthUser): CompanySettings {

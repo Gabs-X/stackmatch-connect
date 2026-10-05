@@ -3,19 +3,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { DemoLink } from "@/components/demo-link";
+import { ProfileLink } from "@/components/profile-link";
 import { DeveloperPhoto } from "@/components/developer-photo";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
-import { developers, type Developer } from "@/lib/developers";
+import type { Developer } from "@/lib/developers";
 import { fetchPublishedProfile } from "@/lib/profile-api";
 import { useApp } from "@/lib/app-context";
 
 export const Route = createFileRoute("/developer/$id")({
-  // Ids outside the fictional catalog are developer accounts' profiles, kept on the server.
-  loader: async ({ params }) =>
-    developers.find((d) => d.id === params.id) ??
-    (await fetchPublishedProfile({ data: params.id })),
+  // The id is the developer's account id.
+  loader: ({ params }) => fetchPublishedProfile({ data: params.id }),
   head: ({ loaderData }) => ({
     meta: [
       {
@@ -40,17 +38,16 @@ export const Route = createFileRoute("/developer/$id")({
 });
 function DeveloperPage() {
   const d = Route.useLoaderData();
-  return d ? <CatalogDeveloperPage d={d} /> : <ProfileNotFound />;
+  return d ? <DeveloperProfile d={d} /> : <ProfileNotFound />;
 }
 
-function CatalogDeveloperPage({ d }: { d: Developer }) {
+function DeveloperProfile({ d }: { d: Developer }) {
   const { t, tv, formatCurrency } = useI18n();
   useLocalizedMeta(d.name + " — Stack Match", tv(d.bio));
   const { saved, toggleSaved } = useApp();
   const isSaved = saved.includes(d.id);
-  // Profiles created in the app may leave out what the form doesn't collect (rate, experience).
+  // Rate and experience are optional in the profile form.
   const place = [d.location, tv(d.workMode)].filter(Boolean).join(" · ");
-  const real = d.links.verified === true;
   return (
     <main className="pb-20">
       <section className="stagger-item border-b bg-card">
@@ -177,15 +174,10 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
                     {(p.links.github || p.links.demo) && (
                       <div className="mt-5 flex gap-4 text-xs font-bold">
                         {p.links.github && (
-                          <DemoLink url={p.links.github} label="GitHub" icon={Github} real={real} />
+                          <ProfileLink url={p.links.github} label="GitHub" icon={Github} />
                         )}
                         {p.links.demo && (
-                          <DemoLink
-                            url={p.links.demo}
-                            label="Demo"
-                            icon={ExternalLink}
-                            real={real}
-                          />
+                          <ProfileLink url={p.links.demo} label="Demo" icon={ExternalLink} />
                         )}
                       </div>
                     )}
@@ -218,30 +210,22 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
             <p className="text-xs font-bold uppercase text-muted-foreground">{t.profile.links}</p>
             <div className="mt-3 space-y-2">
               {d.links.github && (
-                <DemoLink
-                  url={d.links.github}
-                  label="GitHub"
-                  icon={Github}
-                  variant="block"
-                  real={real}
-                />
+                <ProfileLink url={d.links.github} label="GitHub" icon={Github} variant="block" />
               )}
               {d.links.linkedin && (
-                <DemoLink
+                <ProfileLink
                   url={d.links.linkedin}
                   label="LinkedIn"
                   icon={Linkedin}
                   variant="block"
-                  real={real}
                 />
               )}
               {d.links.website ? (
-                <DemoLink
+                <ProfileLink
                   url={d.links.website}
                   label={t.profile.portfolioLink}
                   icon={ExternalLink}
                   variant="block"
-                  real={real}
                 />
               ) : (
                 <Button asChild variant="outline" className="w-full justify-start">
@@ -251,7 +235,6 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
                   </a>
                 </Button>
               )}
-              {!real && <p className="pt-1 text-xs text-muted-foreground">{t.profile.demoNote}</p>}
             </div>
           </div>
         </aside>

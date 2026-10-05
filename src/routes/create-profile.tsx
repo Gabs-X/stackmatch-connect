@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Github,
   IdCard,
   Pencil,
   Plus,
@@ -25,24 +24,13 @@ import { ProjectFormDialog } from "@/components/project-form-dialog";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   emptyProfile,
   missingProfileFields,
-  newProject,
   requiredProfileFields,
-  profileLink,
   type LocalProfile,
   type LocalProject,
   type RequiredProfileField,
@@ -92,8 +80,6 @@ function CreateProfile() {
   const [skill, setSkill] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LocalProject | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
   const bioId = useId();
   const skillId = useId();
   const { user } = useAuth();
@@ -176,8 +162,6 @@ function CreateProfile() {
       setSaving(false);
     }
   };
-  const hasProject = (name: string) =>
-    projects.some((project) => project.name.toLowerCase() === name.toLowerCase());
   const openProjectForm = (project: LocalProject | null) => {
     setEditing(project);
     setFormOpen(true);
@@ -211,24 +195,6 @@ function CreateProfile() {
           }),
       },
     });
-  };
-  // With a GitHub profile filled in, mock imports point at that account; otherwise they have no repo link.
-  const githubBase = profileLink(profile.github)?.replace(/\/+$/, "");
-  const importSelected = () => {
-    const imported = t.create.importRepos
-      .filter((repo) => selected.includes(repo.name) && !hasProject(repo.name))
-      .map((repo) =>
-        newProject({
-          name: repo.name,
-          description: repo.description,
-          tech: [...repo.tech],
-          github: githubBase ? `${githubBase}/${repo.name.toLowerCase().replace(/\s+/g, "-")}` : "",
-        }),
-      );
-    updateField("projects", [...projects, ...imported]);
-    setSelected([]);
-    setImportOpen(false);
-    toast.success(t.create.importToast);
   };
   const steps = [t.create.steps[0], t.create.steps[1], t.create.projects, t.create.steps[3]];
   const addSkill = () => {
@@ -554,70 +520,12 @@ function CreateProfile() {
                 skillSuggestions={skills}
                 onSave={saveProject}
               />
-              <Dialog
-                open={importOpen}
-                onOpenChange={(open) => {
-                  setImportOpen(open);
-                  if (!open) setSelected([]);
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="secondary" className="mt-4 w-full">
-                    <Github />
-                    {t.create.importGh}
-                  </Button>
-                </DialogTrigger>
-                {projects.length === 0 && (
-                  <Button variant="ghost" className="mt-2 w-full" onClick={() => goToStep(4)}>
-                    {t.create.skipProjects}
-                    <ChevronRight />
-                  </Button>
-                )}
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t.create.importTitle}</DialogTitle>
-                    <DialogDescription>{t.create.importDesc}</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-2">
-                    {t.create.importRepos.map((repo) => {
-                      const added = hasProject(repo.name);
-                      const checked = added || selected.includes(repo.name);
-                      return (
-                        <button
-                          key={repo.name}
-                          type="button"
-                          disabled={added}
-                          aria-pressed={checked}
-                          onClick={() =>
-                            setSelected(
-                              selected.includes(repo.name)
-                                ? selected.filter((name) => name !== repo.name)
-                                : [...selected, repo.name],
-                            )
-                          }
-                          className={`flex w-full items-start justify-between gap-3 rounded-lg border p-4 text-left disabled:opacity-50 ${selected.includes(repo.name) ? "border-primary bg-secondary" : ""}`}
-                        >
-                          <span>
-                            <span className="block font-semibold">{repo.name}</span>
-                            <span className="mt-0.5 block text-sm text-muted-foreground">
-                              {repo.description}
-                            </span>
-                            <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
-                              {repo.tech.join(" · ")}
-                            </span>
-                          </span>
-                          {checked && <Check className="mt-1 size-4 shrink-0 text-primary" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <DialogFooter>
-                    <Button disabled={!selected.length} onClick={importSelected}>
-                      {t.create.importSelected}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {projects.length === 0 && (
+                <Button variant="ghost" className="mt-4 w-full" onClick={() => goToStep(4)}>
+                  {t.create.skipProjects}
+                  <ChevronRight />
+                </Button>
+              )}
             </div>
           )}
           {step === 4 && (

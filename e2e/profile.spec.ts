@@ -36,17 +36,6 @@ test.describe("when the GitHub avatar fails to load", () => {
   });
 });
 
-test("fictional profile links explain the example address instead of navigating", async ({
-  page,
-}) => {
-  await page.goto("/developer/marina-costa");
-  // The profile link only; project links start with the same address.
-  await page.getByRole("button", { name: /^GitHub: github\.com\/marina-costa \(/ }).click();
-
-  await expect(page.getByText("Link de demonstração")).toBeVisible();
-  await expect(page).toHaveURL(/\/developer\/marina-costa$/);
-});
-
 test("saving from the profile adds it to the shortlist", async ({ page }) => {
   await signInAs(page, "company");
   await page.goto("/developer/marina-costa");

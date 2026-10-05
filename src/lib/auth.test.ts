@@ -1,8 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   formatCnpj,
   isValidCnpj,
-  demoPassword,
   homeFor,
   safeRedirect,
   signInSchema,
@@ -55,12 +54,6 @@ describe("signUpSchema", () => {
   });
 });
 
-describe("demo accounts", () => {
-  it("use a password the sign-up rules would accept", () => {
-    expect(signUpSchema.safeParse({ ...developer, password: demoPassword }).success).toBe(true);
-  });
-});
-
 describe("signInSchema", () => {
   it("requires both fields", () => {
     const result = signInSchema.safeParse({ email: "", password: "" });
@@ -100,19 +93,5 @@ describe("CNPJ", () => {
     expect(formatCnpj("11222")).toBe("11.222");
     expect(formatCnpj("112223330001")).toBe("11.222.333/0001");
     expect(formatCnpj("11a222333000181999")).toBe("11.222.333/0001-81");
-  });
-});
-
-describe("with VITE_DEMO_ACCOUNTS=false", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
-  it("removes the test accounts", async () => {
-    vi.stubEnv("VITE_DEMO_ACCOUNTS", "false");
-    vi.resetModules();
-    const auth = await import("./auth");
-    expect(auth.demoAccounts).toEqual([]);
   });
 });

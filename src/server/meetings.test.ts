@@ -11,12 +11,21 @@ import {
   listSentBy,
   sendMeetingRequest,
 } from "./meetings";
-import { createTestDb } from "./test-db";
+import { createDeveloper, createTestDb } from "./test-db";
 
 let db: Db;
+let rafael: string;
+let marina: string;
+let proposal: { developerId: string; date: string; time: string; message: string };
+let diego: string;
 
 beforeEach(async () => {
   db = await createTestDb();
+  // Companies only reach developers with a published profile.
+  rafael = await createDeveloper(db, "rafael@example.com", "Rafael Lima");
+  marina = await createDeveloper(db, "marina@example.com", "Marina Costa");
+  proposal = { developerId: marina, date: "2026-10-02", time: "10:30", message: "Oi" };
+  diego = await createDeveloper(db, "diego@example.com", "Diego Santos");
 });
 
 // Noon in Brasília on 2026-10-01; proposal times are in GMT-3.
@@ -37,8 +46,6 @@ async function company(email: string): Promise<AuthUser> {
   return user;
 }
 
-const proposal = { developerId: "marina-costa", date: "2026-10-02", time: "10:30", message: "Oi" };
-
 describe("sendMeetingRequest", () => {
   it("records the proposal signed with the company's current contact", async () => {
     const acme = await company("bia@acme.com");
@@ -51,7 +58,7 @@ describe("sendMeetingRequest", () => {
     const result = await sendMeetingRequest(db, acme, proposal, now);
     expect(result).toMatchObject({
       request: {
-        developerId: "marina-costa",
+        developerId: marina,
         developerName: "Marina Costa",
         companyId: acme.id,
         company: "Acme",
@@ -86,14 +93,14 @@ describe("listing proposals", () => {
     const other = await company("ana@other.com");
     await sendMeetingRequest(db, acme, proposal, now);
     await sendMeetingRequest(db, acme, { ...proposal, time: "14:00" }, now + 1000);
-    await sendMeetingRequest(db, other, { ...proposal, developerId: "rafael-lima" }, now);
+    await sendMeetingRequest(db, other, { ...proposal, developerId: rafael }, now);
 
     expect((await listSentBy(db, acme.id)).map((request) => request.time)).toEqual([
       "10:30",
       "14:00",
     ]);
     expect(await listSentBy(db, other.id)).toHaveLength(1);
-    expect((await listReceivedBy(db, "marina-costa")).map((item) => item.companyId)).toEqual([
+    expect((await listReceivedBy(db, marina)).map((item) => item.companyId)).toEqual([
       acme.id,
       acme.id,
     ]);
@@ -103,12 +110,12 @@ describe("listing proposals", () => {
 describe("companyReachedDeveloper", () => {
   it("is true after an interest mark or a proposal, and only for that developer", async () => {
     const acme = await company("bia@acme.com");
-    expect(await companyReachedDeveloper(db, acme.id, "marina-costa")).toBe(false);
+    expect(await companyReachedDeveloper(db, acme.id, marina)).toBe(false);
 
-    await markInterest(db, acme.id, "rafael-lima");
+    await markInterest(db, acme.id, rafael);
     await sendMeetingRequest(db, acme, proposal, now);
-    expect(await companyReachedDeveloper(db, acme.id, "rafael-lima")).toBe(true);
-    expect(await companyReachedDeveloper(db, acme.id, "marina-costa")).toBe(true);
-    expect(await companyReachedDeveloper(db, acme.id, "diego-santos")).toBe(false);
+    expect(await companyReachedDeveloper(db, acme.id, rafael)).toBe(true);
+    expect(await companyReachedDeveloper(db, acme.id, marina)).toBe(true);
+    expect(await companyReachedDeveloper(db, acme.id, diego)).toBe(false);
   });
 });

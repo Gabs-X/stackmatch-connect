@@ -26,7 +26,7 @@ test("checks the account before showing any profile, then the first one", async 
   expect(html).not.toContain("Gabriel Botelho");
 
   await page.goto("/discover");
-  await expect(counter(page)).toHaveText("1 de 17 perfis");
+  await expect(counter(page)).toHaveText("1 de 5 perfis");
   await expect(card(page)).toContainText("Full Stack Developer");
 });
 
@@ -34,7 +34,7 @@ test("marking interest saves the profile and moves to the next one", async ({ pa
   await page.getByRole("button", { name: "Interessado" }).click();
 
   await expect(page.getByText("Interesse registrado", { exact: true })).toBeVisible();
-  await expect(counter(page)).toHaveText("2 de 17 perfis");
+  await expect(counter(page)).toHaveText("2 de 5 perfis");
   await expect(card(page)).toContainText("Marina Costa");
   await expect(savedBadge(page)).toHaveText("1");
 });
@@ -54,27 +54,20 @@ test("profiles already saved stay out of Discover", async ({ page }) => {
   await seedSavedTalents(page, ["demo-developer"]);
   await page.reload();
 
-  await expect(counter(page)).toHaveText("1 de 16 perfis");
+  await expect(counter(page)).toHaveText("1 de 4 perfis");
   await expect(card(page)).not.toContainText("Gabriel Botelho");
   await expect(page.getByRole("link", { name: "· 1 já salvo fora da lista" })).toBeVisible();
 
   // Saving during the round keeps the card in the list, so undo still brings it back.
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(counter(page)).toHaveText("2 de 16 perfis");
+  await expect(counter(page)).toHaveText("2 de 4 perfis");
   await page.getByRole("main").getByRole("button", { name: "Desfazer" }).click();
-  await expect(counter(page)).toHaveText("1 de 16 perfis");
+  await expect(counter(page)).toHaveText("1 de 4 perfis");
   await expect(savedBadge(page)).toHaveText("1");
 });
 
 test("a search whose talents are all saved points to the shortlist", async ({ page }) => {
-  await seedSavedTalents(page, [
-    "marina-costa",
-    "rafael-lima",
-    "amanda-rocha",
-    "larissa-souza",
-    "thiago-nascimento",
-    "rodrigo-martins",
-  ]);
+  await seedSavedTalents(page, ["marina-costa", "rafael-lima"]);
   await page.reload();
   await filterChip(page, "Sênior").click();
 
@@ -88,11 +81,11 @@ test("a search whose talents are all saved points to the shortlist", async ({ pa
 test("filters narrow the list and active chips can be removed", async ({ page }) => {
   await filterChip(page, "Sênior").click();
 
-  await expect(counter(page)).toHaveText("1 de 6 perfis");
+  await expect(counter(page)).toHaveText("1 de 2 perfis");
   await expect(card(page)).toContainText("Sênior");
 
   await page.getByRole("button", { name: "Remover filtro: Sênior" }).click();
-  await expect(counter(page)).toHaveText("1 de 17 perfis");
+  await expect(counter(page)).toHaveText("1 de 5 perfis");
 });
 
 test("a search without results offers to clear the filters", async ({ page }) => {
@@ -101,7 +94,7 @@ test("a search without results offers to clear the filters", async ({ page }) =>
 
   await expect(page.getByRole("heading", { name: "Nenhum talento encontrado" })).toBeVisible();
   await page.getByRole("button", { name: "Limpar filtros" }).click();
-  await expect(counter(page)).toHaveText("1 de 17 perfis");
+  await expect(counter(page)).toHaveText("1 de 5 perfis");
 });
 
 test("reaching the end of the list offers to review again", async ({ page }) => {
@@ -113,19 +106,6 @@ test("reaching the end of the list offers to review again", async ({ page }) => 
 
   await page.getByRole("button", { name: "Rever perfis" }).click();
   await expect(card(page)).toContainText("Diego Santos");
-});
-
-test("the saved counter only counts profiles that still exist", async ({ page }) => {
-  await seedSavedTalents(page, ["perfil-removido", "demo-developer"]);
-  await page.reload();
-  await expect(savedBadge(page)).toHaveText("1");
-
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: /Talentos salvos/ })
-    .click();
-  await expect(page.getByRole("main").getByRole("article")).toHaveCount(1);
-  await expect(page.getByRole("main")).toContainText("Gabriel Botelho");
 });
 
 test("each company keeps its own shortlist in a shared browser", async ({ page }) => {
