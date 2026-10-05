@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 /**
- * Front-end stand-in for the authentication API. Accounts and the session live in this browser's
- * localStorage. When the backend exists, replace signUp/signIn/requestPasswordReset with fetch
- * calls that return the same shapes, and keep the session handling in auth-context.
+ * Shared by the screens and the server: account shapes, form validation and the demo accounts.
+ * Sign-up, sign-in and sessions run on the server (src/lib/auth-api.ts).
  */
 
 export type AccountType = "company" | "developer";
@@ -20,8 +19,6 @@ export type AuthUser = {
   /** Professional title for developers (required) or the recruiter's role (optional). */
   jobTitle: string;
 };
-
-export type AuthSession = { user: AuthUser; token: string };
 
 export type AuthErrorCode = "email-taken" | "invalid-credentials";
 
@@ -111,56 +108,9 @@ export type SignUpInput = z.infer<typeof signUpSchema>;
 
 export const passwordResetSchema = z.object({ email });
 
-// Storage.
-const MOCK_LATENCY_MS = 600;
-const usersKey = "stackmatch-users";
-export const sessionStorageKey = "stackmatch-session";
-
-const storedUserSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string(),
-  accountType: z.enum(["company", "developer"]),
-  company: z.string(),
-  jobTitle: z.string().default(""),
-  // Added after the first release; older accounts don't have it.
-  cnpj: z.string().default(""),
-  passwordHash: z.string(),
-});
-type StoredUser = z.infer<typeof storedUserSchema>;
-
-const sessionSchema = z.object({
-  token: z.string(),
-  user: storedUserSchema.omit({ passwordHash: true }),
-});
-
-const delay = () => new Promise<void>((resolve) => setTimeout(resolve, MOCK_LATENCY_MS));
-const normalizeEmail = (value: string) => value.trim().toLowerCase();
-const createId = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-/** Prototype only: hashing in the browser keeps plain passwords out of storage, nothing more. */
-export async function hashPassword(emailAddress: string, password: string) {
-  const data = new TextEncoder().encode(`${normalizeEmail(emailAddress)}:${password}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function readUsers(): StoredUser[] {
-  try {
-    const value: unknown = JSON.parse(window.localStorage.getItem(usersKey) ?? "[]");
-    const result = z.array(storedUserSchema).safeParse(value);
-    return result.success ? result.data : [];
-  } catch {
-    return [];
-  }
-}
-
 /**
- * Ready-made accounts for trying each side of the app without signing up. They live in code, not
- * in storage, so clearing site data never removes them. Sign in with the e-mail or the username.
+ * Ready-made accounts for trying each side of the app without signing up. The server creates them
+ * in the database on startup (src/server/auth.ts). Sign in with the e-mail or the username.
  *
  * Public deployments should set VITE_DEMO_ACCOUNTS=false: the password is in the source code.
  */
@@ -193,73 +143,16 @@ const allDemoAccounts: (AuthUser & { username: string })[] = [
 
 export const demoAccounts = demoAccountsEnabled ? allDemoAccounts : [];
 
-const findDemoAccount = (login: string) =>
-  demoAccounts.find((account) => account.email === login || account.username === login);
-
-const toSession = ({ passwordHash: _hash, ...user }: StoredUser): AuthSession => ({
-  user,
-  token: createId(),
-});
-
-export async function signUp(input: SignUpInput): Promise<AuthSession> {
-  await delay();
-  const users = readUsers();
-  const address = normalizeEmail(input.email);
-  if (findDemoAccount(address) || users.some((user) => user.email === address))
-    throw new AuthError("email-taken");
-  const user: StoredUser = {
-    id: createId(),
-    name: input.name.trim(),
-    email: address,
-    accountType: input.accountType,
-    company: input.accountType === "company" ? input.company.trim() : "",
-    cnpj: input.accountType === "company" ? onlyDigits(input.cnpj) : "",
-    jobTitle: input.jobTitle.trim(),
-    passwordHash: await hashPassword(address, input.password),
-  };
-  window.localStorage.setItem(usersKey, JSON.stringify([...users, user]));
-  return toSession(user);
-}
-
-export async function signIn(input: SignInInput): Promise<AuthSession> {
-  await delay();
-  const address = normalizeEmail(input.email);
-  const demo = findDemoAccount(address);
-  if (demo) {
-    if (input.password !== demoPassword) throw new AuthError("invalid-credentials");
-    const { username: _username, ...user } = demo;
-    return { user, token: createId() };
-  }
-  const user = readUsers().find((item) => item.email === address);
-  // Same error for unknown e-mail and wrong password, so the form doesn't reveal accounts.
-  if (!user || user.passwordHash !== (await hashPassword(address, input.password)))
-    throw new AuthError("invalid-credentials");
-  return toSession(user);
-}
-
-/** Always resolves, whether or not the account exists, so the screen can't be used to probe. */
+/**
+ * Stand-in for the password reset e-mail: there is no e-mail service yet. Always resolves, whether
+ * or not the account exists, so the screen can't be used to probe.
+ */
 export async function requestPasswordReset(_email: string): Promise<void> {
-  await delay();
+  await new Promise<void>((resolve) => setTimeout(resolve, 600));
 }
 
-export function loadSession(): AuthSession | null {
-  try {
-    const value: unknown = JSON.parse(window.localStorage.getItem(sessionStorageKey) ?? "null");
-    const result = sessionSchema.safeParse(value);
-    return result.success ? result.data : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveSession(session: AuthSession | null) {
-  try {
-    if (session) window.localStorage.setItem(sessionStorageKey, JSON.stringify(session));
-    else window.localStorage.removeItem(sessionStorageKey);
-  } catch {
-    /* The session still works for this visit without persistence. */
-  }
-}
+/** Broadcasts sign-ins and sign-outs to the other tabs; the session itself is a server cookie. */
+export const sessionStorageKey = "stackmatch-session";
 
 /** Only same-site paths, so a crafted ?redirect= can't send users to another site. */
 export function safeRedirect(value: unknown, fallback: string) {

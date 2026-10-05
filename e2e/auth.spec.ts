@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, test, uniqueEmail } from "./fixtures";
 
 const main = (page: Page) => page.getByRole("main");
 
@@ -40,7 +40,7 @@ test("a developer signs up, lands on the profile form prefilled, and signs out",
     type: "developer",
     name: "Ana Souza",
     title: "Frontend Developer",
-    email: "ana@example.com",
+    email: uniqueEmail("ana@example.com"),
   });
 
   await expect(page).toHaveURL(/\/create-profile$/);
@@ -61,7 +61,11 @@ test("a developer signs up, lands on the profile form prefilled, and signs out",
 });
 
 test("a hiring account needs a company and lands on Discover", async ({ page }) => {
-  await registerAccount(page, { type: "company", name: "Bruno Lima", email: "bruno@acme.com" });
+  await registerAccount(page, {
+    type: "company",
+    name: "Bruno Lima",
+    email: uniqueEmail("bruno@acme.com"),
+  });
   await expect(main(page).getByText("Informe o nome da empresa.")).toBeVisible();
   await expect(main(page).getByText("Informe um CNPJ válido.")).toBeVisible();
 
@@ -100,19 +104,20 @@ test("the password checklist follows what is typed", async ({ page }) => {
 });
 
 test("signing in rejects a wrong password and honors the redirect", async ({ page }) => {
+  const email = uniqueEmail("bruno@acme.com");
   await registerAccount(page, {
     type: "company",
     name: "Bruno Lima",
     company: "Acme",
     cnpj: "11222333000181",
-    email: "bruno@acme.com",
+    email,
   });
   await expect(page).toHaveURL(/\/discover$/);
   await page.getByRole("button", { name: "Menu da conta de Bruno Lima" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await page.goto("/login?redirect=/saved");
-  await main(page).getByLabel("E-mail").fill("bruno@acme.com");
+  await main(page).getByLabel("E-mail").fill(email);
   await main(page).getByLabel("Senha", { exact: true }).fill("errada123");
   await main(page).getByRole("button", { name: "Entrar" }).click();
   await expect(main(page).getByRole("alert")).toHaveText("E-mail ou senha incorretos.");
@@ -123,18 +128,19 @@ test("signing in rejects a wrong password and honors the redirect", async ({ pag
   await expect(page.getByText("Olá, Bruno!")).toBeVisible();
 });
 
-test("an e-mail can only be registered once", async ({ page }) => {
+test("an e-mail can only be registered once", async ({ page, context }) => {
   const account = {
     type: "developer" as const,
     name: "Ana Souza",
     title: "Dev",
-    email: "ana@example.com",
+    email: uniqueEmail("ana@example.com"),
   };
   await registerAccount(page, account);
   await expect(page).toHaveURL(/\/create-profile$/);
-  await page.evaluate(() => localStorage.removeItem("stackmatch-session"));
+  // Signs out by dropping the session cookie, without going through the menu.
+  await context.clearCookies();
 
-  await registerAccount(page, { ...account, email: "ANA@example.com" });
+  await registerAccount(page, { ...account, email: account.email.toUpperCase() });
   await expect(main(page).getByRole("alert")).toHaveText("Já existe uma conta com esse e-mail.");
 });
 

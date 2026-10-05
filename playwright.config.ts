@@ -33,6 +33,8 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
+    // A throwaway in-memory database per run, so tests never see accounts from earlier runs.
+    env: { DATABASE_URL: "memory://" },
     reuseExistingServer: !isCI,
     timeout: 120_000,
   },

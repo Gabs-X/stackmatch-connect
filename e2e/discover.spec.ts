@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, signInAs, test } from "./fixtures";
+import { expect, signInAs, test, uniqueEmail } from "./fixtures";
 
 const card = (page: Page) => page.locator("main section article").first();
 const counter = (page: Page) => page.getByText(/^\d+ de \d+ perf(il|is)$/);
@@ -157,7 +157,7 @@ test("each company keeps its own shortlist in a shared browser", async ({ page }
   await form.getByLabel("Nome completo").fill("Bruno Lima");
   await form.getByLabel("Empresa").fill("Acme");
   await form.getByLabel("CNPJ").fill("11222333000181");
-  await form.getByLabel("E-mail").fill("bruno@acme.com");
+  await form.getByLabel("E-mail").fill(uniqueEmail("bruno@acme.com"));
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();

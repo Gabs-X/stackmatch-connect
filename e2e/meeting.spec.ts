@@ -1,18 +1,18 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, test, uniqueEmail } from "./fixtures";
 
 // Thursday noon in Brasília, so the next day (Friday) has every time open.
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-10-01T12:00:00-03:00"));
 });
 
-async function registerCompany(page: Page) {
+async function registerCompany(page: Page, email: string) {
   await page.goto("/register?type=company");
   const form = page.getByRole("main");
   await form.getByLabel("Nome completo").fill("Bia Santos");
   await form.getByLabel("Empresa").fill("Acme");
   await form.getByLabel("CNPJ").fill("11222333000181");
-  await form.getByLabel("E-mail").fill("bia@acme.com");
+  await form.getByLabel("E-mail").fill(email);
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
@@ -30,7 +30,8 @@ test("asks visitors to sign in before proposing a meeting", async ({ page }) => 
 });
 
 test("a company proposes one time and sees the e-mail the developer will get", async ({ page }) => {
-  await registerCompany(page);
+  const email = uniqueEmail("bia@acme.com");
+  await registerCompany(page, email);
   await page.goto("/developer/marina-costa");
   await page.getByRole("button", { name: "Propor reunião" }).click();
 
@@ -43,13 +44,13 @@ test("a company proposes one time and sees the e-mail the developer will get", a
   await dialog.getByLabel(/Sobre a oportunidade/).fill("Projeto de dashboard em React.");
   const preview = dialog.getByRole("region", { name: "Prévia do e-mail" });
   await expect(preview).toContainText("Acme quer conversar com você pelo StackMatch");
-  await expect(preview).toContainText("bia@acme.com");
+  await expect(preview).toContainText(email);
   await expect(preview).toContainText("sexta-feira, 2 de outubro, às 10:30");
   await expect(preview).toContainText("Projeto de dashboard em React.");
 
   await dialog.getByRole("button", { name: "Enviar proposta" }).click();
   await expect(dialog.getByRole("heading", { name: "Proposta enviada" })).toBeVisible();
-  await expect(dialog).toContainText("As respostas chegam em bia@acme.com");
+  await expect(dialog).toContainText(`As respostas chegam em ${email}`);
   await dialog.getByRole("button", { name: "Concluir" }).click();
 
   // The proposal is remembered, but another one can still be sent.
@@ -65,7 +66,7 @@ test("developer accounts can't send proposals", async ({ page }) => {
   await form.getByText("Sou desenvolvedor").click();
   await form.getByLabel("Nome completo").fill("Ana Souza");
   await form.getByLabel("Cargo profissional").fill("Frontend Developer");
-  await form.getByLabel("E-mail").fill("ana@example.com");
+  await form.getByLabel("E-mail").fill(uniqueEmail("ana@example.com"));
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();

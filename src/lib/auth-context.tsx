@@ -2,20 +2,17 @@ import type React from "react";
 import { useRouter } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  loadSession,
-  saveSession,
+  AuthError,
   sessionStorageKey,
-  signIn as apiSignIn,
-  signUp as apiSignUp,
-  type AuthSession,
   type AuthUser,
   type SignInInput,
   type SignUpInput,
 } from "./auth";
+import { fetchCurrentUser, signInFn, signOutFn, signUpFn } from "./auth-api";
 
 type AuthState = {
   user: AuthUser | null;
-  /** False until the stored session has been read; avoids flashing logged-out UI. */
+  /** False until the server answered who is signed in; avoids flashing logged-out UI. */
   ready: boolean;
   signIn: (input: SignInInput) => Promise<AuthUser>;
   signUp: (input: SignUpInput) => Promise<AuthUser>;
@@ -27,52 +24,70 @@ type AuthState = {
 const store = globalThis as unknown as { __stackmatchAuth?: React.Context<AuthState | null> };
 const AuthContext = (store.__stackmatchAuth ??= createContext<AuthState | null>(null));
 
+/** Tells the other tabs the session changed; they ask the server who is signed in now. */
+function announceSessionChange() {
+  try {
+    window.localStorage.setItem(sessionStorageKey, String(Date.now()));
+  } catch {
+    /* Other tabs catch up on their next page load. */
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
   const router = useRouter();
   // Read by the storage listener, which is set up once.
   const signedIn = useRef(false);
-  signedIn.current = session !== null;
+  signedIn.current = user !== null;
 
   /**
-   * Every sign-out lands on the home page. Navigate before clearing the session, so account-only
+   * Every sign-out lands on the home page. Navigate before clearing the account, so account-only
    * pages leave instead of sending the user to the login.
    */
   const leave = async () => {
     await router.navigate({ to: "/" });
-    setSession(null);
+    setUser(null);
   };
 
   useEffect(() => {
-    setSession(loadSession());
-    setReady(true);
+    let active = true;
+    const refresh = async () => {
+      const next = await fetchCurrentUser().catch(() => null);
+      if (!active) return;
+      if (next) setUser(next);
+      else if (signedIn.current) await leave();
+      setReady(true);
+    };
+    void refresh();
     // Keep tabs in sync when the user signs in or out elsewhere.
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== null && event.key !== sessionStorageKey) return;
-      const next = loadSession();
-      if (next) setSession(next);
-      else if (signedIn.current) void leave();
+      if (event.key === null || event.key === sessionStorageKey) void refresh();
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return () => {
+      active = false;
+      window.removeEventListener("storage", onStorage);
+    };
     // The listener reads the latest state through refs; it is set up once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = (next: AuthSession) => {
-    saveSession(next);
-    setSession(next);
-    return next.user;
+  const start = (result: { user: AuthUser } | { error: AuthError["code"] }) => {
+    if ("error" in result) throw new AuthError(result.error);
+    setUser(result.user);
+    announceSessionChange();
+    return result.user;
   };
 
   const value: AuthState = {
-    user: session?.user ?? null,
+    user,
     ready,
-    signIn: async (input) => start(await apiSignIn(input)),
-    signUp: async (input) => start(await apiSignUp(input)),
+    signIn: async (input) => start(await signInFn({ data: input })),
+    signUp: async (input) => start(await signUpFn({ data: input })),
     signOut: async () => {
-      saveSession(null);
+      await signOutFn();
+      announceSessionChange();
       await leave();
     },
   };

@@ -1,4 +1,4 @@
-import { expect, signInAs, test } from "./fixtures";
+import { expect, signInAs, test, uniqueEmail } from "./fixtures";
 
 test("a completed profile previews the card companies see in Discover", async ({ page }) => {
   await signInAs(page, "developer");
@@ -125,7 +125,7 @@ test("a developer can publish a profile without projects", async ({ page }) => {
   const form = page.getByRole("main");
   await form.getByLabel("Nome completo").fill("Rita Prado");
   await form.getByLabel("Cargo profissional").fill("QA Engineer");
-  await form.getByLabel("E-mail").fill("rita@example.com");
+  await form.getByLabel("E-mail").fill(uniqueEmail("rita@example.com"));
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();

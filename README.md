@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**Backend não fazia parte do escopo.** Os fluxos de produto usam dados fictícios e estado no navegador.
+**O backend está em implementação.** Contas e login já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
 
 ## Problema e proposta
 
@@ -25,7 +25,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Empresas interessadas:** aba do desenvolvedor com as empresas que marcaram interesse no perfil dele pelo Discover ou propuseram uma conversa, com contato, horário sugerido, mensagem e botão para responder por e-mail.
 - **Detalhes da empresa:** em Empresas interessadas, o nome da empresa ou o botão "Ver empresa" abre `/company/<id da conta>`, com a descrição, a localização e o site que a empresa preencheu em Dados da empresa, o contato (nome, cargo, e-mail e telefone), o que ela fez (interesse ou proposta) e o botão de resposta. O desenvolvedor só vê empresas que entraram em contato com ele; outros endereços mostram "Empresa não encontrada".
 - **Dados da empresa:** página da conta de empresa (`/company-settings`, no menu da conta) com site, localização, descrição e o contato para os desenvolvedores (nome do colaborador, cargo, e-mail e telefone). Propostas de reunião e interesses marcados no Discover saem assinados com esse contato, e as respostas vão para o e-mail de contato. Nome da empresa, CNPJ e e-mail de login aparecem só para consulta. O CNPJ é pedido no cadastro de empresa, com máscara e validação dos dígitos verificadores; a conta `teste.emp` usa o CNPJ de exemplo 11.222.333/0001-81.
-- **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`), digitando as credenciais: a tela de login não as exibe. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado. Em deploys públicos, defina `VITE_DEMO_ACCOUNTS=false`: isso remove as contas de teste e o perfil de demonstração do Gabriel, já que a senha fica no código.
+- **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`), digitando as credenciais: a tela de login não as exibe. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado. Em deploys públicos, defina `VITE_DEMO_ACCOUNTS=false`: isso deixa de criar as contas de teste no banco e remove o perfil de demonstração do Gabriel, já que a senha fica no código.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist. Cada conta de empresa tem a própria shortlist, mesmo quando várias usam o mesmo navegador.
 - **Criação de perfil:** formulário em etapas (incluindo anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento local ao concluir.
@@ -45,6 +45,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - Framer Motion para animações e arraste dos cards.
 - Lucide para ícones e Sonner para notificações.
 - date-fns e React DayPicker para datas e calendário.
+- Drizzle ORM com Postgres (Neon em produção, PGlite no desenvolvimento e nos testes) e server functions do TanStack Start para o backend.
 - Zod e React Hook Form para validação dos formulários e da estrutura dos dados locais.
 - TanStack Query para as consultas à API simulada (catálogo, atividade das empresas, dados e perfil das empresas), com estados de carregamento e erro.
 - ESLint e Prettier para verificação e formatação.
@@ -61,7 +62,12 @@ npm install
 npm run dev
 ```
 
-Acesse o endereço informado pelo Vite no terminal. Os fluxos mockados não exigem credenciais de GitHub, Google Calendar ou banco de dados.
+Acesse o endereço informado pelo Vite no terminal. Sem configuração, o servidor usa um Postgres local em arquivo (PGlite, na pasta `.pglite/`, criado e migrado sozinho); para começar do zero, apague essa pasta. Os fluxos mockados não exigem credenciais de GitHub ou Google Calendar.
+
+### Banco de dados
+
+- `DATABASE_URL` define o banco: uma URL `postgres://…` (Neon em produção), `memory://` para um banco descartável ou o caminho de uma pasta do PGlite. Em produção ela é obrigatória.
+- O schema fica em `src/server/db/schema.ts`. Depois de alterá-lo, gere a migração com `npm run db:generate`; para aplicar as migrações num Postgres, rode `npm run db:migrate` com `DATABASE_URL` definida.
 
 ### Verificações
 
@@ -94,7 +100,9 @@ O lint pode apresentar avisos de `react-refresh/only-export-components` em módu
 | `src/components/`              | Componentes de produto, como cards, filtros, cabeçalho e proposta de reunião.                                                               |
 | `src/components/ui/`           | Primitivas reutilizáveis de interface (só as usadas pelo app).                                                                              |
 | `src/lib/api.ts`               | API simulada: único ponto a trocar por chamadas ao backend.                                                                                 |
-| `src/lib/auth.ts`              | Contas, sessão, validação de cadastro e contas de teste.                                                                                    |
+| `src/lib/auth.ts`              | Tipos de conta, validação de cadastro e contas de teste.                                                                                    |
+| `src/lib/auth-api.ts`          | Server functions de cadastro, login, logout e conta atual.                                                                                  |
+| `src/server/`                  | Código só de servidor: banco (`db/`), senhas, sessões e contas de teste.                                                                    |
 | `src/lib/developers.ts`        | Tipos e catálogo mockado de profissionais, projetos e empresas de demonstração.                                                             |
 | `src/lib/app-context.tsx`      | Estado compartilhado: shortlist e interesses (por conta de empresa), propostas e marcações de interesse.                                    |
 | `src/lib/meeting-requests.ts`  | Formato das propostas de reunião, horários aceitos e leitura do histórico local.                                                            |
@@ -121,7 +129,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
 - O envio da proposta de reunião é **simulado**: `sendMeetingRequest` em `src/lib/api.ts` faz o papel do futuro `POST /meeting-requests`, que enviará o e-mail ao profissional com `Reply-To` da empresa. Nenhum e-mail é enviado; a proposta fica registrada neste navegador para a empresa lembrar com quem já falou.
 - O interesse é um registro local, sem notificação, chat ou contato externo; quando feito por uma conta de empresa, aparece para o desenvolvedor em Empresas interessadas.
-- **Contas e login são simulados.** Cadastro, entrada e recuperação de senha funcionam só neste navegador: as contas ficam no `localStorage` com a senha guardada como hash SHA-256 (o que evita texto puro, mas não é segurança real), e nenhum e-mail é enviado. Há dois tipos de conta: **empresa** (com nome da empresa; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido). As funções ficam em `src/lib/auth.ts` e podem ser trocadas por chamadas à API sem mudar as telas.
+- **Contas e login usam o servidor.** O cadastro e a entrada gravam no banco (tabela `users`), com a senha em hash scrypt, e abrem uma sessão guardada num cookie httpOnly (o banco guarda só o hash do token, tabela `sessions`, com validade de 30 dias). A recuperação de senha ainda é simulada: nenhum e-mail é enviado. Há dois tipos de conta: **empresa** (com nome da empresa e CNPJ; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido).
 - **Controle de acesso e empresas interessadas são de front-end.** O guard `RequireAccount` (`src/components/require-account.tsx`) só organiza a interface; o backend precisará validar o tipo de conta em cada endpoint. Interesses marcados por empresas ficam neste navegador (`stackmatch-profile-interests`) e são associados ao perfil pelo id da conta do desenvolvedor; `fetchCompanyActivity` em `src/lib/api.ts` faz o papel do futuro `GET /me/interested-companies` e devolve atividade fictícia (de `src/lib/developers.ts`) apenas para a conta `teste.dev`. As contas de teste ficam em `src/lib/auth.ts`, fora do `localStorage`.
 - Propostas e interesses guardam o id da conta da empresa (`companyId`), que identifica quem já contatou cada profissional mesmo se a empresa trocar o e-mail de contato. Registros antigos, sem esse campo, usam o e-mail no lugar.
 - Os dados da empresa ficam neste navegador, por conta (`stackmatch-company-settings`): `fetchCompanySettings` e `saveCompanySettings` em `src/lib/api.ts` fazem o papel do futuro `GET/PUT /company/settings`.
@@ -175,7 +183,7 @@ Sem essa variável, o componente não é incluído no build.
 
 ## Limitações conhecidas
 
-- Não há autenticação, autorização, verificação de profissionais nem persistência remota. Limpar os dados do navegador apaga os registros locais.
+- Só as contas ficam no servidor. Perfis, shortlist, interesses, propostas e dados da empresa ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
 - Os perfis de desenvolvedor ficam neste navegador (`stackmatch-profiles`), um por conta e identificados pelo id dela, no lugar do futuro `GET/PUT /me/profile` e `GET /profiles`. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor criadas aqui. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Versões anteriores guardavam um único perfil sem dono (`stackmatch-profile`), que é descartado. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.

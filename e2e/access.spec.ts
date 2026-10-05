@@ -1,4 +1,4 @@
-import { expect, signInAs, test } from "./fixtures";
+import { expect, signInAs, test, uniqueEmail } from "./fixtures";
 
 test("visitors are sent to the login before account-only pages", async ({ page }) => {
   await page.goto("/interests");
@@ -73,7 +73,7 @@ test("each developer account has its own profile, and companies see them all", a
   const form = page.getByRole("main");
   await form.getByLabel("Nome completo").fill("Diego Fernandes");
   await form.getByLabel("Cargo profissional").fill("Backend Developer");
-  await form.getByLabel("E-mail").fill("diego@example.com");
+  await form.getByLabel("E-mail").fill(uniqueEmail("diego@example.com"));
   await form.getByLabel("Senha", { exact: true }).fill("segredo123");
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();

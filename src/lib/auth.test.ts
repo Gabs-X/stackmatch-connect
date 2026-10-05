@@ -1,18 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  AuthError,
   formatCnpj,
   isValidCnpj,
-  demoAccounts,
   demoPassword,
-  hashPassword,
   homeFor,
-  loadSession,
   safeRedirect,
-  saveSession,
-  signIn,
   signInSchema,
-  signUp,
   signUpSchema,
   type SignUpInput,
 } from "./auth";
@@ -28,20 +21,10 @@ beforeEach(() => {
       removeItem: (key: string) => void storage.delete(key),
     },
   });
-  vi.useFakeTimers();
 });
 afterEach(() => {
-  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
-
-/** Runs a mock API call to completion, skipping its simulated latency. */
-const settle = async <T>(promise: Promise<T>) => {
-  // Mark a rejection as handled now; the caller still receives it from the returned promise.
-  promise.catch(() => {});
-  await vi.runAllTimersAsync();
-  return promise;
-};
 
 const developer: SignUpInput = {
   accountType: "developer",
@@ -88,110 +71,16 @@ describe("signUpSchema", () => {
   });
 });
 
+describe("demo accounts", () => {
+  it("use a password the sign-up rules would accept", () => {
+    expect(signUpSchema.safeParse({ ...developer, password: demoPassword }).success).toBe(true);
+  });
+});
+
 describe("signInSchema", () => {
   it("requires both fields", () => {
     const result = signInSchema.safeParse({ email: "", password: "" });
     expect(result.error?.issues.map((issue) => issue.message)).toEqual(["required", "required"]);
-  });
-});
-
-describe("signUp and signIn", () => {
-  it("creates the account, normalizing the e-mail, and never stores the password", async () => {
-    const session = await settle(signUp(developer));
-    expect(session.user).toMatchObject({
-      name: "Ana Souza",
-      email: "ana@example.com",
-      accountType: "developer",
-      company: "",
-      jobTitle: "Frontend Developer",
-    });
-    expect(session.token).toBeTruthy();
-    expect(storage.get("stackmatch-users")).not.toContain("segredo123");
-  });
-
-  it("rejects a second account with the same e-mail in any case", async () => {
-    await settle(signUp(developer));
-    await expect(settle(signUp({ ...developer, email: "ANA@example.com" }))).rejects.toEqual(
-      new AuthError("email-taken"),
-    );
-  });
-
-  it("signs in with the right password and rejects wrong passwords and unknown e-mails alike", async () => {
-    await settle(signUp(developer));
-    const session = await settle(signIn({ email: " ana@EXAMPLE.com", password: "segredo123" }));
-    expect(session.user.email).toBe("ana@example.com");
-
-    await expect(
-      settle(signIn({ email: "ana@example.com", password: "errada123" })),
-    ).rejects.toEqual(new AuthError("invalid-credentials"));
-    await expect(
-      settle(signIn({ email: "outra@example.com", password: "segredo123" })),
-    ).rejects.toEqual(new AuthError("invalid-credentials"));
-  });
-
-  it("keeps a company account's company name", async () => {
-    const session = await settle(
-      signUp({
-        ...developer,
-        accountType: "company",
-        company: " Acme ",
-        cnpj: "11.222.333/0001-81",
-        jobTitle: "",
-      }),
-    );
-    expect(session.user).toMatchObject({ company: "Acme", cnpj: "11222333000181" });
-  });
-});
-
-describe("demo accounts", () => {
-  it("sign in by username or e-mail with the shared password", async () => {
-    const dev = await settle(signIn({ email: "teste.dev", password: demoPassword }));
-    expect(dev.user).toMatchObject({ id: "demo-developer", accountType: "developer" });
-    expect(dev.user).not.toHaveProperty("username");
-
-    const company = await settle(
-      signIn({ email: " TESTE.EMP@stackmatch.app", password: demoPassword }),
-    );
-    expect(company.user).toMatchObject({ accountType: "company", company: "Empresa Teste" });
-
-    await expect(settle(signIn({ email: "teste.dev", password: "1234" }))).rejects.toEqual(
-      new AuthError("invalid-credentials"),
-    );
-  });
-
-  it("use a password the sign-up rules would accept, and their e-mails can't be taken", async () => {
-    expect(signUpSchema.safeParse({ ...developer, password: demoPassword }).success).toBe(true);
-    await expect(
-      settle(signUp({ ...developer, email: demoAccounts[0]?.email ?? "" })),
-    ).rejects.toEqual(new AuthError("email-taken"));
-  });
-});
-
-describe("hashPassword", () => {
-  it("is stable for the same e-mail and differs between e-mails", async () => {
-    expect(await hashPassword("ana@example.com", "x")).toBe(
-      await hashPassword(" ANA@example.com", "x"),
-    );
-    expect(await hashPassword("ana@example.com", "x")).not.toBe(
-      await hashPassword("bia@example.com", "x"),
-    );
-  });
-});
-
-describe("session storage", () => {
-  it("reads back a saved session and clears it on sign-out", async () => {
-    const session = await settle(signUp(developer));
-    saveSession(session);
-    expect(loadSession()).toEqual(session);
-    saveSession(null);
-    expect(loadSession()).toBeNull();
-  });
-
-  it("ignores malformed sessions", () => {
-    storage.set("stackmatch-session", JSON.stringify({ token: "x" }));
-    expect(loadSession()).toBeNull();
-    storage.set("stackmatch-session", "{not json");
-    expect(loadSession()).toBeNull();
   });
 });
 
@@ -243,9 +132,6 @@ describe("with VITE_DEMO_ACCOUNTS=false", () => {
     const profiles = await import("./local-profile");
 
     expect(auth.demoAccounts).toEqual([]);
-    await expect(
-      settle(auth.signIn({ email: "teste.dev", password: auth.demoPassword })),
-    ).rejects.toEqual(new auth.AuthError("invalid-credentials"));
     expect(profiles.loadAccountProfile(auth.demoDeveloperId)).toBeNull();
     expect(profiles.loadPublishedProfiles()).toEqual([]);
   });

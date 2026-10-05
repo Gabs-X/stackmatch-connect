@@ -40,6 +40,13 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
 
 export { expect } from "@playwright/test";
 
+/**
+ * Accounts live in the server's database, shared by tests running in parallel, so each sign-up
+ * needs its own address: "ana@example.com" -> "ana+1a2b3c4d@example.com".
+ */
+export const uniqueEmail = (address: string) =>
+  address.replace("@", `+${crypto.randomUUID().slice(0, 8)}@`);
+
 /** Signs in with a built-in test account through the login form and waits for its home page. */
 export async function signInAs(page: Page, type: "developer" | "company") {
   await page.goto("/login");
