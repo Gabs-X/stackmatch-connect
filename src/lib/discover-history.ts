@@ -9,8 +9,6 @@ export type HistoryEntry = {
   index: number;
   addedSaved: boolean;
   addedInterest: boolean;
-  /** Id of the company account whose interest mark this action created, if any. */
-  interestFrom?: string;
 };
 
 /**

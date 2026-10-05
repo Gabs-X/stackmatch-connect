@@ -8,6 +8,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -78,6 +79,26 @@ export const savedTalents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.companyId, table.developerId] })],
+);
+
+/** A company marked a developer as interesting in Discover; the developer sees who it was. */
+export const interests = pgTable(
+  "interests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // No foreign key: besides developer accounts, it can be a profile of the fictional catalog.
+    developerId: text("developer_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("interests_company_developer_idx").on(table.companyId, table.developerId),
+    index("interests_developer_id_idx").on(table.developerId),
+  ],
 );
 
 /** A developer account's public profile; companies find it in Discover once it exists. */

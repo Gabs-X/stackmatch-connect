@@ -1,6 +1,6 @@
 import type { MeetingRequest } from "./meeting-requests";
 
-/** A company account marked a developer as interesting in Discover. */
+/** A company account marked a developer as interesting in Discover, signed with its contact. */
 export type ProfileInterest = {
   id: string;
   developerId: string;
@@ -12,8 +12,6 @@ export type ProfileInterest = {
   email: string;
   at: string;
 };
-
-export type ProfileInterestInput = Omit<ProfileInterest, "id" | "at">;
 
 /**
  * One company that showed interest, with its latest meeting proposal when it sent one. Contact
@@ -28,26 +26,6 @@ export type InterestedCompany = {
   at: string;
   meeting?: MeetingRequest;
 };
-
-export const profileInterestStorageKey = "stackmatch-profile-interests";
-
-export function readProfileInterests(): ProfileInterest[] {
-  const value: unknown = JSON.parse(window.localStorage.getItem(profileInterestStorageKey) ?? "[]");
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item: Record<string, unknown> | null) => {
-    if (
-      !item ||
-      !["id", "developerId", "company", "contactName", "email", "at"].every(
-        (key) => typeof item[key] === "string",
-      )
-    )
-      return [];
-    const interest = item as Omit<ProfileInterest, "companyId"> & { companyId?: unknown };
-    // Marks made before senders were tracked by account only know the contact e-mail.
-    const companyId = typeof interest.companyId === "string" ? interest.companyId : interest.email;
-    return [{ ...interest, companyId }];
-  });
-}
 
 /** Groups interest marks and meeting proposals by company account, most recent first. */
 export function interestedCompanies(

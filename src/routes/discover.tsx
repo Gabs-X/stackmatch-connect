@@ -32,8 +32,6 @@ import {
   type Filters,
 } from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
-import { useAuth } from "@/lib/auth-context";
-import { useCompanySettings } from "@/lib/use-company-settings";
 import { useDevelopers } from "@/lib/use-developers";
 
 export const Route = createFileRoute("/discover")({
@@ -67,19 +65,8 @@ function DiscoverPage() {
   const { developers = noDevelopers, isPending, isError, refetch } = useDevelopers();
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [index, setIndex] = useState(0);
-  const {
-    hydrated,
-    saved,
-    interests,
-    addSaved,
-    registerInterest,
-    removeSaved,
-    removeInterest,
-    recordProfileInterest,
-    removeProfileInterest,
-  } = useApp();
-  const { user } = useAuth();
-  const companySettings = useCompanySettings();
+  const { hydrated, saved, interests, addSaved, registerInterest, removeSaved, removeInterest } =
+    useApp();
   const [feedback, setFeedback] = useState<{ action: "save" | "interest"; name: string } | null>(
     null,
   );
@@ -135,7 +122,6 @@ function DiscoverPage() {
     if (!entry || !canUndo(entry, historyRef.current)) return;
     if (entry.addedSaved) removeSaved(entry.id);
     if (entry.addedInterest) removeInterest(entry.id);
-    if (entry.interestFrom) removeProfileInterest(entry.id, entry.interestFrom);
     updateHistory(historyRef.current.slice(0, -1));
     setFeedback(null);
     setIndex(entry.index);
@@ -144,21 +130,6 @@ function DiscoverPage() {
   const next = (action: DiscoverAction) => {
     if (!current) return;
     const entry = createHistoryEntry(current, action, index, saved, interests);
-    // The developer sees which company marked them, signed with its contact details; anonymous
-    // visitors only keep a local mark.
-    if (
-      action === "interest" &&
-      user?.accountType === "company" &&
-      companySettings &&
-      recordProfileInterest({
-        developerId: current.id,
-        companyId: user.id,
-        company: user.company,
-        contactName: companySettings.contactName,
-        email: companySettings.contactEmail,
-      })
-    )
-      entry.interestFrom = user.id;
     updateHistory([...historyRef.current, entry]);
     if (action !== "pass") {
       addSaved(current.id);
