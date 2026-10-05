@@ -182,3 +182,57 @@ test("removing the photo goes back to the GitHub avatar", async ({ page }) => {
   );
   await expect(page.getByRole("button", { name: "Escolher foto" })).toBeVisible();
 });
+
+test("skills suggest what others use, and a new one becomes a suggestion for everyone", async ({
+  page,
+}) => {
+  await signInAs(page, "developer");
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
+  await page.getByRole("button", { name: "2 Skills" }).click();
+  const input = page.getByRole("combobox", { name: "Tecnologias" });
+  const options = page.getByRole("listbox", { name: "Skills sugeridas" }).getByRole("option");
+
+  // Skills other profiles use, like Diego's Spring Boot.
+  await input.fill("spr");
+  // What was typed can always be added as new, last in the list.
+  await expect(options).toHaveText(["Spring Boot", "Adicionar “spr” como nova skill"]);
+  await input.press("ArrowDown");
+  await input.press("Enter");
+  await expect(page.getByRole("button", { name: "Spring Boot" })).toBeVisible();
+
+  // Another case of an existing skill keeps the catalog's spelling.
+  await input.fill("angular");
+  await input.press("Enter");
+  await expect(page.getByRole("button", { name: "Angular", exact: true })).toBeVisible();
+
+  // A skill nobody has yet can still be added.
+  await input.fill("Elixir");
+  await expect(options).toHaveText(["Adicionar “Elixir” como nova skill"]);
+  await options.first().click();
+  await expect(page.getByRole("button", { name: "Elixir" })).toBeVisible();
+  await page.getByRole("button", { name: "4 Links" }).click();
+  await page.getByRole("button", { name: "Concluir perfil" }).click();
+  await expect(page.getByText("Perfil salvo!").first()).toBeVisible();
+  await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  // Once saved, it's suggested to the next developer.
+  await page.goto("/register?type=developer");
+  const form = page.getByRole("main");
+  await form.getByLabel("Nome completo").fill("Rita Prado");
+  await form.getByLabel("Cargo profissional").fill("Backend Developer");
+  await form.getByLabel("E-mail").fill(uniqueEmail("rita@example.com"));
+  await form.getByLabel("Senha", { exact: true }).fill("segredo123");
+  await form.getByLabel(/Li e aceito/).check();
+  await form.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL(/\/create-profile$/);
+  // Step 1's required fields come first.
+  await page.getByLabel("Localização").fill("Natal, RN");
+  await page.getByLabel("Senioridade").selectOption("Pleno");
+  await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
+  await page.getByLabel("Disponibilidade").selectOption("Disponível agora");
+  await page.getByLabel("Bio profissional").fill("Construo APIs.");
+  await page.getByRole("button", { name: "2 Skills" }).click();
+  await page.getByRole("combobox", { name: "Tecnologias" }).fill("eli");
+  await expect(options.first()).toHaveText("Elixir");
+});

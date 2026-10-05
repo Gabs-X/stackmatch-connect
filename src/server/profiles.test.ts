@@ -3,7 +3,13 @@ import { emptyProfile, newProject, type LocalProfile } from "@/lib/local-profile
 import { createAccount } from "./auth";
 import type { Db } from "./db";
 import * as schema from "./db/schema";
-import { loadProfile, loadPublishedProfile, loadPublishedProfiles, saveProfile } from "./profiles";
+import {
+  listSkillCatalog,
+  loadProfile,
+  loadPublishedProfile,
+  loadPublishedProfiles,
+  saveProfile,
+} from "./profiles";
 import { seedDatabase, seedDeveloperId, seedDeveloperProfile } from "./seed";
 import { createTestDb } from "./test-db";
 
@@ -138,5 +144,37 @@ describe("seed", () => {
     await saveProfile(db, seedDeveloperId, { ...seedDeveloperProfile, name: "Gabriel B." });
     await seedDatabase(db);
     expect((await loadProfile(db, seedDeveloperId))?.name).toBe("Gabriel B.");
+  });
+});
+
+describe("skill catalog", () => {
+  it("keeps one spelling per skill, whatever case each profile typed", async () => {
+    const anaId = await developerAccount("ana@example.com");
+    const biaId = await developerAccount("bia@example.com");
+    await saveProfile(db, anaId, { ...ana, skills: ["React"], projects: [] });
+    await saveProfile(db, biaId, {
+      ...ana,
+      skills: ["react", "REACT", "Elixir"],
+      projects: [newProject({ name: "Chat", tech: ["elixir", "React"] })],
+    });
+
+    expect((await loadProfile(db, biaId))?.skills).toEqual(["React", "Elixir"]);
+    expect((await loadProfile(db, biaId))?.projects[0]?.tech).toEqual(["Elixir", "React"]);
+    expect((await db.select().from(schema.skills)).map((skill) => skill.name).sort()).toEqual([
+      "Elixir",
+      "React",
+    ]);
+  });
+
+  it("lists skills in use, most used first, and drops the ones nobody uses anymore", async () => {
+    const anaId = await developerAccount("ana@example.com");
+    const biaId = await developerAccount("bia@example.com");
+    await saveProfile(db, anaId, { ...ana, skills: ["React", "Go"], projects: [] });
+    await saveProfile(db, biaId, { ...ana, skills: ["React", "Typo"], projects: [] });
+    expect(await listSkillCatalog(db)).toEqual(["React", "Go", "Typo"]);
+
+    // Bia fixes the typo: it stays in the table but stops being suggested.
+    await saveProfile(db, biaId, { ...ana, skills: ["React"], projects: [] });
+    expect(await listSkillCatalog(db)).toEqual(["React", "Go"]);
   });
 });

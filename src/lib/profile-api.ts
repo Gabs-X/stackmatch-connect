@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
+  listSkillCatalog,
   loadProfile,
   loadPublishedProfile,
   loadPublishedProfiles,
@@ -36,6 +37,17 @@ export const fetchPublishedProfiles = createServerFn({ method: "GET" }).handler(
 export const fetchPublishedProfile = createServerFn({ method: "GET" })
   .validator(z.string())
   .handler(async ({ data }) => loadPublishedProfile(await database(), data));
+
+/** Skills already in use on StackMatch, most used first, to suggest while typing one. */
+export const fetchSkillCatalog = createServerFn({ method: "GET" }).handler(async () =>
+  listSkillCatalog(await database()),
+);
+
+export const skillCatalogQuery = queryOptions({
+  queryKey: ["skill-catalog"],
+  queryFn: () => fetchSkillCatalog(),
+  staleTime: 5 * 60 * 1000,
+});
 
 export const myProfileQuery = (accountId: string) =>
   queryOptions({ queryKey: ["my-profile", accountId], queryFn: () => fetchMyProfile() });

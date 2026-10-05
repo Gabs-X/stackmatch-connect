@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   date,
   doublePrecision,
@@ -163,10 +164,15 @@ export const developerProfiles = pgTable("developer_profiles", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const skills = pgTable("skills", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-});
+export const skills = pgTable(
+  "skills",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull().unique(),
+  },
+  // One spelling per skill: "React" and "react" are the same.
+  (table) => [uniqueIndex("skills_name_lower_idx").on(sql`lower(${table.name})`)],
+);
 
 export const developerSkills = pgTable(
   "developer_skills",

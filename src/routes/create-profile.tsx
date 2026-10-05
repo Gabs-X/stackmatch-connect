@@ -19,6 +19,7 @@ import {
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { ProfilePhotoField } from "@/components/profile-photo-field";
+import { SkillCombobox } from "@/components/skill-combobox";
 import { ProfilePreview } from "@/components/profile-preview";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
@@ -36,7 +37,12 @@ import {
   type LocalProject,
   type RequiredProfileField,
 } from "@/lib/local-profile";
-import { myProfileQuery, publishedProfilesQuery, saveMyProfile } from "@/lib/profile-api";
+import {
+  myProfileQuery,
+  publishedProfilesQuery,
+  saveMyProfile,
+  skillCatalogQuery,
+} from "@/lib/profile-api";
 import { FieldError } from "@/components/auth-layout";
 import {
   availabilityOptions,
@@ -78,7 +84,6 @@ function CreateProfile() {
   const [profile, setProfile] = useState<LocalProfile>(emptyProfile);
   const [completed, setCompleted] = useState(false);
   const { skills, projects } = profile;
-  const [skill, setSkill] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LocalProject | null>(null);
   const bioId = useId();
@@ -109,6 +114,8 @@ function CreateProfile() {
     );
   }, [user, stored.isSuccess, stored.data]);
   const [saving, setSaving] = useState(false);
+  // Suggestions while typing a skill; the form works without them if they fail to load.
+  const { data: skillCatalog = [] } = useQuery(skillCatalogQuery);
   const updateField = <Key extends keyof LocalProfile>(field: Key, value: LocalProfile[Key]) => {
     setProfile((current) => ({ ...current, [field]: value }));
     setCompleted(false);
@@ -153,6 +160,8 @@ function CreateProfile() {
       if (!saved) throw new Error("Profile not saved");
       queryClient.setQueryData(myProfileQuery(accountId).queryKey, saved);
       void queryClient.invalidateQueries({ queryKey: publishedProfilesQuery.queryKey });
+      // New skills from this profile become suggestions for everyone.
+      void queryClient.invalidateQueries({ queryKey: skillCatalogQuery.queryKey });
       setProfile(saved);
       setCompleted(true);
       setPreview(true);
@@ -198,12 +207,6 @@ function CreateProfile() {
     });
   };
   const steps = [t.create.steps[0], t.create.steps[1], t.create.projects, t.create.steps[3]];
-  const addSkill = () => {
-    if (skill.trim() && !skills.includes(skill.trim())) {
-      updateField("skills", [...skills, skill.trim()]);
-      setSkill("");
-    }
-  };
   if (stored.isPending && accountId)
     return (
       <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4">
@@ -410,30 +413,15 @@ function CreateProfile() {
                 {t.create.tech}
                 <RequiredMark />
               </Label>
-              <div className="mt-2 flex gap-2">
-                <Input
-                  id={skillId}
-                  value={skill}
-                  onChange={(e) => setSkill(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addSkill();
-                    }
-                  }}
-                  placeholder={t.create.skillPh}
-                  aria-required="true"
-                  aria-invalid={errorFor("skills") ? true : undefined}
-                  aria-describedby={errorFor("skills") ? `${skillId}-error` : undefined}
-                />
-                <Button
-                  onClick={addSkill}
-                  disabled={!skill.trim() || skills.includes(skill.trim())}
-                >
-                  <Plus />
-                  {t.create.add}
-                </Button>
-              </div>
+              <SkillCombobox
+                id={skillId}
+                catalog={skillCatalog}
+                chosen={skills}
+                onAdd={(value) => updateField("skills", [...skills, value])}
+                placeholder={t.create.skillPh}
+                invalid={Boolean(errorFor("skills"))}
+                {...(errorFor("skills") ? { describedBy: `${skillId}-error` } : {})}
+              />
               <FieldError id={`${skillId}-error`} message={errorFor("skills")} />
               <div className="mt-5 flex flex-wrap gap-2">
                 {skills.map((s) => (

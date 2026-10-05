@@ -57,6 +57,13 @@
       "when": 1791218697871,
       "tag": "0007_developer_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791220000224,
+      "tag": "0008_skills_case_insensitive",
+      "breakpoints": true
     }
   ]
 }

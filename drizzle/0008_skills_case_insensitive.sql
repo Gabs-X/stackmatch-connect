@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "skills_name_lower_idx" ON "skills" USING btree (lower("name"));
