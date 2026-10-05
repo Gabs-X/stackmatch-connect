@@ -32,6 +32,7 @@ export async function saveProfile(db: Db, userId: string, profile: LocalProfile)
       experienceYears: profile.experienceYears,
       hourlyRate: profile.rate,
       bio: profile.bio,
+      photo: profile.photo,
       githubUrl: profile.github,
       linkedinUrl: profile.linkedin,
       websiteUrl: profile.website,
@@ -146,6 +147,7 @@ async function loadProfiles(db: Db, userIds?: string[]): Promise<Map<string, Loc
         availability: row.availability,
         workMode: row.workMode,
         bio: row.bio,
+        photo: row.photo,
         github: row.githubUrl,
         linkedin: row.linkedinUrl,
         website: row.websiteUrl,
@@ -180,14 +182,4 @@ export async function loadPublishedProfiles(db: Db): Promise<Developer[]> {
 export async function loadPublishedProfile(db: Db, userId: string): Promise<Developer | null> {
   const profile = await loadProfile(db, userId);
   return profile && localProfileToDeveloper(profile, userId);
-}
-
-/** The first profile ever published, which the home page shows as an example. */
-export async function loadFirstPublishedProfile(db: Db): Promise<Developer | null> {
-  const [first] = await db
-    .select({ userId: developerProfiles.userId })
-    .from(developerProfiles)
-    .orderBy(asc(developerProfiles.createdAt), asc(developerProfiles.userId))
-    .limit(1);
-  return first ? loadPublishedProfile(db, first.userId) : null;
 }

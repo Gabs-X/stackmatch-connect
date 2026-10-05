@@ -185,6 +185,13 @@ const pt = {
     changeImage: "Trocar imagem",
     removeImage: "Remover imagem",
     imageError: "Não foi possível usar essa imagem. Escolha um arquivo PNG, JPG ou WebP.",
+    photo: "Foto do perfil",
+    photoPreview: "Prévia da foto do perfil",
+    photoHint:
+      "PNG, JPG ou WebP. A imagem é recortada em quadrado. Sem foto, o card usa o avatar do GitHub informado nos links.",
+    choosePhoto: "Escolher foto",
+    changePhoto: "Trocar foto",
+    removePhoto: "Remover foto",
     projectRepo: "Repositório (GitHub)",
     projectRepoPh: "github.com/usuario/projeto",
     projectDemo: "Link da demonstração",
@@ -685,6 +692,13 @@ const en: Dict = {
     changeImage: "Change image",
     removeImage: "Remove image",
     imageError: "Couldn't use this image. Choose a PNG, JPG or WebP file.",
+    photo: "Profile photo",
+    photoPreview: "Profile photo preview",
+    photoHint:
+      "PNG, JPG or WebP. The image is cropped to a square. Without a photo, the card uses the GitHub avatar from your links.",
+    choosePhoto: "Choose photo",
+    changePhoto: "Change photo",
+    removePhoto: "Remove photo",
     projectRepo: "Repository (GitHub)",
     projectRepoPh: "github.com/username/project",
     projectDemo: "Demo link",
@@ -1002,8 +1016,11 @@ const en: Dict = {
   },
 };
 
-// English for values stored in Portuguese: the profile options and the seed profile's texts.
+// English for values stored in Portuguese: the profile options, the seed profile's texts and the
+// example card on the home page.
 const dataEn: Record<string, string> = {
+  "Crio interfaces em React e TypeScript com foco em acessibilidade e design systems.":
+    "I build React and TypeScript interfaces with a focus on accessibility and design systems.",
   "Desenvolvo aplicações full stack com React e Node.js, integrando interfaces, APIs e bancos relacionais.":
     "I build full stack applications with React and Node.js, connecting interfaces, APIs and relational databases.",
   Júnior: "Junior",

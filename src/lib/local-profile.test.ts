@@ -63,6 +63,14 @@ describe("localProfileToDeveloper", () => {
     expect(localProfileToDeveloper({ ...emptyProfile, name: "Ana" }, "ana").image).toBe("");
   });
 
+  it("prefers the uploaded photo to the GitHub avatar", () => {
+    const photo = "data:image/jpeg;base64,AAAA";
+    expect(
+      localProfileToDeveloper({ ...emptyProfile, github: "github.com/anasouza", photo }, "ana")
+        .image,
+    ).toBe(photo);
+  });
+
   it("keeps only valid links", () => {
     // Typed by the developer, so they open for real instead of showing an example notice.
     expect(developer.links).toEqual({
@@ -153,6 +161,17 @@ describe("profileInputSchema", () => {
       false,
     );
     expect(profileInputSchema.safeParse({ ...complete, hiringTypes: ["Bolsa"] }).success).toBe(
+      false,
+    );
+  });
+
+  it("only takes profile photos made by the form", () => {
+    const withPhoto = (photo: string) => ({ ...complete, photo });
+    expect(profileInputSchema.safeParse(withPhoto("")).success).toBe(true);
+    expect(profileInputSchema.safeParse(withPhoto("data:image/jpeg;base64,AAAA")).success).toBe(
+      true,
+    );
+    expect(profileInputSchema.safeParse(withPhoto("https://example.com/me.png")).success).toBe(
       false,
     );
   });

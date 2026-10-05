@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { expect, signInAs, test, uniqueEmail } from "./fixtures";
 
 test("a completed profile previews the card companies see in Discover", async ({ page }) => {
@@ -137,4 +138,47 @@ test("a developer can publish a profile without projects", async ({ page }) => {
   await page.getByRole("button", { name: "Continuar sem projetos" }).click();
   await page.getByRole("button", { name: "Concluir perfil" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Rita Prado" })).toBeVisible();
+});
+
+test("a profile photo replaces the GitHub avatar for companies too", async ({ page }) => {
+  await signInAs(page, "developer");
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
+
+  // Without an upload, the preview shows the GitHub avatar.
+  const preview = page.getByRole("img", { name: "Prévia da foto do perfil" });
+  await expect(preview).toHaveAttribute("src", /github\.com\/Gabs-X\.png/);
+  await page
+    .getByLabel("Foto do perfil")
+    .setInputFiles(fileURLToPath(new URL("./github-avatar.jpg", import.meta.url)));
+  // Cropped and downscaled in the browser.
+  await expect(preview).toHaveAttribute("src", /^data:image\/jpeg;base64,/);
+  await expect(page.getByRole("button", { name: "Trocar foto" })).toBeVisible();
+
+  await page.getByRole("button", { name: "4 Links" }).click();
+  await page.getByRole("button", { name: "Concluir perfil" }).click();
+  await expect(page.getByText("Perfil salvo!").first()).toBeVisible();
+  await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  await signInAs(page, "company");
+  await expect(
+    page
+      .locator("main section article")
+      .first()
+      .getByRole("img", { name: "Foto de Gabriel Botelho" }),
+  ).toHaveAttribute("src", /^data:image\/jpeg;base64,/);
+});
+
+test("removing the photo goes back to the GitHub avatar", async ({ page }) => {
+  await signInAs(page, "developer");
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
+  await page
+    .getByLabel("Foto do perfil")
+    .setInputFiles(fileURLToPath(new URL("./github-avatar.jpg", import.meta.url)));
+  await page.getByRole("button", { name: "Remover foto" }).click();
+  await expect(page.getByRole("img", { name: "Prévia da foto do perfil" })).toHaveAttribute(
+    "src",
+    /github\.com\/Gabs-X\.png/,
+  );
+  await expect(page.getByRole("button", { name: "Escolher foto" })).toBeVisible();
 });

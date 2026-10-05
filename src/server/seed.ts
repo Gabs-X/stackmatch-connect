@@ -43,6 +43,8 @@ export const seedDeveloperProfile: LocalProfile = {
   availability: "Disponível agora",
   workMode: "Remoto",
   bio: "Desenvolvo aplicações full stack com React e Node.js, integrando interfaces, APIs e bancos relacionais.",
+  // No upload: the photo comes from the GitHub avatar.
+  photo: "",
   github: "https://github.com/Gabs-X",
   linkedin: "https://www.linkedin.com/in/gabriel-anthony-7688bb224/",
   website: "https://gabrielanthony.vercel.app",

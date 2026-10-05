@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeveloperCard } from "@/components/developer-card";
-import { fetchFeaturedProfile } from "@/lib/profile-api";
+import heroPhoto from "@/assets/hero-developer.jpg";
+import type { Developer } from "@/lib/developers";
 
 export const Route = createFileRoute("/")({
-  loader: () => fetchFeaturedProfile(),
   head: () => ({
     meta: [
       { title: "Stack Match" },
@@ -36,7 +36,28 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+/**
+ * A fictional person, only to illustrate the card companies see in Discover. Not in the database,
+ * and not a profile anyone can find.
+ */
+const exampleDeveloper: Developer = {
+  id: "example",
+  name: "Marina Costa",
+  role: "Frontend Developer",
+  seniority: "Sênior",
+  location: "São Paulo, SP",
+  workMode: "Remoto",
+  availability: "Disponível agora",
+  bio: "Crio interfaces em React e TypeScript com foco em acessibilidade e design systems.",
+  skills: ["React", "Next.js", "TypeScript", "Tailwind", "GraphQL"],
+  experience: "8 anos",
+  image: heroPhoto,
+  rate: 180,
+  hiringTypes: ["Contrato", "PJ"],
+  projects: [],
+  links: { github: "", linkedin: "" },
+};
+
 function Index() {
   const { t, tv } = useI18n();
   useLocalizedMeta(t.home.h1a + t.home.h1b + " — Stack Match", t.home.sub);
@@ -47,7 +68,6 @@ function Index() {
     [Layers3, t.home.benefits[2]],
     [Sparkles, t.home.benefits[3]],
   ] as const;
-  const featuredDeveloper = Route.useLoaderData();
   return (
     <main>
       <section className="hero-band">
@@ -79,26 +99,21 @@ function Index() {
               ))}
             </div>
           </div>
-          {featuredDeveloper && (
-            <div className="relative mx-auto w-full max-w-md animate-scale-in">
-              {/* Experience is optional in the profile form. */}
-              {featuredDeveloper.experience && (
-                <div className="absolute -left-7 top-16 z-10 hidden rounded-lg border bg-card p-3 shadow-soft sm:block">
-                  <p className="text-xs text-muted-foreground">{t.profile.experience}</p>
-                  <p className="font-display text-2xl font-bold text-primary">
-                    {tv(featuredDeveloper.experience)}
-                  </p>
-                </div>
-              )}
-              <DeveloperCard developer={featuredDeveloper} />
-              <div className="absolute -bottom-5 right-3 z-10 rounded-lg border bg-card p-3 shadow-soft sm:-right-5">
-                <p className="flex items-center gap-2 text-sm font-semibold">
-                  <span className="status-dot" />
-                  {tv(featuredDeveloper.availability)}
-                </p>
-              </div>
+          <div className="relative mx-auto w-full max-w-md animate-scale-in">
+            <div className="absolute -left-7 top-16 z-10 hidden rounded-lg border bg-card p-3 shadow-soft sm:block">
+              <p className="text-xs text-muted-foreground">{t.profile.experience}</p>
+              <p className="font-display text-2xl font-bold text-primary">
+                {tv(exampleDeveloper.experience)}
+              </p>
             </div>
-          )}
+            <DeveloperCard developer={exampleDeveloper} />
+            <div className="absolute -bottom-5 right-3 z-10 rounded-lg border bg-card p-3 shadow-soft sm:-right-5">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <span className="status-dot" />
+                {tv(exampleDeveloper.availability)}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
       <section className="border-y bg-card">

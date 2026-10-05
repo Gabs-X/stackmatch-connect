@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { ProfilePhotoField } from "@/components/profile-photo-field";
 import { ProfilePreview } from "@/components/profile-preview";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
@@ -289,6 +290,12 @@ function CreateProfile() {
           </div>
           {step === 1 && (
             <div className="grid gap-5 sm:grid-cols-2">
+              <ProfilePhotoField
+                name={profile.name}
+                photo={profile.photo}
+                github={profile.github}
+                onChange={(photo) => updateField("photo", photo)}
+              />
               <Field
                 label={t.create.fullName}
                 placeholder={t.create.fullNamePh}

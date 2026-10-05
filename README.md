@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código; um banco novo começa com o seed (`npm run db:seed`). O envio de e-mails e o assistente de IA ainda são simulados.
+**Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código, a não ser o card de exemplo da home, que ilustra o produto com uma pessoa fictícia; um banco novo começa com o seed (`npm run db:seed`). O envio de e-mails e o assistente de IA ainda são simulados.
 
 ## Problema e proposta
 
@@ -28,7 +28,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Contas de teste:** o seed (`npm run db:seed`) cria `teste.dev@stackmatch.app` (desenvolvedor, com o perfil do Gabriel Botelho publicado) e `teste.emp@stackmatch.app` (empresa), ambas com a senha `teste1234`. O login é sempre pelo e-mail, e a tela de login não mostra essas contas. Como a senha está no código, rode o seed só nos bancos em que essas contas devem existir.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist. Cada conta de empresa tem a própria shortlist, guardada no servidor (tabela `saved_talents`).
-- **Criação de perfil:** formulário em etapas (incluindo anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento no servidor ao concluir.
+- **Criação de perfil:** formulário em etapas (incluindo foto do perfil, anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento no servidor ao concluir.
 - **Campos obrigatórios do perfil:** nome, cargo, localização, senioridade, modelo de trabalho, disponibilidade, bio e pelo menos uma skill, marcados com `*`. Com algum em branco, o formulário não avança de etapa nem conclui: mostra a mensagem em cada campo e leva o foco ao primeiro. A regra fica em `missingProfileFields` (`src/lib/local-profile.ts`).
 - **Perfil sem projetos:** a etapa Projetos é opcional, com a opção "Continuar sem projetos". Na página do perfil, um desenvolvedor sem projetos mostra um aviso no lugar da seção vazia.
 - **Proposta de reunião:** uma conta de empresa sugere um horário (data e hora, em GMT−3) e escreve uma mensagem opcional. O profissional recebe a proposta por e-mail e responde direto para a empresa: o StackMatch não gerencia a reunião nem bloqueia horários. O diálogo mostra uma prévia do e-mail e avisa quando já houve proposta para o mesmo profissional. Visitantes são levados ao login; contas de desenvolvedor não enviam propostas.
@@ -129,7 +129,7 @@ As opções do perfil (senioridade, modelo de trabalho, disponibilidade e contra
 
 - **Contas e login:** o cadastro e a entrada gravam no banco (tabela `users`), com a senha em hash scrypt, e abrem uma sessão guardada num cookie httpOnly (o banco guarda só o hash do token, tabela `sessions`, com validade de 30 dias). Há dois tipos de conta: **empresa** (com nome da empresa e CNPJ; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido).
 - **Controle de acesso:** o guard `RequireAccount` (`src/components/require-account.tsx`) organiza a interface, e as server functions conferem o tipo de conta (`requireAccount` em `src/server/session.ts`).
-- **Perfis:** um por conta de desenvolvedor, em `developer_profiles`, com skills e projetos em tabelas próprias. A foto vem do avatar público do GitHub (`github.com/<usuário>.png`) quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais. Os links abrem em nova aba.
+- **Perfis:** um por conta de desenvolvedor, em `developer_profiles`, com skills e projetos em tabelas próprias. A foto é a que o desenvolvedor enviou no formulário (recortada em quadrado e reduzida para 512 px no navegador, gravada no banco como data URL); sem ela, vem o avatar público do GitHub (`github.com/<usuário>.png`), e sem os dois, ou se a imagem não carregar, aparecem as iniciais. Os links abrem em nova aba.
 - **Dados da empresa:** um registro por conta de empresa (`company_profiles`), lido e salvo só pela própria conta. Até a empresa salvar, valem o nome, o cargo e o e-mail do cadastro. O desenvolvedor só vê os dados de empresas que o contataram, por interesse ou proposta.
 - **Talentos salvos, interesses e propostas:** ficam em `saved_talents`, `interests` e `meeting_requests`, ligados às contas da empresa e do desenvolvedor; apagar uma conta apaga esses registros. Só perfis publicados podem ser salvos, marcados ou receber proposta. O interesse aparece para o desenvolvedor com o contato atual da empresa; desfazer no Discover apaga o interesse.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
@@ -176,7 +176,7 @@ Sem essa variável, o componente não é incluído no build.
 
 ## Decisões técnicas
 
-- **Só dados do banco:** o app não tem dados embutidos; o seed é um script separado (`scripts/seed.ts`), rodado só onde as contas de teste devem existir.
+- **Só dados do banco:** o app não tem dados embutidos (o card de exemplo da home, com foto em `src/assets/hero-developer.jpg`, só ilustra o produto e não é um perfil); o seed é um script separado (`scripts/seed.ts`), rodado só onde as contas de teste devem existir.
 - **Context e TanStack Query:** atendem ao volume e ao escopo do projeto sem uma camada adicional de gerenciamento de estado.
 - **Backend no mesmo projeto:** server functions do TanStack Start, com Drizzle e Postgres, evitam um serviço separado e compartilham tipos e validações (Zod) com as telas. O PGlite deixa o desenvolvimento e os testes sem nada para instalar.
 - **Sessão em cookie httpOnly:** o token não fica acessível ao JavaScript da página, e o banco guarda só o hash dele.
@@ -189,7 +189,7 @@ Sem essa variável, o componente não é incluído no build.
 
 - Contas, perfis de desenvolvedor, dados da empresa, shortlist, interesses e propostas ficam no servidor, que confere o tipo de conta antes de ler ou salvar. Não há verificação de profissionais, e a recuperação de senha e o envio de e-mails ainda não existem.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
-- Os perfis de desenvolvedor ficam no banco (tabelas `developer_profiles`, `skills`, `developer_skills`, `projects` e `project_skills`), um por conta e identificados pelo id dela. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor, na ordem em que foram publicados. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas no navegador e, por enquanto, gravadas no banco como data URL; o próximo passo é um armazenamento de arquivos.
+- Os perfis de desenvolvedor ficam no banco (tabelas `developer_profiles`, `skills`, `developer_skills`, `projects` e `project_skills`), um por conta e identificados pelo id dela. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor, na ordem em que foram publicados. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As fotos de perfil e as capas dos projetos são reduzidas no navegador e, por enquanto, gravadas no banco como data URL; o próximo passo é um armazenamento de arquivos.
 - O Discover mostra só os perfis publicados no banco; com poucos perfis, algumas opções de filtro não retornam resultados. Não há busca geográfica, ranking ou recomendação automática.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
 - Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.

@@ -41,6 +41,11 @@ export function newProject(fields: Partial<LocalProject> = {}): LocalProject {
 
 const text = (max: number) => z.string().trim().max(max);
 const link = text(500);
+/** Images are downscaled in the browser to about 100 KB; anything else isn't one of ours. */
+const jpegDataUrl = z
+  .string()
+  .max(1_000_000)
+  .refine((value) => !value || value.startsWith("data:image/jpeg;base64,"));
 
 const profileSchema = z.object({
   name: text(120),
@@ -50,6 +55,8 @@ const profileSchema = z.object({
   availability: z.string(),
   workMode: z.string(),
   bio: text(2000),
+  /** Square JPEG data URL made by readProfilePhoto, or "" to use the GitHub avatar. */
+  photo: jpegDataUrl,
   github: link,
   linkedin: link,
   website: link,
@@ -63,11 +70,7 @@ const profileSchema = z.object({
         name: text(80).min(1),
         description: text(400),
         tech: z.array(text(50).min(1)).max(20),
-        // Covers are downscaled to about 100 KB; anything else isn't one of ours.
-        image: z
-          .string()
-          .max(1_000_000)
-          .refine((value) => !value || value.startsWith("data:image/jpeg;base64,")),
+        image: jpegDataUrl,
         github: link,
         demo: link,
       }),
@@ -98,6 +101,7 @@ export const emptyProfile: LocalProfile = {
   availability: "",
   workMode: "",
   bio: "",
+  photo: "",
   github: "",
   linkedin: "",
   website: "",
@@ -141,14 +145,16 @@ export function profileLink(value: string): string | undefined {
   }
 }
 
-const maxImageWidth = 960;
-const maxImageHeight = 600;
+type ImageArea = { x: number; y: number; width: number; height: number };
 
 /**
- * Downscales an uploaded cover to a small JPEG data URL, which the profile stores as is until
- * project covers move to file storage.
+ * Draws part of an uploaded image onto a canvas of the given size and returns it as a JPEG data
+ * URL. The profile stores these as is until images move to file storage, so they stay small.
  */
-export function readProjectImage(file: File): Promise<string> {
+function readImage(
+  file: File,
+  layout: (width: number, height: number) => { source: ImageArea; width: number; height: number },
+): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/")) {
       reject(new Error("Not an image"));
@@ -158,10 +164,10 @@ export function readProjectImage(file: File): Promise<string> {
     const image = new Image();
     image.onload = () => {
       URL.revokeObjectURL(url);
-      const scale = Math.min(1, maxImageWidth / image.width, maxImageHeight / image.height);
+      const { source, width, height } = layout(image.width, image.height);
       const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.width * scale));
-      canvas.height = Math.max(1, Math.round(image.height * scale));
+      canvas.width = Math.max(1, Math.round(width));
+      canvas.height = Math.max(1, Math.round(height));
       const context = canvas.getContext("2d");
       if (!context) {
         reject(new Error("Canvas unavailable"));
@@ -170,7 +176,17 @@ export function readProjectImage(file: File): Promise<string> {
       // JPEG has no transparency; paint white so transparent PNGs don't turn black.
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      context.drawImage(
+        image,
+        source.x,
+        source.y,
+        source.width,
+        source.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
       resolve(canvas.toDataURL("image/jpeg", 0.8));
     };
     image.onerror = () => {
@@ -178,6 +194,33 @@ export function readProjectImage(file: File): Promise<string> {
       reject(new Error("Unreadable image"));
     };
     image.src = url;
+  });
+}
+
+/** A project cover: the whole image, downscaled to fit 960×600. */
+export function readProjectImage(file: File) {
+  return readImage(file, (width, height) => {
+    const scale = Math.min(1, 960 / width, 600 / height);
+    return {
+      source: { x: 0, y: 0, width, height },
+      width: width * scale,
+      height: height * scale,
+    };
+  });
+}
+
+export const profilePhotoSize = 512;
+
+/** A profile photo: the centered square of the image, downscaled to 512×512 at most. */
+export function readProfilePhoto(file: File) {
+  return readImage(file, (width, height) => {
+    const side = Math.min(width, height);
+    const size = Math.min(side, profilePhotoSize);
+    return {
+      source: { x: (width - side) / 2, y: (height - side) / 2, width: side, height: side },
+      width: size,
+      height: size,
+    };
   });
 }
 
@@ -200,8 +243,8 @@ export function localProfileToDeveloper(profile: LocalProfile, accountId: string
     bio: profile.bio.trim(),
     skills: profile.skills,
     experience: experienceLabel(profile.experienceYears),
-    // The GitHub avatar stands in for a photo; the form has no upload for one.
-    image: githubAvatarUrl(profileLink(profile.github) ?? "") ?? "",
+    // The uploaded photo, else the GitHub avatar; without either, the card shows initials.
+    image: profile.photo || (githubAvatarUrl(profileLink(profile.github) ?? "") ?? ""),
     rate: profile.rate ?? Number.NaN,
     hiringTypes: profile.hiringTypes,
     links: {

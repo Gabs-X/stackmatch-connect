@@ -42,6 +42,7 @@ const ana: LocalProfile = {
   rate: 95.5,
   hiringTypes: ["PJ", "CLT"],
   github: "https://github.com/anasouza",
+  photo: "data:image/jpeg;base64,AAAA",
   projects: [
     newProject({ name: "Clinic Booking", tech: ["Vue", "TypeScript"], demo: "clinic.app" }),
     newProject({ name: "Portfolio", image: "data:image/jpeg;base64,AAAA" }),
@@ -113,7 +114,8 @@ describe("published profiles", () => {
       role: "Staff Engineer",
       experience: "4 anos",
       rate: 95.5,
-      image: "https://github.com/anasouza.png?size=768",
+      // The uploaded photo wins over the GitHub avatar.
+      image: "data:image/jpeg;base64,AAAA",
     });
     expect(published[0]?.projects[0]?.links.demo).toBe("https://clinic.app/");
   });

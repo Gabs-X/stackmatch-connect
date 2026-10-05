@@ -154,6 +154,8 @@ export const developerProfiles = pgTable("developer_profiles", {
   /** BRL per hour. */
   hourlyRate: doublePrecision("hourly_rate"),
   bio: text("bio").notNull(),
+  /** Square JPEG data URL from the form, or "" to fall back to the GitHub avatar. */
+  photo: text("photo").notNull().default(""),
   githubUrl: text("github_url").notNull().default(""),
   linkedinUrl: text("linkedin_url").notNull().default(""),
   websiteUrl: text("website_url").notNull().default(""),

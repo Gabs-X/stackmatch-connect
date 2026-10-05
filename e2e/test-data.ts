@@ -28,6 +28,7 @@ const developer = (fields: {
     workMode: fields.workMode,
     availability: fields.availability,
     bio: `${fields.name} trabalha com ${fields.skills.join(" e ")}.`,
+    photo: "",
     github: `https://github.com/${fields.id}`,
     linkedin: "",
     website: "",
