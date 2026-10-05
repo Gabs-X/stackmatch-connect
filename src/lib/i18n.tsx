@@ -514,6 +514,20 @@ const pt = {
     dateFormat: "d 'de' MMMM",
     dateTimeFormat: "d 'de' MMM, HH:mm",
     at: "às",
+    viewCompany: "Ver empresa",
+  },
+  company: {
+    back: "Voltar para empresas interessadas",
+    kicker: "Empresa interessada",
+    about: "Sobre a empresa",
+    noAbout: "Esta empresa ainda não adicionou uma descrição.",
+    website: "Site",
+    contact: "Contato",
+    phone: "Telefone",
+    activity: "O que a empresa fez",
+    notFoundTitle: "Empresa não encontrada",
+    notFoundSub:
+      "Só aparecem aqui empresas que marcaram interesse no seu perfil ou propuseram uma conversa.",
   },
 };
 
@@ -1021,11 +1035,32 @@ const en: Dict = {
     dateFormat: "MMMM d",
     dateTimeFormat: "MMM d, HH:mm",
     at: "at",
+    viewCompany: "View company",
+  },
+  company: {
+    back: "Back to interested companies",
+    kicker: "Interested company",
+    about: "About the company",
+    noAbout: "This company hasn't added a description yet.",
+    website: "Website",
+    contact: "Contact",
+    phone: "Phone",
+    activity: "What the company did",
+    notFoundTitle: "Company not found",
+    notFoundSub:
+      "Only companies that marked your profile as interesting or proposed a call show up here.",
   },
 };
 
 // Translations for mock data values (stored in Portuguese).
 const dataEn: Record<string, string> = {
+  "Fintech de pagamentos digitais para pequenos e médios negócios. Nosso time de tecnologia tem 40 pessoas, divididas entre produto, plataforma e dados.":
+    "Digital payments fintech for small and mid-sized businesses. Our tech team has 40 people across product, platform and data.",
+  "Estúdio de produto que cria aplicativos web e mobile para startups de saúde e educação. Time enxuto, 100% remoto e com bastante autonomia.":
+    "Product studio building web and mobile apps for health and education startups. A lean, fully remote team with plenty of autonomy.",
+  "Plataforma de gestão para o agronegócio, com monitoramento de lavouras e logística em tempo real. Estamos ampliando o time de produto.":
+    "Management platform for agribusiness, with real-time crop monitoring and logistics. We are growing our product team.",
+  "Head de Engenharia": "Head of Engineering",
   "Aplicativo de rotas com autenticação e favoritos.":
     "Route planning app with authentication and favorites.",
   "Registro de hábitos com sincronização entre dispositivos.":

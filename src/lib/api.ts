@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { demoCompanyActivity, developers, type Developer } from "./developers";
+import { demoCompanyActivity, demoCompanyProfiles, developers, type Developer } from "./developers";
 import {
   isProposedTimeValid,
   type MeetingRequest,
@@ -10,7 +10,9 @@ import { demoDeveloperId, type AuthUser } from "./auth";
 import {
   companySettingsSchema,
   readCompanySettings,
+  readSavedCompanySettings,
   writeCompanySettings,
+  type CompanyProfile,
   type CompanySettings,
   type CompanySettingsInput,
 } from "./company-settings";
@@ -100,3 +102,24 @@ export async function saveCompanySettings(
 }
 
 export const companySettingsKey = (accountId: string) => ["company-settings", accountId] as const;
+
+/**
+ * Stand-in for `GET /companies/:id`: what a company shows the developers it reached. Null while
+ * the company never filled in its details; the mock only knows demo companies and accounts that
+ * saved their settings in this browser.
+ */
+export async function fetchCompanyProfile(companyId: string): Promise<CompanyProfile | null> {
+  await delay(MOCK_LATENCY_MS);
+  const demo = demoCompanyProfiles[companyId];
+  if (demo) return demo;
+  const settings = readSavedCompanySettings(companyId);
+  if (!settings) return null;
+  const { about, website, location, contactRole, phone } = settings;
+  return { about, website, location, contactRole, phone, demo: false };
+}
+
+export const companyProfileQuery = (companyId: string) =>
+  queryOptions({
+    queryKey: ["company-profile", companyId],
+    queryFn: () => fetchCompanyProfile(companyId),
+  });

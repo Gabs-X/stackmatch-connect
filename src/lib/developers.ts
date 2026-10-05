@@ -2,6 +2,7 @@ import gabriel from "@/assets/developer-gabriel.jpg";
 import marina from "@/assets/developer-marina.jpg";
 import rafael from "@/assets/developer-rafael.jpg";
 import juliana from "@/assets/developer-juliana.jpg";
+import type { CompanyProfile } from "./company-settings";
 import type { LocalProfile } from "./local-profile";
 
 // Catalog values double as filter keys; tv() translates them for display.
@@ -427,3 +428,34 @@ export function demoCompanyActivity(developerId: string, developerName: string, 
     ],
   };
 }
+
+/** Public details of the companies in the demo activity, keyed by company account id. */
+export const demoCompanyProfiles: Record<string, CompanyProfile> = {
+  "demo-company-nuvempay": {
+    about:
+      "Fintech de pagamentos digitais para pequenos e médios negócios. Nosso time de tecnologia tem 40 pessoas, divididas entre produto, plataforma e dados.",
+    website: "nuvempay.example",
+    location: "São Paulo, SP",
+    contactRole: "Tech Recruiter",
+    phone: "",
+    demo: true,
+  },
+  "demo-company-orbita": {
+    about:
+      "Estúdio de produto que cria aplicativos web e mobile para startups de saúde e educação. Time enxuto, 100% remoto e com bastante autonomia.",
+    website: "orbitalabs.example",
+    location: "Florianópolis, SC",
+    contactRole: "CTO",
+    phone: "",
+    demo: true,
+  },
+  "demo-company-verdetech": {
+    about:
+      "Plataforma de gestão para o agronegócio, com monitoramento de lavouras e logística em tempo real. Estamos ampliando o time de produto.",
+    website: "verdetech.example",
+    location: "Campinas, SP",
+    contactRole: "Head de Engenharia",
+    phone: "(19) 3555-0142",
+    demo: true,
+  },
+};

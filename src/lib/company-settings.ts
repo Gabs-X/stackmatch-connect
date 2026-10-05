@@ -27,6 +27,15 @@ export const companySettingsSchema = z.object({
 export type CompanySettings = z.output<typeof companySettingsSchema>;
 export type CompanySettingsInput = z.input<typeof companySettingsSchema>;
 
+/** What a developer sees about a company that reached them, besides the contact it signed with. */
+export type CompanyProfile = Pick<
+  CompanySettings,
+  "about" | "website" | "location" | "contactRole" | "phone"
+> & {
+  /** Fictional company: its website is an example address. */
+  demo: boolean;
+};
+
 export const companySettingsStorageKey = "stackmatch-company-settings";
 
 /** Until the company edits them, settings come from what it filled in at sign-up. */
@@ -55,10 +64,15 @@ function readAll(): Record<string, unknown> {
   }
 }
 
+/** Settings a company account saved in this browser, or null while it never saved any. */
+export function readSavedCompanySettings(accountId: string): CompanySettings | null {
+  const result = companySettingsSchema.safeParse(readAll()[accountId]);
+  return result.success ? result.data : null;
+}
+
 /** Mock storage behind the settings API: one entry per company account, in this browser. */
 export function readCompanySettings(user: AuthUser): CompanySettings {
-  const result = companySettingsSchema.safeParse(readAll()[user.id]);
-  return result.success ? result.data : defaultCompanySettings(user);
+  return readSavedCompanySettings(user.id) ?? defaultCompanySettings(user);
 }
 
 export function writeCompanySettings(accountId: string, settings: CompanySettings) {

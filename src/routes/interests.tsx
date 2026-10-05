@@ -1,19 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { ptBR, enUS } from "react-day-picker/locale";
-import { Building2, CalendarDays, Heart, Mail, RotateCcw, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  Heart,
+  Mail,
+  RotateCcw,
+  UserRound,
+} from "lucide-react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { companyActivityQuery } from "@/lib/api";
-import { useApp } from "@/lib/app-context";
 import type { AuthUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { loadAccountProfile, profilesStorageKey } from "@/lib/local-profile";
-import { interestedCompanies } from "@/lib/profile-interests";
+import { useInterestedCompanies } from "@/lib/use-interested-companies";
 
 export const Route = createFileRoute("/interests")({
   head: () => ({
@@ -41,8 +47,6 @@ function InterestsPage() {
 function InterestsList({ user }: { user: AuthUser }) {
   const { t, lang } = useI18n();
   const locale = lang === "pt" ? ptBR : enUS;
-  const { hydrated, profileInterests, meetingRequests } = useApp();
-  // Companies reach this developer's profile, and send their interest, under the account id.
   const [hasProfile, setHasProfile] = useState(true);
   useEffect(() => {
     const read = () => setHasProfile(loadAccountProfile(user.id) !== null);
@@ -53,17 +57,7 @@ function InterestsList({ user }: { user: AuthUser }) {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [user.id]);
-  const { data, isPending, isError, refetch } = useQuery(companyActivityQuery(user.id, user.name));
-  const companies = useMemo(
-    () =>
-      interestedCompanies(
-        user.id,
-        [...(data?.interests ?? []), ...profileInterests],
-        [...(data?.meetings ?? []), ...meetingRequests],
-      ),
-    [user.id, data, profileInterests, meetingRequests],
-  );
-  const loading = !hydrated || (isPending && !isError);
+  const { companies, loading, isError, refetch } = useInterestedCompanies(user);
 
   return (
     <main className="mx-auto min-h-[calc(100vh-4rem)] max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
@@ -121,7 +115,15 @@ function InterestsList({ user }: { user: AuthUser }) {
                         <Building2 className="size-5" aria-hidden="true" />
                       </span>
                       <div className="min-w-0">
-                        <h2 className="truncate font-display text-lg font-bold">{item.company}</h2>
+                        <h2 className="truncate font-display text-lg font-bold">
+                          <Link
+                            to="/company/$id"
+                            params={{ id: item.companyId }}
+                            className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {item.company}
+                          </Link>
+                        </h2>
                         <p className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                           <UserRound className="size-3.5 shrink-0" aria-hidden="true" />
                           {t.interests.contact(item.contactName)}
@@ -142,21 +144,14 @@ function InterestsList({ user }: { user: AuthUser }) {
                       </time>
                     </div>
                   </div>
-                  {meeting && (
-                    <div className="mt-4 rounded-lg bg-muted/60 p-4 text-sm">
-                      <p className="font-medium">
-                        {t.interests.proposedFor(
-                          `${format(new Date(`${meeting.date}T12:00:00`), t.interests.dateFormat, { locale })}, ${t.interests.at} ${meeting.time}`,
-                        )}
-                      </p>
-                      {meeting.message && (
-                        <p className="mt-2 whitespace-pre-line text-muted-foreground">
-                          {meeting.message}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-4">
+                  {meeting && <MeetingProposal meeting={meeting} className="mt-4" />}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button asChild size="sm">
+                      <Link to="/company/$id" params={{ id: item.companyId }}>
+                        {t.interests.viewCompany}
+                        <ChevronRight />
+                      </Link>
+                    </Button>
                     <Button asChild variant="outline" size="sm">
                       <a href={`mailto:${item.email}?subject=${subject}`}>
                         <Mail />
