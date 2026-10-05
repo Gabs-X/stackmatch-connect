@@ -1,4 +1,13 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
+
+/**
+ * `npm run db:migrate` can read DATABASE_URL from .env.migrate.local, which git ignores. Not from
+ * .env or .env.local: the dev server loads those, and would then use that database instead of
+ * PGlite (see docs/deploy-neon.md).
+ */
+const migrateEnvFile = ".env.migrate.local";
+if (!process.env["DATABASE_URL"] && existsSync(migrateEnvFile)) process.loadEnvFile(migrateEnvFile);
 
 // `npm run db:generate` writes migrations to drizzle/ from the schema; `npm run db:migrate` applies
 // them to the Postgres in DATABASE_URL. Local PGlite databases apply them on their own at startup.
