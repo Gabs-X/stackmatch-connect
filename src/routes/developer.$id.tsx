@@ -1,6 +1,6 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { DemoLink } from "@/components/demo-link";
@@ -8,13 +8,14 @@ import { DeveloperPhoto } from "@/components/developer-photo";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
 import { developers, type Developer } from "@/lib/developers";
-import { loadPublishedProfiles } from "@/lib/local-profile";
+import { fetchPublishedProfile } from "@/lib/profile-api";
 import { useApp } from "@/lib/app-context";
 
 export const Route = createFileRoute("/developer/$id")({
-  // Other ids may be profiles created by developer accounts, which live in the browser for now,
-  // so their pages look them up on the client.
-  loader: ({ params }) => developers.find((d) => d.id === params.id) ?? null,
+  // Ids outside the fictional catalog are developer accounts' profiles, kept on the server.
+  loader: async ({ params }) =>
+    developers.find((d) => d.id === params.id) ??
+    (await fetchPublishedProfile({ data: params.id })),
   head: ({ loaderData }) => ({
     meta: [
       {
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/developer/$id")({
 });
 function DeveloperPage() {
   const d = Route.useLoaderData();
-  return d ? <CatalogDeveloperPage d={d} /> : <LocalDeveloperPage />;
+  return d ? <CatalogDeveloperPage d={d} /> : <ProfileNotFound />;
 }
 
 function CatalogDeveloperPage({ d }: { d: Developer }) {
@@ -259,35 +260,18 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
   );
 }
 
-/** A profile a developer account created in the app, shown like any other profile. */
-function LocalDeveloperPage() {
+/** No catalog entry or developer account has this profile. */
+function ProfileNotFound() {
   const { t } = useI18n();
-  const { id } = Route.useParams();
-  // Undefined while reading storage, null when no account has this profile.
-  const [developer, setDeveloper] = useState<Developer | null>();
-  useEffect(
-    () => setDeveloper(loadPublishedProfiles().find((profile) => profile.id === id) ?? null),
-    [id],
+  return (
+    <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
+      <div>
+        <h1 className="text-xl font-semibold">{t.common.notFound}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t.common.notFoundDescription}</p>
+        <Button asChild className="mt-6">
+          <Link to="/discover">{t.profile.back}</Link>
+        </Button>
+      </div>
+    </main>
   );
-  if (developer === undefined)
-    return (
-      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4">
-        <p role="status" className="text-sm text-muted-foreground">
-          {t.common.loading}
-        </p>
-      </main>
-    );
-  if (developer === null)
-    return (
-      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
-        <div>
-          <h1 className="text-xl font-semibold">{t.common.notFound}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t.common.notFoundDescription}</p>
-          <Button asChild className="mt-6">
-            <Link to="/discover">{t.profile.back}</Link>
-          </Button>
-        </div>
-      </main>
-    );
-  return <CatalogDeveloperPage d={developer} />;
 }

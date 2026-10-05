@@ -1,35 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   emptyProfile,
   experienceLabel,
-  loadAccountProfile,
-  loadPublishedProfiles,
-  loadSavedProfile,
   localProfileToDeveloper,
   missingProfileFields,
   newProject,
+  profileInputSchema,
   profileLink,
-  profilesStorageKey,
-  saveAccountProfile,
 } from "./local-profile";
-
-let storage: Map<string, string>;
-
-beforeEach(() => {
-  storage = new Map();
-  vi.stubGlobal("window", {
-    localStorage: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => void storage.set(key, value),
-      removeItem: (key: string) => void storage.delete(key),
-    },
-  });
-});
-afterEach(() => vi.unstubAllGlobals());
-
-/** Stores one account's profile as written by an older or newer version of the app. */
-const store = (value: unknown, accountId = "ana") =>
-  storage.set(profilesStorageKey, JSON.stringify({ [accountId]: value }));
 
 describe("profileLink", () => {
   it("adds https to bare addresses", () => {
@@ -44,89 +22,6 @@ describe("profileLink", () => {
     expect(profileLink("")).toBeUndefined();
     expect(profileLink("javascript:alert(1)")).toBeUndefined();
     expect(profileLink("ftp://files.ana.dev")).toBeUndefined();
-  });
-});
-
-describe("loadSavedProfile", () => {
-  it("returns null when nothing valid is stored", () => {
-    expect(loadSavedProfile("ana")).toBeNull();
-    storage.set(profilesStorageKey, "{not json");
-    expect(loadSavedProfile("ana")).toBeNull();
-    store({ name: "Ana" });
-    expect(loadSavedProfile("ana")).toBeNull();
-  });
-
-  it("upgrades profiles saved before projects had details", () => {
-    store({ ...emptyProfile, name: "Ana", role: "Dev", projects: ["Legacy App"] });
-    const profile = loadSavedProfile("ana");
-    expect(profile?.projects).toHaveLength(1);
-    expect(profile?.projects[0]).toMatchObject({
-      name: "Legacy App",
-      description: "",
-      tech: [],
-      image: "",
-    });
-    expect(profile?.projects[0]?.id).toBeTruthy();
-  });
-
-  it("adds the work mode field missing from older profiles", () => {
-    const { workMode: _workMode, ...older } = emptyProfile;
-    store({ ...older, name: "Ana", role: "Dev" });
-    expect(loadSavedProfile("ana")?.workMode).toBe("");
-  });
-
-  it("maps free-text answers onto catalog values and keeps unknown ones", () => {
-    store({
-      ...emptyProfile,
-      seniority: " pleno ",
-      availability: "disponível agora",
-      workMode: "REMOTO",
-    });
-    expect(loadSavedProfile("ana")).toMatchObject({
-      seniority: "Pleno",
-      availability: "Disponível agora",
-      workMode: "Remoto",
-    });
-    store({ ...emptyProfile, seniority: "Estagiário" });
-    expect(loadSavedProfile("ana")?.seniority).toBe("Estagiário");
-  });
-
-  it("drops the ownerless profile older versions kept for the whole browser", () => {
-    storage.set("stackmatch-profile", JSON.stringify({ ...emptyProfile, name: "Diego" }));
-    expect(loadSavedProfile("ana")).toBeNull();
-    expect(storage.has("stackmatch-profile")).toBe(false);
-  });
-});
-
-describe("profiles by account", () => {
-  const ana = {
-    ...emptyProfile,
-    name: "Ana",
-    role: "Dev",
-    projects: [newProject({ name: "Clinic Booking", tech: ["Vue"] })],
-  };
-
-  it("keeps each account's profile apart", () => {
-    saveAccountProfile("ana", ana);
-    saveAccountProfile("bia", { ...ana, name: "Bia" });
-    expect(loadSavedProfile("ana")).toEqual(ana);
-    expect(loadSavedProfile("bia")?.name).toBe("Bia");
-    expect(loadSavedProfile("caio")).toBeNull();
-  });
-
-  it("gives the demo developer its ready-made profile until it saves its own", () => {
-    expect(loadAccountProfile("demo-developer")?.name).toBe("Gabriel Botelho");
-    expect(loadAccountProfile("ana")).toBeNull();
-    saveAccountProfile("demo-developer", { ...ana, name: "Gabriel B." });
-    expect(loadAccountProfile("demo-developer")?.name).toBe("Gabriel B.");
-  });
-
-  it("publishes every developer account's profile under its account id", () => {
-    saveAccountProfile("ana", ana);
-    expect(loadPublishedProfiles().map(({ id, name }) => ({ id, name }))).toEqual([
-      { id: "demo-developer", name: "Gabriel Botelho" },
-      { id: "ana", name: "Ana" },
-    ]);
   });
 });
 
@@ -184,14 +79,7 @@ describe("localProfileToDeveloper", () => {
 });
 
 describe("experience, rate and hiring types", () => {
-  it("leave older profiles unanswered instead of guessing", () => {
-    const { experienceYears: _years, rate: _rate, hiringTypes: _types, ...older } = emptyProfile;
-    store({ ...older, name: "Ana", role: "Dev" });
-    expect(loadSavedProfile("ana")).toMatchObject({
-      experienceYears: null,
-      rate: null,
-      hiringTypes: [],
-    });
+  it("stay empty when the developer didn't answer them", () => {
     const developer = localProfileToDeveloper(emptyProfile, "ana");
     expect(developer.experience).toBe("");
     expect(Number.isNaN(developer.rate)).toBe(true);
@@ -240,5 +128,47 @@ describe("missingProfileFields", () => {
   it("accepts a profile without projects, links, rate or experience", () => {
     expect(complete.projects).toEqual([]);
     expect(missingProfileFields(complete)).toEqual([]);
+  });
+});
+
+describe("profileInputSchema", () => {
+  const complete = {
+    ...emptyProfile,
+    name: " Ana Souza ",
+    role: "Frontend Developer",
+    location: "Recife, PE",
+    seniority: "Pleno",
+    workMode: "Remoto",
+    availability: "Disponível agora",
+    bio: "Desenvolvo interfaces acessíveis.",
+    projects: [newProject({ name: "Clinic Booking", tech: ["Vue"] })],
+  };
+
+  it("accepts a complete profile, trimming its text", () => {
+    expect(profileInputSchema.parse(complete).name).toBe("Ana Souza");
+  });
+
+  it("refuses blank required fields and options the filters don't know", () => {
+    expect(profileInputSchema.safeParse({ ...complete, bio: " " }).success).toBe(false);
+    expect(profileInputSchema.safeParse({ ...complete, skills: [] }).success).toBe(false);
+    expect(profileInputSchema.safeParse({ ...complete, seniority: "Estagiário" }).success).toBe(
+      false,
+    );
+    expect(profileInputSchema.safeParse({ ...complete, hiringTypes: ["Bolsa"] }).success).toBe(
+      false,
+    );
+  });
+
+  it("only takes project covers made by the form", () => {
+    const withCover = (image: string) => ({
+      ...complete,
+      projects: [newProject({ name: "Clinic Booking", image })],
+    });
+    expect(profileInputSchema.safeParse(withCover("data:image/jpeg;base64,AAAA")).success).toBe(
+      true,
+    );
+    expect(profileInputSchema.safeParse(withCover("https://example.com/a.png")).success).toBe(
+      false,
+    );
   });
 });

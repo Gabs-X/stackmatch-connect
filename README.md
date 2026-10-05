@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**O backend está em implementação.** Contas e login já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
+**O backend está em implementação.** Contas, login e perfis de desenvolvedor já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
 
 ## Problema e proposta
 
@@ -28,7 +28,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`), digitando as credenciais: a tela de login não as exibe. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado. Em deploys públicos, defina `VITE_DEMO_ACCOUNTS=false`: isso deixa de criar as contas de teste no banco e remove o perfil de demonstração do Gabriel, já que a senha fica no código.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
 - **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist. Cada conta de empresa tem a própria shortlist, mesmo quando várias usam o mesmo navegador.
-- **Criação de perfil:** formulário em etapas (incluindo anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento local ao concluir.
+- **Criação de perfil:** formulário em etapas (incluindo anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento no servidor ao concluir.
 - **Campos obrigatórios do perfil:** nome, cargo, localização, senioridade, modelo de trabalho, disponibilidade, bio e pelo menos uma skill, marcados com `*`. Com algum em branco, o formulário não avança de etapa nem conclui: mostra a mensagem em cada campo e leva o foco ao primeiro. A regra fica em `missingProfileFields` (`src/lib/local-profile.ts`).
 - **Perfil sem projetos:** a etapa Projetos é opcional, com a opção "Continuar sem projetos". Na página do perfil, um desenvolvedor sem projetos mostra um aviso no lugar da seção vazia.
 - **Importação simulada do GitHub:** seleção de projetos fictícios para o perfil.
@@ -79,7 +79,7 @@ npm run test:e2e
 npm run build
 ```
 
-Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos e usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro, login e recuperação de senha; acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links reais e de demonstração, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
+Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos, com banco em memória, e rodam um de cada vez: antes de cada teste, o banco volta aos dados de demonstração pela rota `/api/test-reset`, que só existe com `E2E=1`. Se já houver um servidor na porta 5299, ele é reaproveitado e o reset falha; encerre-o antes. Os testes usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro, login e recuperação de senha; acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links reais e de demonstração, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
 
 Para rodar o build de produção localmente, use o servidor gerado pelo Nitro (o `npm run preview` procura o build em `dist/` e não funciona com essa configuração):
 
@@ -108,11 +108,12 @@ O lint pode apresentar avisos de `react-refresh/only-export-components` em módu
 | `src/lib/meeting-requests.ts`  | Formato das propostas de reunião, horários aceitos e leitura do histórico local.                                                            |
 | `src/lib/profile-interests.ts` | Marcações de interesse e agrupamento das empresas interessadas por conta.                                                                   |
 | `src/lib/company-settings.ts`  | Dados da empresa e o perfil público que o desenvolvedor vê.                                                                                 |
-| `src/lib/local-profile.ts`     | Estrutura, campos obrigatórios e persistência dos perfis, um por conta de desenvolvedor.                                                    |
+| `src/lib/local-profile.ts`     | Estrutura e campos obrigatórios do perfil e validação usada pelo servidor.                                                                  |
+| `src/lib/profile-api.ts`       | Server functions de perfil: o próprio (ler e salvar) e os publicados.                                                                       |
 | `src/lib/i18n.tsx`             | Dicionários, idioma ativo e formatação de valores.                                                                                          |
 | `src/styles.css`               | Estilos globais e tokens visuais.                                                                                                           |
 
-Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist e interesses (com uma chave por conta de empresa, `stackmatch-saved:<id>` e `stackmatch-interests:<id>`), propostas enviadas, perfil concluído e preferência de idioma usam `localStorage`.
+Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist e interesses (com uma chave por conta de empresa, `stackmatch-saved:<id>` e `stackmatch-interests:<id>`), propostas enviadas e preferência de idioma usam `localStorage`. Contas e perfis ficam no servidor.
 
 Embora TanStack Start tenha infraestrutura de renderização no servidor, não há backend de negócio, banco de dados ou API de contratação implementados.
 
@@ -135,7 +136,7 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 - Os dados da empresa ficam neste navegador, por conta (`stackmatch-company-settings`): `fetchCompanySettings` e `saveCompanySettings` em `src/lib/api.ts` fazem o papel do futuro `GET/PUT /company/settings`.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Os links de GitHub, LinkedIn e demos dos perfis mockados usam endereços de exemplo: ao clicar, um aviso mostra o endereço sem navegar, já que essas URLs podem pertencer a pessoas reais. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
-- O perfil do Gabriel Botelho é o perfil da conta `teste.dev` (`demoDeveloperProfile` em `src/lib/developers.ts`), usado até essa conta salvar as próprias edições. Ele usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no navegador também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.
+- O perfil do Gabriel Botelho é o perfil da conta `teste.dev` (`demoDeveloperProfile` em `src/lib/developers.ts`), gravado no banco quando ele começa sem esse perfil; depois, valem as edições da conta. Ele usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no app também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
 
 ## Assistente com IA (preparado para backend)
@@ -183,9 +184,9 @@ Sem essa variável, o componente não é incluído no build.
 
 ## Limitações conhecidas
 
-- Só as contas ficam no servidor. Perfis, shortlist, interesses, propostas e dados da empresa ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
+- Contas e perfis de desenvolvedor ficam no servidor, que só deixa contas de desenvolvedor salvarem perfil. Shortlist, interesses, propostas e dados da empresa ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
-- Os perfis de desenvolvedor ficam neste navegador (`stackmatch-profiles`), um por conta e identificados pelo id dela, no lugar do futuro `GET/PUT /me/profile` e `GET /profiles`. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor criadas aqui. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Versões anteriores guardavam um único perfil sem dono (`stackmatch-profile`), que é descartado. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
+- Os perfis de desenvolvedor ficam no banco (tabelas `developer_profiles`, `skills`, `developer_skills`, `projects` e `project_skills`), um por conta e identificados pelo id dela. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor, antes do catálogo fictício. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas no navegador e, por enquanto, gravadas no banco como data URL; o próximo passo é um armazenamento de arquivos. Perfis salvos no navegador por versões anteriores não são migrados.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios; os perfis adicionados por último não têm foto e mostram as iniciais.
 - Shortlists salvas antes da separação por conta ficavam numa chave única do navegador, sem dono conhecido, e são descartadas.

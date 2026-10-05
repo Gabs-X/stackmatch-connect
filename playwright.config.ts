@@ -5,7 +5,8 @@ const isCI = Boolean(process.env["CI"]);
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // One test at a time: they share the server's database, which each test resets (see fixtures.ts).
+  workers: 1,
   forbidOnly: isCI,
   // One retry absorbs dev-server compile stalls under parallel load; retried passes are still
   // reported as "flaky", so instability stays visible.
@@ -33,8 +34,8 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
-    // A throwaway in-memory database per run, so tests never see accounts from earlier runs.
-    env: { DATABASE_URL: "memory://" },
+    // A throwaway in-memory database, and the reset endpoint the fixtures call before each test.
+    env: { DATABASE_URL: "memory://", E2E: "1" },
     reuseExistingServer: !isCI,
     timeout: 120_000,
   },

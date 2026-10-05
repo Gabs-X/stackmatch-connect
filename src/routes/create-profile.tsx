@@ -1,5 +1,6 @@
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
@@ -38,16 +39,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   emptyProfile,
-  loadAccountProfile,
   missingProfileFields,
   newProject,
   requiredProfileFields,
-  saveAccountProfile,
   profileLink,
   type LocalProfile,
   type LocalProject,
   type RequiredProfileField,
 } from "@/lib/local-profile";
+import { myProfileQuery, publishedProfilesQuery, saveMyProfile } from "@/lib/profile-api";
 import { FieldError } from "@/components/auth-layout";
 import {
   availabilityOptions,
@@ -99,22 +99,29 @@ function CreateProfile() {
   const { user } = useAuth();
   // RequireAccount only renders this page for a signed-in developer.
   const accountId = user?.id ?? "";
+  const queryClient = useQueryClient();
+  // Only this account edits its profile, so what was loaded stays current while editing.
+  const stored = useQuery({
+    ...myProfileQuery(accountId),
+    enabled: !!accountId,
+    staleTime: Infinity,
+  });
   useEffect(() => {
     // Each account edits its own profile; the demo developer starts from its ready-made one.
-    const stored = accountId ? loadAccountProfile(accountId) : null;
-    if (stored) {
-      setProfile(stored);
+    if (stored.data) {
+      setProfile(stored.data);
       setCompleted(true);
       setPreview(true);
     }
-  }, [accountId]);
+  }, [stored.data]);
   // A developer account starts its first profile with the name and title from sign-up.
   useEffect(() => {
-    if (user?.accountType !== "developer" || loadAccountProfile(user.id)) return;
+    if (user?.accountType !== "developer" || !stored.isSuccess || stored.data) return;
     setProfile((current) =>
       current.name || current.role ? current : { ...current, name: user.name, role: user.jobTitle },
     );
-  }, [user]);
+  }, [user, stored.isSuccess, stored.data]);
+  const [saving, setSaving] = useState(false);
   const updateField = <Key extends keyof LocalProfile>(field: Key, value: LocalProfile[Key]) => {
     setProfile((current) => ({ ...current, [field]: value }));
     setCompleted(false);
@@ -150,16 +157,23 @@ function CreateProfile() {
   const goToStep = (target: number) => {
     if (target <= step || requiredFilledBefore(target)) setStep(target);
   };
-  const finishProfile = () => {
+  const finishProfile = async () => {
     if (!requiredFilledBefore(steps.length + 1)) return;
+    setSaving(true);
     try {
-      const saved = saveAccountProfile(accountId, profile);
+      // The server stores the profile as it will show it; the form continues from that.
+      const saved = await saveMyProfile({ data: profile });
+      if (!saved) throw new Error("Profile not saved");
+      queryClient.setQueryData(myProfileQuery(accountId).queryKey, saved);
+      void queryClient.invalidateQueries({ queryKey: publishedProfilesQuery.queryKey });
       setProfile(saved);
       setCompleted(true);
       setPreview(true);
       toast.success(t.create.finishToast, { description: t.create.finishDesc });
     } catch {
       toast.error(t.create.saveError);
+    } finally {
+      setSaving(false);
     }
   };
   const hasProject = (name: string) =>
@@ -223,6 +237,14 @@ function CreateProfile() {
       setSkill("");
     }
   };
+  if (stored.isPending && accountId)
+    return (
+      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4">
+        <p role="status" className="text-sm text-muted-foreground">
+          {t.common.loading}
+        </p>
+      </main>
+    );
   if (preview)
     return (
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
@@ -631,7 +653,7 @@ function CreateProfile() {
                 <ChevronRight />
               </Button>
             ) : (
-              <Button onClick={finishProfile}>
+              <Button onClick={() => void finishProfile()} disabled={saving}>
                 {t.create.finish}
                 <Check />
               </Button>

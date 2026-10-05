@@ -1,10 +1,9 @@
 import { z } from "zod";
-import { demoAccountsEnabled, demoDeveloperId } from "./auth";
 import {
   availabilityOptions,
-  demoDeveloperProfile,
-  seniorityOptions,
   githubAvatarUrl,
+  hiringOptions,
+  seniorityOptions,
   workModeOptions,
   type Developer,
 } from "./developers";
@@ -40,37 +39,56 @@ export function newProject(fields: Partial<LocalProject> = {}): LocalProject {
   };
 }
 
-/** Maps free text from older profiles ("pleno", "remoto") onto catalog values used by filters. */
-function matchOption(value: string, options: readonly string[]) {
-  const normalized = value.trim().toLowerCase();
-  return options.find((option) => option.toLowerCase() === normalized) ?? value.trim();
-}
+const text = (max: number) => z.string().trim().max(max);
+const link = text(500);
 
 const profileSchema = z.object({
-  name: z.string(),
-  role: z.string(),
-  location: z.string(),
-  seniority: z.string().transform((value) => matchOption(value, seniorityOptions)),
-  availability: z.string().transform((value) => matchOption(value, availabilityOptions)),
-  // Added after the first release; older saved profiles don't have it.
-  workMode: z
-    .string()
-    .default("")
-    .transform((value) => matchOption(value, workModeOptions)),
-  bio: z.string(),
-  github: z.string(),
-  linkedin: z.string(),
-  website: z.string(),
-  skills: z.array(z.string()),
-  // Added later; older profiles don't have them and leave the matching filters unanswered.
-  experienceYears: z.number().int().min(0).max(60).nullable().default(null),
-  rate: z.number().min(0).max(10000).nullable().default(null),
-  hiringTypes: z.array(z.string()).default([]),
-  // Profiles saved before projects had details stored only each project's name.
-  projects: z.array(z.union([projectSchema, z.string().transform((name) => newProject({ name }))])),
+  name: text(120),
+  role: text(120),
+  location: text(120),
+  seniority: z.string(),
+  availability: z.string(),
+  workMode: z.string(),
+  bio: text(2000),
+  github: link,
+  linkedin: link,
+  website: link,
+  skills: z.array(text(50).min(1)).max(40),
+  experienceYears: z.number().int().min(0).max(60).nullable(),
+  rate: z.number().min(0).max(10000).nullable(),
+  hiringTypes: z.array(z.string()),
+  projects: z
+    .array(
+      projectSchema.extend({
+        name: text(80).min(1),
+        description: text(400),
+        tech: z.array(text(50).min(1)).max(20),
+        // Covers are downscaled to about 100 KB; anything else isn't one of ours.
+        image: z
+          .string()
+          .max(1_000_000)
+          .refine((value) => !value || value.startsWith("data:image/jpeg;base64,")),
+        github: link,
+        demo: link,
+      }),
+    )
+    .max(20),
 });
 
-export type LocalProfile = z.output<typeof profileSchema>;
+/**
+ * What the server accepts when a developer saves their profile: the form's shape, with the
+ * required fields filled in and the options the Discover filters know.
+ */
+export const profileInputSchema = profileSchema
+  .extend({
+    seniority: z.enum(seniorityOptions),
+    availability: z.enum(availabilityOptions),
+    workMode: z.enum(workModeOptions),
+    hiringTypes: z.array(z.enum(hiringOptions)),
+  })
+  .refine((profile) => missingProfileFields(profile).length === 0, "required");
+
+export type LocalProfile = z.infer<typeof profileSchema>;
 
 export const emptyProfile: LocalProfile = {
   name: "",
@@ -112,65 +130,6 @@ export function missingProfileFields(profile: LocalProfile): RequiredProfileFiel
   });
 }
 
-/**
- * Front-end stand-in for the profile API: each developer account owns one profile, kept here by
- * account id. When the backend exists, swap these for `GET/PUT /me/profile` and `GET /profiles`.
- */
-export const profilesStorageKey = "stackmatch-profiles";
-/** Before profiles belonged to accounts, the browser kept a single one with no owner. */
-const ownerlessProfileKey = "stackmatch-profile";
-
-function readProfiles(): Record<string, LocalProfile> {
-  try {
-    window.localStorage.removeItem(ownerlessProfileKey);
-    const value: unknown = JSON.parse(window.localStorage.getItem(profilesStorageKey) ?? "{}");
-    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-    const profiles: Record<string, LocalProfile> = {};
-    for (const [accountId, stored] of Object.entries(value)) {
-      const result = profileSchema.safeParse(stored);
-      if (result.success) profiles[accountId] = result.data;
-    }
-    return profiles;
-  } catch {
-    return {};
-  }
-}
-
-/** The profile this account saved, if any. */
-export function loadSavedProfile(accountId: string): LocalProfile | null {
-  return readProfiles()[accountId] ?? null;
-}
-
-/** The account's profile: what it saved or, for the demo developer, its ready-made profile. */
-export function loadAccountProfile(accountId: string): LocalProfile | null {
-  return (
-    loadSavedProfile(accountId) ??
-    (demoAccountsEnabled && accountId === demoDeveloperId ? demoDeveloperProfile : null)
-  );
-}
-
-export function saveAccountProfile(accountId: string, profile: LocalProfile): LocalProfile {
-  const saved = profileSchema.parse(profile);
-  window.localStorage.setItem(
-    profilesStorageKey,
-    JSON.stringify({ ...readProfiles(), [accountId]: saved }),
-  );
-  return saved;
-}
-
-/** Every developer profile companies can find, newest accounts' edits included. */
-export function loadPublishedProfiles(): Developer[] {
-  const profiles = readProfiles();
-  const owners = new Set([
-    ...(demoAccountsEnabled ? [demoDeveloperId] : []),
-    ...Object.keys(profiles),
-  ]);
-  return [...owners].flatMap((accountId) => {
-    const profile = loadAccountProfile(accountId);
-    return profile ? [localProfileToDeveloper(profile, accountId)] : [];
-  });
-}
-
 export function profileLink(value: string): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -186,8 +145,8 @@ const maxImageWidth = 960;
 const maxImageHeight = 600;
 
 /**
- * Downscales an uploaded cover to a small JPEG data URL. The profile lives in localStorage
- * (about 5 MB per site), so storing original photos would fail after one or two projects.
+ * Downscales an uploaded cover to a small JPEG data URL, which the profile stores as is until
+ * project covers move to file storage.
  */
 export function readProjectImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

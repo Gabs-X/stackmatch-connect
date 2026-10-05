@@ -18,6 +18,7 @@ import { Route as InterestsRouteImport } from './routes/interests'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
+import { Route as ApiTestResetRouteImport } from './routes/api.test-reset'
 import { Route as CompanyIdRouteImport } from './routes/company.$id'
 import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
 
@@ -66,6 +67,11 @@ const SavedRoute = SavedRouteImport.update({
   path: '/saved',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTestResetRoute = ApiTestResetRouteImport.update({
+  id: '/api/test-reset',
+  path: '/api/test-reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompanyIdRoute = CompanyIdRouteImport.update({
   id: '/company/$id',
   path: '/company/$id',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/api/test-reset': typeof ApiTestResetRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/api/test-reset': typeof ApiTestResetRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/api/test-reset': typeof ApiTestResetRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/api/test-reset'
     | '/company/$id'
     | '/developer/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/api/test-reset'
     | '/company/$id'
     | '/developer/$id'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/api/test-reset'
     | '/company/$id'
     | '/developer/$id'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
+  ApiTestResetRoute: typeof ApiTestResetRoute
   CompanyIdRoute: typeof CompanyIdRoute
   DeveloperIdRoute: typeof DeveloperIdRoute
 }
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SavedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/test-reset': {
+      id: '/api/test-reset'
+      path: '/api/test-reset'
+      fullPath: '/api/test-reset'
+      preLoaderRoute: typeof ApiTestResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/company/$id': {
       id: '/company/$id'
       path: '/company/$id'
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
+  ApiTestResetRoute: ApiTestResetRoute,
   CompanyIdRoute: CompanyIdRoute,
   DeveloperIdRoute: DeveloperIdRoute,
 }

@@ -1,7 +1,3 @@
-import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeEach, describe, expect, it } from "vitest";
 import { demoPassword, type SignUpInput } from "@/lib/auth";
 import {
@@ -17,13 +13,12 @@ import {
 } from "./auth";
 import type { Db } from "./db";
 import * as schema from "./db/schema";
+import { createTestDb } from "./test-db";
 
 let db: Db;
 
 beforeEach(async () => {
-  const client = drizzle({ client: new PGlite(), schema });
-  await migrate(client, { migrationsFolder: path.resolve("drizzle") });
-  db = client as unknown as Db;
+  db = await createTestDb();
 });
 
 const developer: SignUpInput = {

@@ -34,6 +34,9 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
         : route.fulfill({ status: 404, body: "" }),
     );
     waitForHydrationOnNavigation(page);
+    // Every test starts from the demo data, whatever the previous one saved on the server.
+    const reset = await page.request.post("/api/test-reset");
+    if (!reset.ok()) throw new Error(`Database reset failed: ${reset.status()}`);
     await provide(page);
   },
 });
@@ -41,8 +44,8 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
 export { expect } from "@playwright/test";
 
 /**
- * Accounts live in the server's database, shared by tests running in parallel, so each sign-up
- * needs its own address: "ana@example.com" -> "ana+1a2b3c4d@example.com".
+ * A fresh address for each sign-up, so tests never depend on which accounts already exist:
+ * "ana@example.com" -> "ana+1a2b3c4d@example.com".
  */
 export const uniqueEmail = (address: string) =>
   address.replace("@", `+${crypto.randomUUID().slice(0, 8)}@`);

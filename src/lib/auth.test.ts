@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   formatCnpj,
   isValidCnpj,
@@ -9,22 +9,6 @@ import {
   signUpSchema,
   type SignUpInput,
 } from "./auth";
-
-let storage: Map<string, string>;
-
-beforeEach(() => {
-  storage = new Map();
-  vi.stubGlobal("window", {
-    localStorage: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => void storage.set(key, value),
-      removeItem: (key: string) => void storage.delete(key),
-    },
-  });
-});
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
 
 const developer: SignUpInput = {
   accountType: "developer",
@@ -125,14 +109,10 @@ describe("with VITE_DEMO_ACCOUNTS=false", () => {
     vi.resetModules();
   });
 
-  it("removes the test accounts and the demo developer's profile", async () => {
+  it("removes the test accounts", async () => {
     vi.stubEnv("VITE_DEMO_ACCOUNTS", "false");
     vi.resetModules();
     const auth = await import("./auth");
-    const profiles = await import("./local-profile");
-
     expect(auth.demoAccounts).toEqual([]);
-    expect(profiles.loadAccountProfile(auth.demoDeveloperId)).toBeNull();
-    expect(profiles.loadPublishedProfiles()).toEqual([]);
   });
 });

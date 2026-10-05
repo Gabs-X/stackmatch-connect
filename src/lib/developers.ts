@@ -595,8 +595,8 @@ function slugify(value: string) {
 }
 
 /**
- * Profile of the demo developer account (teste.dev): Gabriel Botelho, with his real links. It
- * stands in for the profile that account saved in the browser until it saves its own edits.
+ * Profile of the demo developer account (teste.dev): Gabriel Botelho, with his real links. The
+ * server saves it for that account when the database starts without one (src/server/profiles.ts).
  */
 export const demoDeveloperProfile: LocalProfile = {
   name: "Gabriel Botelho",

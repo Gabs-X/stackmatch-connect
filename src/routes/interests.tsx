@@ -10,7 +10,8 @@ import {
   RotateCcw,
   UserRound,
 } from "lucide-react";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { CSSProperties } from "react";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { AuthUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { loadAccountProfile, profilesStorageKey } from "@/lib/local-profile";
+import { myProfileQuery } from "@/lib/profile-api";
 import { useInterestedCompanies } from "@/lib/use-interested-companies";
 
 export const Route = createFileRoute("/interests")({
@@ -47,16 +48,9 @@ function InterestsPage() {
 function InterestsList({ user }: { user: AuthUser }) {
   const { t, lang } = useI18n();
   const locale = lang === "pt" ? ptBR : enUS;
-  const [hasProfile, setHasProfile] = useState(true);
-  useEffect(() => {
-    const read = () => setHasProfile(loadAccountProfile(user.id) !== null);
-    read();
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === profilesStorageKey) read();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [user.id]);
+  // Assume a profile until the server says otherwise, so the notice never flashes.
+  const { data: profile } = useQuery(myProfileQuery(user.id));
+  const hasProfile = profile !== null;
   const { companies, loading, isError, refetch } = useInterestedCompanies(user);
 
   return (
