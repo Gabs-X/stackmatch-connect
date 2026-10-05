@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, signInAs, test, uniqueEmail } from "./fixtures";
+import { expect, seedSavedTalents, signInAs, test, uniqueEmail } from "./fixtures";
 
 const card = (page: Page) => page.locator("main section article").first();
 const counter = (page: Page) => page.getByText(/^\d+ de \d+ perf(il|is)$/);
@@ -51,9 +51,7 @@ test("undo brings the card back and removes the save it created", async ({ page 
 });
 
 test("profiles already saved stay out of Discover", async ({ page }) => {
-  await page.evaluate(() =>
-    localStorage.setItem("stackmatch-saved:demo-company", JSON.stringify(["demo-developer"])),
-  );
+  await seedSavedTalents(page, ["demo-developer"]);
   await page.reload();
 
   await expect(counter(page)).toHaveText("1 de 16 perfis");
@@ -69,19 +67,14 @@ test("profiles already saved stay out of Discover", async ({ page }) => {
 });
 
 test("a search whose talents are all saved points to the shortlist", async ({ page }) => {
-  await page.evaluate(() =>
-    localStorage.setItem(
-      "stackmatch-saved:demo-company",
-      JSON.stringify([
-        "marina-costa",
-        "rafael-lima",
-        "amanda-rocha",
-        "larissa-souza",
-        "thiago-nascimento",
-        "rodrigo-martins",
-      ]),
-    ),
-  );
+  await seedSavedTalents(page, [
+    "marina-costa",
+    "rafael-lima",
+    "amanda-rocha",
+    "larissa-souza",
+    "thiago-nascimento",
+    "rodrigo-martins",
+  ]);
   await page.reload();
   await filterChip(page, "Sênior").click();
 
@@ -122,16 +115,8 @@ test("reaching the end of the list offers to review again", async ({ page }) => 
   await expect(card(page)).toContainText("Diego Santos");
 });
 
-test("the saved counter matches the list, even with ids left by older versions", async ({
-  page,
-}) => {
-  // A profile that no longer exists, and Gabriel under the id he had in the old catalog.
-  await page.evaluate(() =>
-    localStorage.setItem(
-      "stackmatch-saved:demo-company",
-      JSON.stringify(["perfil-removido", "gabriel-botelho"]),
-    ),
-  );
+test("the saved counter only counts profiles that still exist", async ({ page }) => {
+  await seedSavedTalents(page, ["perfil-removido", "demo-developer"]);
   await page.reload();
   await expect(savedBadge(page)).toHaveText("1");
 

@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**O backend está em implementação.** Contas, login, perfis de desenvolvedor e dados da empresa já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
+**O backend está em implementação.** Contas, login, perfis de desenvolvedor, dados da empresa e talentos salvos já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
 
 ## Problema e proposta
 
@@ -27,7 +27,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Dados da empresa:** página da conta de empresa (`/company-settings`, no menu da conta) com site, localização, descrição e o contato para os desenvolvedores (nome do colaborador, cargo, e-mail e telefone). Propostas de reunião e interesses marcados no Discover saem assinados com esse contato, e as respostas vão para o e-mail de contato. Nome da empresa, CNPJ e e-mail de login aparecem só para consulta. O CNPJ é pedido no cadastro de empresa, com máscara e validação dos dígitos verificadores; a conta `teste.emp` usa o CNPJ de exemplo 11.222.333/0001-81.
 - **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`), digitando as credenciais: a tela de login não as exibe. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado. Em deploys públicos, defina `VITE_DEMO_ACCOUNTS=false`: isso deixa de criar as contas de teste no banco e remove o perfil de demonstração do Gabriel, já que a senha fica no código.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
-- **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist. Cada conta de empresa tem a própria shortlist, mesmo quando várias usam o mesmo navegador.
+- **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist. Cada conta de empresa tem a própria shortlist, guardada no servidor (tabela `saved_talents`).
 - **Criação de perfil:** formulário em etapas (incluindo anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento no servidor ao concluir.
 - **Campos obrigatórios do perfil:** nome, cargo, localização, senioridade, modelo de trabalho, disponibilidade, bio e pelo menos uma skill, marcados com `*`. Com algum em branco, o formulário não avança de etapa nem conclui: mostra a mensagem em cada campo e leva o foco ao primeiro. A regra fica em `missingProfileFields` (`src/lib/local-profile.ts`).
 - **Perfil sem projetos:** a etapa Projetos é opcional, com a opção "Continuar sem projetos". Na página do perfil, um desenvolvedor sem projetos mostra um aviso no lugar da seção vazia.
@@ -79,7 +79,7 @@ npm run test:e2e
 npm run build
 ```
 
-Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos, com banco em memória, e rodam um de cada vez: antes de cada teste, o banco volta aos dados de demonstração pela rota `/api/test-reset`, que só existe com `E2E=1`. Se já houver um servidor na porta 5299, ele é reaproveitado e o reset falha; encerre-o antes. Os testes usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro, login e recuperação de senha; acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links reais e de demonstração, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
+Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos, com banco em memória, e rodam um de cada vez: antes de cada teste, o banco volta aos dados de demonstração pela rota `/api/test-reset`, e alguns testes preparam a shortlist pela `/api/test-seed`; as duas só existem com `E2E=1`. Se já houver um servidor na porta 5299, ele é reaproveitado e o reset falha; encerre-o antes. Os testes usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro, login e recuperação de senha; acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links reais e de demonstração, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
 
 Para rodar o build de produção localmente, use o servidor gerado pelo Nitro (o `npm run preview` procura o build em `dist/` e não funciona com essa configuração):
 
@@ -104,7 +104,8 @@ O lint pode apresentar avisos de `react-refresh/only-export-components` em módu
 | `src/lib/auth-api.ts`          | Server functions de cadastro, login, logout e conta atual.                                                                                  |
 | `src/server/`                  | Código só de servidor: banco (`db/`), senhas, sessões e contas de teste.                                                                    |
 | `src/lib/developers.ts`        | Tipos e catálogo mockado de profissionais, projetos e empresas de demonstração.                                                             |
-| `src/lib/app-context.tsx`      | Estado compartilhado: shortlist e interesses (por conta de empresa), propostas e marcações de interesse.                                    |
+| `src/lib/app-context.tsx`      | Estado compartilhado: shortlist (sincronizada com o servidor) e interesses por conta de empresa, propostas e marcações de interesse.        |
+| `src/lib/saved-talents-api.ts` | Server functions da shortlist: listar, salvar e remover.                                                                                    |
 | `src/lib/meeting-requests.ts`  | Formato das propostas de reunião, horários aceitos e leitura do histórico local.                                                            |
 | `src/lib/profile-interests.ts` | Marcações de interesse e agrupamento das empresas interessadas por conta.                                                                   |
 | `src/lib/company-settings.ts`  | Validação dos dados da empresa e o perfil público que o desenvolvedor vê.                                                                   |
@@ -114,7 +115,7 @@ O lint pode apresentar avisos de `react-refresh/only-export-components` em módu
 | `src/lib/i18n.tsx`             | Dicionários, idioma ativo e formatação de valores.                                                                                          |
 | `src/styles.css`               | Estilos globais e tokens visuais.                                                                                                           |
 
-Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist e interesses (com uma chave por conta de empresa, `stackmatch-saved:<id>` e `stackmatch-interests:<id>`), propostas enviadas e preferência de idioma usam `localStorage`. Contas, perfis e dados da empresa ficam no servidor.
+Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; interesses (com uma chave por conta de empresa, `stackmatch-interests:<id>`), propostas enviadas e preferência de idioma usam `localStorage`. Contas, perfis, dados da empresa e shortlist ficam no servidor; a shortlist muda na tela na hora e volta ao que o servidor tem se ele recusar a alteração.
 
 Embora TanStack Start tenha infraestrutura de renderização no servidor, não há backend de negócio, banco de dados ou API de contratação implementados.
 
@@ -185,12 +186,12 @@ Sem essa variável, o componente não é incluído no build.
 
 ## Limitações conhecidas
 
-- Contas, perfis de desenvolvedor e dados da empresa ficam no servidor, que confere o tipo de conta antes de ler ou salvar. Shortlist, interesses e propostas ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
+- Contas, perfis de desenvolvedor, dados da empresa e shortlist ficam no servidor, que confere o tipo de conta antes de ler ou salvar. Interesses e propostas ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
 - Os perfis de desenvolvedor ficam no banco (tabelas `developer_profiles`, `skills`, `developer_skills`, `projects` e `project_skills`), um por conta e identificados pelo id dela. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor, antes do catálogo fictício. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas no navegador e, por enquanto, gravadas no banco como data URL; o próximo passo é um armazenamento de arquivos. Perfis salvos no navegador por versões anteriores não são migrados.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
 - As imagens de perfil incluem reutilizações entre personagens fictícios; os perfis adicionados por último não têm foto e mostram as iniciais.
-- Shortlists salvas antes da separação por conta ficavam numa chave única do navegador, sem dono conhecido, e são descartadas.
+- Shortlists salvas no navegador por versões anteriores não são migradas para o servidor. A shortlist só aceita perfis que existem (do catálogo ou de contas de desenvolvedor); se um perfil deixar de existir, ele some da lista e do contador.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
 - Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.
 - Os testes automatizados cobrem a lógica (Vitest, `npm test`) e os principais fluxos no navegador (Playwright, `npm run test:e2e`).

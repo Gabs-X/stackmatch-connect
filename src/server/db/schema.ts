@@ -66,6 +66,20 @@ export const companyProfiles = pgTable("company_profiles", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** A company's shortlist. */
+export const savedTalents = pgTable(
+  "saved_talents",
+  {
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // No foreign key: besides developer accounts, it can be a profile of the fictional catalog.
+    developerId: text("developer_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.companyId, table.developerId] })],
+);
+
 /** A developer account's public profile; companies find it in Discover once it exists. */
 export const developerProfiles = pgTable("developer_profiles", {
   userId: text("user_id")

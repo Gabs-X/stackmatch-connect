@@ -50,6 +50,14 @@ export { expect } from "@playwright/test";
 export const uniqueEmail = (address: string) =>
   address.replace("@", `+${crypto.randomUUID().slice(0, 8)}@`);
 
+/** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
+export async function seedSavedTalents(page: Page, developerIds: string[]) {
+  const seed = await page.request.post("/api/test-seed", {
+    data: { companyId: "demo-company", savedTalents: developerIds },
+  });
+  if (!seed.ok()) throw new Error(`Seeding failed: ${seed.status()}`);
+}
+
 /** Signs in with a built-in test account through the login form and waits for its home page. */
 export async function signInAs(page: Page, type: "developer" | "company") {
   await page.goto("/login");

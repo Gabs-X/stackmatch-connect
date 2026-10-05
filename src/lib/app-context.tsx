@@ -14,6 +14,7 @@ import {
   profileInterestStorageKey,
   readProfileInterests,
 } from "./profile-interests";
+import { fetchSavedTalents, removeSavedTalentFn, saveTalentFn } from "./saved-talents-api";
 export type { MeetingRequest } from "./meeting-requests";
 
 type AppState = {
@@ -52,8 +53,11 @@ function upgradeIds(value: unknown[]) {
 
 type ListName = "saved" | "interests";
 
-/** Each hiring account keeps its own shortlist and interest marks in this browser. */
-const accountListKey = (list: ListName, accountId: string) => `stackmatch-${list}:${accountId}`;
+/**
+ * Each hiring account has its own shortlist, kept on the server, and interest marks, kept in this
+ * browser for now.
+ */
+const interestsKey = (accountId: string) => `stackmatch-interests:${accountId}`;
 
 /**
  * Before lists belonged to accounts, every company in the browser shared these keys. Nothing
@@ -61,11 +65,9 @@ const accountListKey = (list: ListName, accountId: string) => `stackmatch-${list
  */
 const legacyListKeys = ["stackmatch-saved", "stackmatch-interests"];
 
-function readList(list: ListName, accountId: string) {
+function readInterests(accountId: string) {
   try {
-    const value: unknown = JSON.parse(
-      window.localStorage.getItem(accountListKey(list, accountId)) ?? "[]",
-    );
+    const value: unknown = JSON.parse(window.localStorage.getItem(interestsKey(accountId)) ?? "[]");
     return Array.isArray(value) ? upgradeIds(value) : [];
   } catch {
     return [];
@@ -94,11 +96,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       /* Storage unavailable; nothing to clean up. */
     }
-    setLists(
-      owner
-        ? { owner, saved: readList("saved", owner), interests: readList("interests", owner) }
-        : { owner, saved: [], interests: [] },
-    );
+    if (!owner) {
+      setLists({ owner, saved: [], interests: [] });
+      return;
+    }
+    let active = true;
+    const interests = readInterests(owner);
+    fetchSavedTalents()
+      .catch((error: unknown) => {
+        console.error(error);
+        return [];
+      })
+      .then((saved) => {
+        if (active) setLists({ owner, saved, interests });
+      });
+    return () => {
+      active = false;
+    };
   }, [ready, owner]);
   /** Applies `update` to one of the signed-in account's lists and stores the result. */
   const updateList = (list: ListName, update: (ids: string[]) => string[]) =>
@@ -107,7 +121,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const next = update(state[list]);
       if (next === state[list]) return state;
       try {
-        if (owner) window.localStorage.setItem(accountListKey(list, owner), JSON.stringify(next));
+        if (owner && list === "interests")
+          window.localStorage.setItem(interestsKey(owner), JSON.stringify(next));
       } catch {
         /* Keep session state. */
       }
@@ -141,12 +156,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const add = (id: string) => (ids: string[]) => (ids.includes(id) ? ids : [...ids, id]);
   const remove = (id: string) => (ids: string[]) =>
     ids.includes(id) ? ids.filter((item) => item !== id) : ids;
-  const addSaved = (id: string) => updateList("saved", add(id));
+  /**
+   * Shows the change right away and sends it to the server. If the server refuses, the shortlist
+   * goes back to what the server has.
+   */
+  const setSaved = (id: string, keep: boolean) => {
+    updateList("saved", keep ? add(id) : remove(id));
+    const request = keep ? saveTalentFn({ data: id }) : removeSavedTalentFn({ data: id });
+    request.catch(async (error: unknown) => {
+      console.error(error);
+      const saved = await fetchSavedTalents().catch(() => null);
+      if (saved) updateList("saved", () => saved);
+    });
+  };
+  const addSaved = (id: string) => setSaved(id, true);
   const registerInterest = (id: string) => updateList("interests", add(id));
-  const removeSaved = (id: string) => updateList("saved", remove(id));
+  const removeSaved = (id: string) => setSaved(id, false);
   const removeInterest = (id: string) => updateList("interests", remove(id));
-  const toggleSaved = (id: string) =>
-    updateList("saved", (ids) => (ids.includes(id) ? remove(id)(ids) : add(id)(ids)));
+  const toggleSaved = (id: string) => setSaved(id, !saved.includes(id));
   const recordMeetingRequest = (request: MeetingRequest) => {
     let next = [...meetingRequests, request];
     try {
