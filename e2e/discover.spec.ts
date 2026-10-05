@@ -52,7 +52,7 @@ test("undo brings the card back and removes the save it created", async ({ page 
 
 test("profiles already saved stay out of Discover", async ({ page }) => {
   await page.evaluate(() =>
-    localStorage.setItem("stackmatch-saved", JSON.stringify(["demo-developer"])),
+    localStorage.setItem("stackmatch-saved:demo-company", JSON.stringify(["demo-developer"])),
   );
   await page.reload();
 
@@ -71,7 +71,7 @@ test("profiles already saved stay out of Discover", async ({ page }) => {
 test("a search whose talents are all saved points to the shortlist", async ({ page }) => {
   await page.evaluate(() =>
     localStorage.setItem(
-      "stackmatch-saved",
+      "stackmatch-saved:demo-company",
       JSON.stringify([
         "marina-costa",
         "rafael-lima",
@@ -128,7 +128,7 @@ test("the saved counter matches the list, even with ids left by older versions",
   // A profile that no longer exists, and Gabriel under the id he had in the old catalog.
   await page.evaluate(() =>
     localStorage.setItem(
-      "stackmatch-saved",
+      "stackmatch-saved:demo-company",
       JSON.stringify(["perfil-removido", "gabriel-botelho"]),
     ),
   );
@@ -141,4 +141,38 @@ test("the saved counter matches the list, even with ids left by older versions",
     .click();
   await expect(page.getByRole("main").getByRole("article")).toHaveCount(1);
   await expect(page.getByRole("main")).toContainText("Gabriel Botelho");
+});
+
+test("each company keeps its own shortlist in a shared browser", async ({ page }) => {
+  // Company A (teste.emp, signed in by beforeEach) saves Gabriel.
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(savedBadge(page)).toHaveText("1");
+  await page.getByRole("button", { name: "Menu da conta de Recrutadora Teste" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  // Company B signs up in the same browser and starts with an empty shortlist.
+  await page.goto("/register");
+  const form = page.getByRole("main");
+  await form.getByText("Quero contratar").click();
+  await form.getByLabel("Nome completo").fill("Bruno Lima");
+  await form.getByLabel("Empresa").fill("Acme");
+  await form.getByLabel("CNPJ").fill("11222333000181");
+  await form.getByLabel("E-mail").fill("bruno@acme.com");
+  await form.getByLabel("Senha", { exact: true }).fill("segredo123");
+  await form.getByLabel(/Li e aceito/).check();
+  await form.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL(/\/discover$/);
+  await expect(card(page)).toContainText("Gabriel Botelho");
+  await expect(savedBadge(page)).toBeHidden();
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: /Talentos salvos/ })
+    .click();
+  await expect(page.getByText("Você ainda não salvou nenhum talento.")).toBeVisible();
+  await page.getByRole("button", { name: "Menu da conta de Bruno Lima" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  // Company A still finds its shortlist.
+  await signInAs(page, "company");
+  await expect(savedBadge(page)).toHaveText("1");
 });

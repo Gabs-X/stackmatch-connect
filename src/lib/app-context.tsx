@@ -1,5 +1,6 @@
 import type React from "react";
 import { demoDeveloperId } from "./auth";
+import { useAuth } from "./auth-context";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import {
@@ -48,27 +49,71 @@ function upgradeIds(value: unknown[]) {
   const ids = value.filter((id): id is string => typeof id === "string");
   return [...new Set(ids.map((id) => renamedIds[id] ?? id))];
 }
+
+type ListName = "saved" | "interests";
+
+/** Each hiring account keeps its own shortlist and interest marks in this browser. */
+const accountListKey = (list: ListName, accountId: string) => `stackmatch-${list}:${accountId}`;
+
+/**
+ * Before lists belonged to accounts, every company in the browser shared these keys. Nothing
+ * records whose they were, so they are dropped rather than handed to whoever signs in next.
+ */
+const legacyListKeys = ["stackmatch-saved", "stackmatch-interests"];
+
+function readList(list: ListName, accountId: string) {
+  try {
+    const value: unknown = JSON.parse(
+      window.localStorage.getItem(accountListKey(list, accountId)) ?? "[]",
+    );
+    return Array.isArray(value) ? upgradeIds(value) : [];
+  } catch {
+    return [];
+  }
+}
+
+type AccountLists = { owner: string | null; saved: string[]; interests: string[] };
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [saved, setSaved] = useState<string[]>([]);
-  const [interests, setInterests] = useState<string[]>([]);
+  const { user, ready } = useAuth();
+  // Only hiring accounts save talents and mark interest; other sessions get empty lists.
+  const owner = user?.accountType === "company" ? user.id : null;
+  // Tagged with their owner, so a previous account's lists never show after switching accounts.
+  const [lists, setLists] = useState<AccountLists | null>(null);
+  const current = lists?.owner === owner ? lists : null;
+  const saved = current?.saved ?? [];
+  const interests = current?.interests ?? [];
   const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
   const [profileInterests, setProfileInterests] = useState<ProfileInterest[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [recordsRead, setRecordsRead] = useState(false);
+  const hydrated = recordsRead && current !== null;
   useEffect(() => {
+    if (!ready) return;
     try {
-      const value: unknown = JSON.parse(
-        window.localStorage.getItem("stackmatch-interests") ?? "[]",
-      );
-      if (Array.isArray(value)) setInterests(upgradeIds(value));
+      for (const key of legacyListKeys) window.localStorage.removeItem(key);
     } catch {
-      /* Keep session state if storage is unavailable. */
+      /* Storage unavailable; nothing to clean up. */
     }
-    try {
-      const value: unknown = JSON.parse(window.localStorage.getItem("stackmatch-saved") ?? "[]");
-      if (Array.isArray(value)) setSaved(upgradeIds(value));
-    } catch {
-      /* Keep session state if storage is unavailable or corrupted. */
-    }
+    setLists(
+      owner
+        ? { owner, saved: readList("saved", owner), interests: readList("interests", owner) }
+        : { owner, saved: [], interests: [] },
+    );
+  }, [ready, owner]);
+  /** Applies `update` to one of the signed-in account's lists and stores the result. */
+  const updateList = (list: ListName, update: (ids: string[]) => string[]) =>
+    setLists((state) => {
+      if (!state || state.owner !== owner) return state;
+      const next = update(state[list]);
+      if (next === state[list]) return state;
+      try {
+        if (owner) window.localStorage.setItem(accountListKey(list, owner), JSON.stringify(next));
+      } catch {
+        /* Keep session state. */
+      }
+      return { ...state, [list]: next };
+    });
+  useEffect(() => {
     try {
       setMeetingRequests(readMeetingRequests());
     } catch {
@@ -79,7 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       /* Keep the local list empty if storage cannot be read. */
     }
-    setHydrated(true);
+    setRecordsRead(true);
     const sync = (event: StorageEvent) => {
       try {
         if (event.key === meetingRequestStorageKey || event.key === null)
@@ -93,60 +138,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
   }, []);
-  const addSaved = (id: string) =>
-    setSaved((current) => {
-      if (current.includes(id)) return current;
-      const next = [...current, id];
-      try {
-        window.localStorage.setItem("stackmatch-saved", JSON.stringify(next));
-      } catch {
-        /* Keep session state. */
-      }
-      return next;
-    });
-  const registerInterest = (id: string) =>
-    setInterests((current) => {
-      if (current.includes(id)) return current;
-      const next = [...current, id];
-      try {
-        window.localStorage.setItem("stackmatch-interests", JSON.stringify(next));
-      } catch {
-        /* Keep session state. */
-      }
-      return next;
-    });
-  const removeSaved = (id: string) =>
-    setSaved((current) => {
-      if (!current.includes(id)) return current;
-      const next = current.filter((item) => item !== id);
-      try {
-        window.localStorage.setItem("stackmatch-saved", JSON.stringify(next));
-      } catch {
-        /* Keep session state. */
-      }
-      return next;
-    });
-  const removeInterest = (id: string) =>
-    setInterests((current) => {
-      if (!current.includes(id)) return current;
-      const next = current.filter((item) => item !== id);
-      try {
-        window.localStorage.setItem("stackmatch-interests", JSON.stringify(next));
-      } catch {
-        /* Keep session state. */
-      }
-      return next;
-    });
+  const add = (id: string) => (ids: string[]) => (ids.includes(id) ? ids : [...ids, id]);
+  const remove = (id: string) => (ids: string[]) =>
+    ids.includes(id) ? ids.filter((item) => item !== id) : ids;
+  const addSaved = (id: string) => updateList("saved", add(id));
+  const registerInterest = (id: string) => updateList("interests", add(id));
+  const removeSaved = (id: string) => updateList("saved", remove(id));
+  const removeInterest = (id: string) => updateList("interests", remove(id));
   const toggleSaved = (id: string) =>
-    setSaved((current) => {
-      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-      try {
-        window.localStorage.setItem("stackmatch-saved", JSON.stringify(next));
-      } catch {
-        /* Keep session state. */
-      }
-      return next;
-    });
+    updateList("saved", (ids) => (ids.includes(id) ? remove(id)(ids) : add(id)(ids)));
   const recordMeetingRequest = (request: MeetingRequest) => {
     let next = [...meetingRequests, request];
     try {

@@ -149,8 +149,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <AuthProvider>
+      {/* App state is kept per account, so it reads the session from AuthProvider. */}
+      <AuthProvider>
+        <AppProvider>
           <AppHeader />
           {/* Keyed by the shown page so each navigation replays the entrance animation. */}
           <div key={shownPathname} className="page-enter">
@@ -165,8 +166,8 @@ function RootComponent() {
           />
           <AssistantWidget raised={raised} />
           {vercelAnalyticsEnabled && <Analytics />}
-        </AuthProvider>
-      </AppProvider>
+        </AppProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
