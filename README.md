@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**O backend está em implementação.** Contas, login e perfis de desenvolvedor já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
+**O backend está em implementação.** Contas, login, perfis de desenvolvedor e dados da empresa já usam o servidor e um banco Postgres; os demais fluxos ainda usam dados fictícios e estado no navegador.
 
 ## Problema e proposta
 
@@ -107,13 +107,14 @@ O lint pode apresentar avisos de `react-refresh/only-export-components` em módu
 | `src/lib/app-context.tsx`      | Estado compartilhado: shortlist e interesses (por conta de empresa), propostas e marcações de interesse.                                    |
 | `src/lib/meeting-requests.ts`  | Formato das propostas de reunião, horários aceitos e leitura do histórico local.                                                            |
 | `src/lib/profile-interests.ts` | Marcações de interesse e agrupamento das empresas interessadas por conta.                                                                   |
-| `src/lib/company-settings.ts`  | Dados da empresa e o perfil público que o desenvolvedor vê.                                                                                 |
+| `src/lib/company-settings.ts`  | Validação dos dados da empresa e o perfil público que o desenvolvedor vê.                                                                   |
+| `src/lib/company-api.ts`       | Server functions dos dados da empresa e do perfil público dela.                                                                             |
 | `src/lib/local-profile.ts`     | Estrutura e campos obrigatórios do perfil e validação usada pelo servidor.                                                                  |
 | `src/lib/profile-api.ts`       | Server functions de perfil: o próprio (ler e salvar) e os publicados.                                                                       |
 | `src/lib/i18n.tsx`             | Dicionários, idioma ativo e formatação de valores.                                                                                          |
 | `src/styles.css`               | Estilos globais e tokens visuais.                                                                                                           |
 
-Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist e interesses (com uma chave por conta de empresa, `stackmatch-saved:<id>` e `stackmatch-interests:<id>`), propostas enviadas e preferência de idioma usam `localStorage`. Contas e perfis ficam no servidor.
+Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist e interesses (com uma chave por conta de empresa, `stackmatch-saved:<id>` e `stackmatch-interests:<id>`), propostas enviadas e preferência de idioma usam `localStorage`. Contas, perfis e dados da empresa ficam no servidor.
 
 Embora TanStack Start tenha infraestrutura de renderização no servidor, não há backend de negócio, banco de dados ou API de contratação implementados.
 
@@ -126,14 +127,14 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 ## O que está mockado
 
 - Os dezesseis profissionais do catálogo, suas bios, projetos, valores, experiências e disponibilidades são fictícios; com o perfil da conta `teste.dev`, o Discover mostra 17. A home não faz alegações de volume ou verificação de perfis.
-- As empresas da atividade de demonstração (NuvemPay, Órbita Labs e VerdeTech) têm descrição, cidade, site de exemplo e cargo do contato fictícios (`demoCompanyProfiles` em `src/lib/developers.ts`). `fetchCompanyProfile` em `src/lib/api.ts` faz o papel do futuro `GET /companies/:id`: devolve esses dados ou o que uma conta de empresa salvou em Dados da empresa neste navegador.
+- As empresas da atividade de demonstração (NuvemPay, Órbita Labs e VerdeTech) têm descrição, cidade, site de exemplo e cargo do contato fictícios (`demoCompanyProfiles` em `src/lib/developers.ts`). `fetchCompanyProfile` em `src/lib/company-api.ts` devolve esses dados ou o que uma conta de empresa salvou em Dados da empresa (tabela `company_profiles`), e só responde a contas de desenvolvedor. Ainda não confere se a empresa contatou esse desenvolvedor: isso depende de interesses e propostas irem para o servidor.
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
 - O envio da proposta de reunião é **simulado**: `sendMeetingRequest` em `src/lib/api.ts` faz o papel do futuro `POST /meeting-requests`, que enviará o e-mail ao profissional com `Reply-To` da empresa. Nenhum e-mail é enviado; a proposta fica registrada neste navegador para a empresa lembrar com quem já falou.
 - O interesse é um registro local, sem notificação, chat ou contato externo; quando feito por uma conta de empresa, aparece para o desenvolvedor em Empresas interessadas.
 - **Contas e login usam o servidor.** O cadastro e a entrada gravam no banco (tabela `users`), com a senha em hash scrypt, e abrem uma sessão guardada num cookie httpOnly (o banco guarda só o hash do token, tabela `sessions`, com validade de 30 dias). A recuperação de senha ainda é simulada: nenhum e-mail é enviado. Há dois tipos de conta: **empresa** (com nome da empresa e CNPJ; entra pelo Discover) e **desenvolvedor** (com cargo profissional; entra pelo formulário de perfil, já preenchido).
 - **Controle de acesso e empresas interessadas são de front-end.** O guard `RequireAccount` (`src/components/require-account.tsx`) só organiza a interface; o backend precisará validar o tipo de conta em cada endpoint. Interesses marcados por empresas ficam neste navegador (`stackmatch-profile-interests`) e são associados ao perfil pelo id da conta do desenvolvedor; `fetchCompanyActivity` em `src/lib/api.ts` faz o papel do futuro `GET /me/interested-companies` e devolve atividade fictícia (de `src/lib/developers.ts`) apenas para a conta `teste.dev`. As contas de teste ficam em `src/lib/auth.ts`, fora do `localStorage`.
 - Propostas e interesses guardam o id da conta da empresa (`companyId`), que identifica quem já contatou cada profissional mesmo se a empresa trocar o e-mail de contato. Registros antigos, sem esse campo, usam o e-mail no lugar.
-- Os dados da empresa ficam neste navegador, por conta (`stackmatch-company-settings`): `fetchCompanySettings` e `saveCompanySettings` em `src/lib/api.ts` fazem o papel do futuro `GET/PUT /company/settings`.
+- Os dados da empresa ficam no banco (tabela `company_profiles`), um registro por conta de empresa, lidos e salvos só pela própria conta. Até a empresa salvar, valem o nome, o cargo e o e-mail do cadastro. Dados salvos no navegador por versões anteriores não são migrados.
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Os links de GitHub, LinkedIn e demos dos perfis mockados usam endereços de exemplo: ao clicar, um aviso mostra o endereço sem navegar, já que essas URLs podem pertencer a pessoas reais. Links válidos preenchidos no perfil local podem ser abertos pelo usuário.
 - O perfil do Gabriel Botelho é o perfil da conta `teste.dev` (`demoDeveloperProfile` em `src/lib/developers.ts`), gravado no banco quando ele começa sem esse perfil; depois, valem as edições da conta. Ele usa links reais, que abrem em nova aba, e a foto vem do avatar público do GitHub (`github.com/<usuário>.png`). O perfil criado no app também usa esse avatar quando o GitHub é preenchido; se a imagem não carregar, aparecem as iniciais.
@@ -184,7 +185,7 @@ Sem essa variável, o componente não é incluído no build.
 
 ## Limitações conhecidas
 
-- Contas e perfis de desenvolvedor ficam no servidor, que só deixa contas de desenvolvedor salvarem perfil. Shortlist, interesses, propostas e dados da empresa ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
+- Contas, perfis de desenvolvedor e dados da empresa ficam no servidor, que confere o tipo de conta antes de ler ou salvar. Shortlist, interesses e propostas ainda ficam no navegador, e o tipo de conta ainda não é verificado nesses fluxos. Limpar os dados do navegador apaga esses registros. Não há verificação de profissionais.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
 - Os perfis de desenvolvedor ficam no banco (tabelas `developer_profiles`, `skills`, `developer_skills`, `projects` e `project_skills`), um por conta e identificados pelo id dela. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor, antes do catálogo fictício. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas no navegador e, por enquanto, gravadas no banco como data URL; o próximo passo é um armazenamento de arquivos. Perfis salvos no navegador por versões anteriores não são migrados.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.

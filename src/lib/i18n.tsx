@@ -185,7 +185,7 @@ const pt = {
     fromSkills: "Das suas skills:",
     removeTech: (tech: string) => `Remover ${tech}`,
     projectImage: "Imagem de capa",
-    projectImageHint: "PNG, JPG ou WebP. A imagem é reduzida e salva só neste navegador.",
+    projectImageHint: "PNG, JPG ou WebP. A imagem é reduzida antes de ser salva com o perfil.",
     chooseImage: "Escolher imagem",
     changeImage: "Trocar imagem",
     removeImage: "Remover imagem",
@@ -264,7 +264,7 @@ const pt = {
     back: "Voltar",
     next: "Continuar",
     finish: "Concluir perfil",
-    finishToast: "Perfil salvo neste navegador!",
+    finishToast: "Perfil salvo!",
     finishDesc: "Demonstração local; nenhum dado foi enviado ou publicado.",
     requiredFields: "Preencha os campos obrigatórios para continuar.",
     requiredNote: "Campos marcados com * são obrigatórios.",
@@ -277,8 +277,7 @@ const pt = {
     projectsOptional:
       "Projetos são opcionais. Você pode concluir o perfil agora e adicioná-los depois, editando o perfil.",
     skipProjects: "Continuar sem projetos",
-    saveError:
-      "Não foi possível salvar o perfil neste navegador. Seus dados continuam no formulário.",
+    saveError: "Não foi possível salvar o perfil. Seus dados continuam no formulário.",
   },
   schedule: {
     trigger: "Propor reunião",
@@ -369,7 +368,7 @@ const pt = {
       "Monte sua shortlist e proponha conversas",
       "Mostre seus projetos para quem está contratando",
     ],
-    demoNote: "Demonstração: as contas ficam salvas apenas neste navegador.",
+    demoNote: "Demonstração: a recuperação de senha ainda não envia e-mails.",
     email: "E-mail",
     emailPh: "voce@empresa.com",
     loginId: "E-mail ou usuário",
@@ -491,6 +490,7 @@ const pt = {
     saving: "Salvando...",
     saved: "Dados da empresa salvos",
     saveError: "Não foi possível salvar. Tente novamente.",
+    loadError: "Não foi possível carregar os dados da empresa.",
     discard: "Descartar alterações",
   },
   access: {
@@ -716,7 +716,8 @@ const en: Dict = {
     fromSkills: "From your skills:",
     removeTech: (tech: string) => `Remove ${tech}`,
     projectImage: "Cover image",
-    projectImageHint: "PNG, JPG or WebP. The image is downsized and saved only in this browser.",
+    projectImageHint:
+      "PNG, JPG or WebP. The image is downsized before it's saved with the profile.",
     chooseImage: "Choose image",
     changeImage: "Change image",
     removeImage: "Remove image",
@@ -795,7 +796,7 @@ const en: Dict = {
     back: "Back",
     next: "Continue",
     finish: "Finish profile",
-    finishToast: "Profile saved in this browser!",
+    finishToast: "Profile saved!",
     finishDesc: "Local demo; no data was sent or published.",
     requiredFields: "Fill in the required fields to continue.",
     requiredNote: "Fields marked with * are required.",
@@ -808,7 +809,7 @@ const en: Dict = {
     projectsOptional:
       "Projects are optional. You can finish your profile now and add them later by editing it.",
     skipProjects: "Continue without projects",
-    saveError: "Couldn't save the profile in this browser. Your data is still in the form.",
+    saveError: "Couldn't save the profile. Your data is still in the form.",
   },
   schedule: {
     trigger: "Propose a meeting",
@@ -897,7 +898,7 @@ const en: Dict = {
       "Build your shortlist and propose conversations",
       "Show your projects to companies that are hiring",
     ],
-    demoNote: "Demo: accounts are stored only in this browser.",
+    demoNote: "Demo: password recovery doesn't send e-mails yet.",
     email: "E-mail",
     emailPh: "you@company.com",
     loginId: "E-mail or username",
@@ -1018,6 +1019,7 @@ const en: Dict = {
     saving: "Saving...",
     saved: "Company details saved",
     saveError: "Couldn't save. Please try again.",
+    loadError: "Couldn't load the company details.",
     discard: "Discard changes",
   },
   access: {

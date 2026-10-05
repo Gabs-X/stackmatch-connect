@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { companySettingsKey, saveCompanySettings } from "@/lib/api";
+import { companySettingsKey, saveMyCompanySettings } from "@/lib/company-api";
 import { formatCnpj, type AuthUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -31,7 +31,7 @@ import {
 } from "@/lib/company-settings";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { profileLink } from "@/lib/local-profile";
-import { useCompanySettings } from "@/lib/use-company-settings";
+import { useCompanySettingsQuery } from "@/lib/use-company-settings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/company-settings")({
@@ -53,9 +53,26 @@ function CompanySettingsPage() {
   const { t } = useI18n();
   useLocalizedMeta(t.companySettings.title + " — Stack Match", t.companySettings.sub);
   const { user } = useAuth();
-  const settings = useCompanySettings();
+  const { data: settings, isError, refetch } = useCompanySettingsQuery();
   // RequireAccount only renders this page for a signed-in company.
-  return user && settings ? <SettingsForm user={user} settings={settings} /> : null;
+  if (!user) return null;
+  if (settings) return <SettingsForm user={user} settings={settings} />;
+  return (
+    <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
+      {isError ? (
+        <div>
+          <p className="text-sm text-muted-foreground">{t.companySettings.loadError}</p>
+          <Button className="mt-4" onClick={() => void refetch()}>
+            {t.common.retry}
+          </Button>
+        </div>
+      ) : (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t.common.loading}
+        </p>
+      )}
+    </main>
+  );
 }
 
 function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySettings }) {
@@ -78,7 +95,7 @@ function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySet
 
   const onSubmit = handleSubmit(async (input) => {
     try {
-      const saved = await saveCompanySettings(user.id, input);
+      const saved = await saveMyCompanySettings({ data: input });
       queryClient.setQueryData(companySettingsKey(user.id), saved);
       reset(saved);
       toast.success(t.companySettings.saved);

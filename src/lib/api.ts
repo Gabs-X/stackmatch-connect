@@ -1,21 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
-import { demoCompanyActivity, demoCompanyProfiles, developers, type Developer } from "./developers";
+import { demoCompanyActivity, developers, type Developer } from "./developers";
 import {
   isProposedTimeValid,
   type MeetingRequest,
   type MeetingRequestInput,
 } from "./meeting-requests";
 import type { ProfileInterest } from "./profile-interests";
-import { demoDeveloperId, type AuthUser } from "./auth";
-import {
-  companySettingsSchema,
-  readCompanySettings,
-  readSavedCompanySettings,
-  writeCompanySettings,
-  type CompanyProfile,
-  type CompanySettings,
-  type CompanySettingsInput,
-} from "./company-settings";
+import { demoDeveloperId } from "./auth";
 
 /**
  * Simulated network latency for the mocked API, so loading states behave like a real backend.
@@ -80,46 +71,4 @@ export const companyActivityQuery = (accountId: string, name: string) =>
   queryOptions({
     queryKey: ["company-activity", accountId],
     queryFn: () => fetchCompanyActivity(accountId, name),
-  });
-
-/**
- * Stand-ins for `GET/PUT /company/settings`: what a hiring account shows developers. The mock keeps
- * them in this browser, per account, starting from the sign-up details.
- */
-export async function fetchCompanySettings(user: AuthUser): Promise<CompanySettings> {
-  await delay(MOCK_LATENCY_MS);
-  return readCompanySettings(user);
-}
-
-export async function saveCompanySettings(
-  accountId: string,
-  input: CompanySettingsInput,
-): Promise<CompanySettings> {
-  await delay(MOCK_LATENCY_MS);
-  const settings = companySettingsSchema.parse(input);
-  writeCompanySettings(accountId, settings);
-  return settings;
-}
-
-export const companySettingsKey = (accountId: string) => ["company-settings", accountId] as const;
-
-/**
- * Stand-in for `GET /companies/:id`: what a company shows the developers it reached. Null while
- * the company never filled in its details; the mock only knows demo companies and accounts that
- * saved their settings in this browser.
- */
-export async function fetchCompanyProfile(companyId: string): Promise<CompanyProfile | null> {
-  await delay(MOCK_LATENCY_MS);
-  const demo = demoCompanyProfiles[companyId];
-  if (demo) return demo;
-  const settings = readSavedCompanySettings(companyId);
-  if (!settings) return null;
-  const { about, website, location, contactRole, phone } = settings;
-  return { about, website, location, contactRole, phone, demo: false };
-}
-
-export const companyProfileQuery = (companyId: string) =>
-  queryOptions({
-    queryKey: ["company-profile", companyId],
-    queryFn: () => fetchCompanyProfile(companyId),
   });

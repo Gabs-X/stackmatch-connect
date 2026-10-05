@@ -1,25 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { AuthUser } from "./auth";
-import {
-  companySettingsSchema,
-  companySettingsStorageKey,
-  defaultCompanySettings,
-  readCompanySettings,
-  writeCompanySettings,
-} from "./company-settings";
-
-let storage: Map<string, string>;
-
-beforeEach(() => {
-  storage = new Map();
-  vi.stubGlobal("window", {
-    localStorage: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => void storage.set(key, value),
-    },
-  });
-});
-afterEach(() => vi.unstubAllGlobals());
+import { companySettingsSchema, defaultCompanySettings } from "./company-settings";
 
 const acme: AuthUser = {
   id: "acme-account",
@@ -33,7 +14,7 @@ const acme: AuthUser = {
 
 describe("company settings", () => {
   it("start from the sign-up details", () => {
-    expect(readCompanySettings(acme)).toEqual({
+    expect(defaultCompanySettings(acme)).toEqual({
       website: "",
       location: "",
       about: "",
@@ -42,16 +23,6 @@ describe("company settings", () => {
       contactEmail: "bruno@acme.com",
       phone: "",
     });
-  });
-
-  it("keep each account's saved settings apart and ignore broken entries", () => {
-    const settings = { ...defaultCompanySettings(acme), contactName: "Carla Dias" };
-    writeCompanySettings(acme.id, settings);
-    expect(readCompanySettings(acme)).toEqual(settings);
-    expect(readCompanySettings({ ...acme, id: "other" }).contactName).toBe("Bruno Lima");
-
-    storage.set(companySettingsStorageKey, JSON.stringify({ [acme.id]: { contactName: 1 } }));
-    expect(readCompanySettings(acme)).toEqual(defaultCompanySettings(acme));
   });
 
   it("validate the contact and the optional fields only when filled in", () => {

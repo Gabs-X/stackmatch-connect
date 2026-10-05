@@ -36,8 +36,6 @@ export type CompanyProfile = Pick<
   demo: boolean;
 };
 
-export const companySettingsStorageKey = "stackmatch-company-settings";
-
 /** Until the company edits them, settings come from what it filled in at sign-up. */
 export function defaultCompanySettings(user: AuthUser): CompanySettings {
   return {
@@ -49,35 +47,4 @@ export function defaultCompanySettings(user: AuthUser): CompanySettings {
     contactEmail: user.email,
     phone: "",
   };
-}
-
-function readAll(): Record<string, unknown> {
-  try {
-    const value: unknown = JSON.parse(
-      window.localStorage.getItem(companySettingsStorageKey) ?? "{}",
-    );
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-/** Settings a company account saved in this browser, or null while it never saved any. */
-export function readSavedCompanySettings(accountId: string): CompanySettings | null {
-  const result = companySettingsSchema.safeParse(readAll()[accountId]);
-  return result.success ? result.data : null;
-}
-
-/** Mock storage behind the settings API: one entry per company account, in this browser. */
-export function readCompanySettings(user: AuthUser): CompanySettings {
-  return readSavedCompanySettings(user.id) ?? defaultCompanySettings(user);
-}
-
-export function writeCompanySettings(accountId: string, settings: CompanySettings) {
-  window.localStorage.setItem(
-    companySettingsStorageKey,
-    JSON.stringify({ ...readAll(), [accountId]: settings }),
-  );
 }

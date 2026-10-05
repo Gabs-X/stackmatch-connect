@@ -15,6 +15,13 @@
       "when": 1791206760840,
       "tag": "0001_developer_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791207575975,
+      "tag": "0002_company_profiles",
+      "breakpoints": true
     }
   ]
 }

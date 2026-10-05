@@ -47,6 +47,25 @@ export const sessions = pgTable(
 
 export type UserRow = typeof users.$inferSelect;
 
+/**
+ * How a hiring account shows up to developers: the company details and the person they talk to.
+ * Until it's saved, the sign-up details stand in (see defaultCompanySettings).
+ */
+export const companyProfiles = pgTable("company_profiles", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  website: text("website").notNull().default(""),
+  location: text("location").notNull().default(""),
+  about: text("about").notNull().default(""),
+  contactName: text("contact_name").notNull(),
+  contactRole: text("contact_role").notNull().default(""),
+  /** Where developers' replies go. */
+  contactEmail: text("contact_email").notNull(),
+  phone: text("phone").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** A developer account's public profile; companies find it in Discover once it exists. */
 export const developerProfiles = pgTable("developer_profiles", {
   userId: text("user_id")

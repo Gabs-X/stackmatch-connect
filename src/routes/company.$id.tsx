@@ -19,7 +19,7 @@ import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { companyProfileQuery } from "@/lib/api";
+import { companyProfileQuery } from "@/lib/company-api";
 import type { AuthUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
