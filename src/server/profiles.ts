@@ -2,6 +2,7 @@ import { asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Developer } from "@/lib/developers";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
+import { isDataUrl, removeImages, storeImage } from "./storage";
 import { developerProfiles, developerSkills, projectSkills, projects, skills } from "./db/schema";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -39,8 +40,58 @@ function uniqueIds(ids: Map<string, number>, names: string[]) {
   return [...new Set(names.flatMap((name) => ids.get(skillKey(name)) ?? []))];
 }
 
-/** Creates or replaces the developer's profile, skills and projects. Expects validated input. */
-export async function saveProfile(db: Db, userId: string, profile: LocalProfile) {
+/** URLs of the images the developer's saved profile uses: the photo and the project covers. */
+async function storedImages(db: Db, userId: string) {
+  const [profile] = await db
+    .select({ photo: developerProfiles.photo })
+    .from(developerProfiles)
+    .where(eq(developerProfiles.userId, userId));
+  const covers = await db
+    .select({ image: projects.coverImage })
+    .from(projects)
+    .where(eq(projects.developerId, userId));
+  return [profile?.photo ?? "", ...covers.map((cover) => cover.image)].filter(Boolean);
+}
+
+/**
+ * Creates or replaces the developer's profile, skills and projects. Expects validated input.
+ *
+ * Images arrive as data URLs when new and are moved to file storage; the database keeps their URL.
+ * A URL is only kept when it's already one of this profile's images, and images the profile no
+ * longer uses are deleted once the save went through.
+ */
+export async function saveProfile(db: Db, userId: string, input: LocalProfile) {
+  const previous = await storedImages(db, userId);
+  const uploaded: string[] = [];
+  const resolve = async (folder: string, image: string) => {
+    if (!image) return "";
+    if (!isDataUrl(image)) return previous.includes(image) ? image : "";
+    const url = await storeImage(folder, userId, image);
+    uploaded.push(url);
+    return url;
+  };
+  let profile: LocalProfile;
+  try {
+    profile = {
+      ...input,
+      photo: await resolve("photos", input.photo),
+      projects: await Promise.all(
+        input.projects.map(async (project) => ({
+          ...project,
+          image: await resolve("covers", project.image),
+        })),
+      ),
+    };
+    await writeProfile(db, userId, profile);
+  } catch (error) {
+    await removeImages(uploaded);
+    throw error;
+  }
+  const kept = new Set([profile.photo, ...profile.projects.map((project) => project.image)]);
+  await removeImages(previous.filter((url) => !kept.has(url)));
+}
+
+async function writeProfile(db: Db, userId: string, profile: LocalProfile) {
   await db.transaction(async (tx) => {
     const fields = {
       name: profile.name,

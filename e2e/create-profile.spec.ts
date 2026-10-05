@@ -1,5 +1,39 @@
 import { fileURLToPath } from "node:url";
-import { expect, signInAs, test, uniqueEmail } from "./fixtures";
+import { chooseLocation, expect, signInAs, test, uniqueEmail } from "./fixtures";
+
+test("changing the state clears the city and only offers cities from that state", async ({
+  page,
+}) => {
+  await signInAs(page, "developer");
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
+  await chooseLocation(page, "Recife", "PE");
+  await page.getByLabel("Estado", { exact: true }).selectOption("RN");
+  const city = page.getByLabel("Cidade", { exact: true });
+  await expect(city).toBeEnabled();
+  await expect(city).toHaveValue("");
+  await expect(city.getByRole("option", { name: "Recife", exact: true })).toHaveCount(0);
+  await city.selectOption("Natal");
+  await expect(city).toHaveValue("Natal");
+});
+
+test("cities can be retried when the IBGE request fails", async ({ page }) => {
+  let fail = true;
+  await page.route("**/estados/PE/municipios*", (route) =>
+    fail
+      ? route.fulfill({ status: 503 })
+      : route.fulfill({ json: [{ id: 2611606, nome: "Recife" }] }),
+  );
+  await signInAs(page, "developer");
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
+  await page.getByLabel("Estado", { exact: true }).selectOption("PE");
+  await expect(
+    page.getByText("Não foi possível carregar as cidades. Tente novamente."),
+  ).toBeVisible();
+  await expect(page.getByLabel("Cidade", { exact: true })).toBeDisabled();
+  fail = false;
+  await page.getByRole("button", { name: "Tentar novamente" }).click();
+  await page.getByLabel("Cidade", { exact: true }).selectOption("Recife");
+});
 
 test("a completed profile previews the card companies see in Discover", async ({ page }) => {
   await signInAs(page, "developer");
@@ -9,7 +43,7 @@ test("a completed profile previews the card companies see in Discover", async ({
   // Step 1: personal info.
   await page.getByLabel("Nome completo").fill("Ana Souza");
   await page.getByLabel("Cargo").fill("Frontend Developer");
-  await page.getByLabel("Localização").fill("Recife, PE");
+  await chooseLocation(page, "Recife", "PE");
   await page.getByLabel("Senioridade").selectOption("Pleno");
   await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
   await page.getByLabel("Disponibilidade").selectOption("Disponível agora");
@@ -88,21 +122,21 @@ test("removing a project can be undone", async ({ page }) => {
 test("required fields block the next step until they are filled", async ({ page }) => {
   await signInAs(page, "developer");
   await page.getByRole("button", { name: "Voltar à edição" }).click();
-  await page.getByLabel("Localização").fill("");
+  await page.getByLabel("Estado", { exact: true }).selectOption("");
   await page.getByLabel("Bio profissional").fill("");
 
   await page.getByRole("button", { name: "Continuar" }).click();
   await expect(page.getByText("ETAPA 1 DE 4")).toBeVisible();
   await expect(page.getByText("Preencha os campos obrigatórios para continuar.")).toBeVisible();
-  await expect(page.getByLabel("Localização")).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByLabel("Localização")).toBeFocused();
+  await expect(page.getByLabel("Estado", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Estado", { exact: true })).toBeFocused();
   await expect(page.getByText("Preencha este campo.")).toHaveCount(2);
 
   // Jumping ahead from the step list is held back the same way.
   await page.getByRole("button", { name: "4 Links" }).click();
   await expect(page.getByText("ETAPA 1 DE 4")).toBeVisible();
 
-  await page.getByLabel("Localização").fill("Uberaba, MG");
+  await chooseLocation(page, "Uberaba", "MG");
   await page.getByLabel("Bio profissional").fill("Desenvolvo aplicações full stack.");
   await expect(page.getByText("Preencha este campo.")).toHaveCount(0);
 
@@ -126,7 +160,7 @@ test("a developer can publish a profile without projects", async ({ page }) => {
   await form.getByRole("button", { name: "Criar conta" }).click();
   await expect(page).toHaveURL(/\/create-profile$/);
 
-  await page.getByLabel("Localização").fill("Natal, RN");
+  await chooseLocation(page, "Natal", "RN");
   await page.getByLabel("Senioridade").selectOption("Júnior");
   await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
   await page.getByLabel("Disponibilidade").selectOption("Em 15 dias");
@@ -161,12 +195,18 @@ test("a profile photo replaces the GitHub avatar for companies too", async ({ pa
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await signInAs(page, "company");
-  await expect(
-    page
-      .locator("main section article")
-      .first()
-      .getByRole("img", { name: "Foto de Gabriel Botelho" }),
-  ).toHaveAttribute("src", /^data:image\/jpeg;base64,/);
+  const photo = page
+    .locator("main section article")
+    .first()
+    .getByRole("img", { name: "Foto de Gabriel Botelho" });
+  // Saved to file storage (a local folder in tests); the database only has the URL.
+  await expect(photo).toHaveAttribute(
+    "src",
+    /^\/uploads\/photos\/demo-developer\/[a-z0-9-]+\.jpg$/,
+  );
+  await expect
+    .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
 });
 
 test("removing the photo goes back to the GitHub avatar", async ({ page }) => {
@@ -227,7 +267,7 @@ test("skills suggest what others use, and a new one becomes a suggestion for eve
   await form.getByRole("button", { name: "Criar conta" }).click();
   await expect(page).toHaveURL(/\/create-profile$/);
   // Step 1's required fields come first.
-  await page.getByLabel("Localização").fill("Natal, RN");
+  await chooseLocation(page, "Natal", "RN");
   await page.getByLabel("Senioridade").selectOption("Pleno");
   await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
   await page.getByLabel("Disponibilidade").selectOption("Disponível agora");

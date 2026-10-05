@@ -29,6 +29,22 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
   githubAvatars: ["serve", { option: true }],
   // Named `provide` instead of Playwright's usual `use` so the React hooks lint rule ignores it.
   page: async ({ page, githubAvatars }, provide) => {
+    const cityLists: Record<string, string[]> = {
+      SP: ["Campinas", "São Paulo"],
+      MG: ["Belo Horizonte", "Uberaba"],
+      PR: ["Curitiba"],
+      PE: ["Recife"],
+      SC: ["Florianópolis"],
+      CE: ["Fortaleza"],
+      RN: ["Natal"],
+    };
+    await page.route(
+      "https://servicodados.ibge.gov.br/api/v1/localidades/estados/*/municipios*",
+      (route) => {
+        const uf = new URL(route.request().url()).pathname.split("/")[5] ?? "";
+        return route.fulfill({ json: (cityLists[uf] ?? []).map((nome, id) => ({ id, nome })) });
+      },
+    );
     await page.route("https://github.com/**", (route) =>
       githubAvatars === "serve"
         ? route.fulfill({ status: 200, contentType: "image/jpeg", body: avatar })
@@ -44,6 +60,11 @@ export const test = base.extend<{ githubAvatars: "serve" | "fail" }>({
 });
 
 export { expect } from "@playwright/test";
+
+export async function chooseLocation(page: Page, city: string, uf: string) {
+  await page.getByLabel("Estado", { exact: true }).selectOption(uf);
+  await page.getByLabel("Cidade", { exact: true }).selectOption(city);
+}
 
 /**
  * A fresh address for each sign-up, so tests never depend on which accounts already exist:

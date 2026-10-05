@@ -38,3 +38,6 @@ blob-report/
 
 # Local PGlite database (development)
 .pglite
+
+# Images stored locally when there is no Blob store (development and tests)
+.uploads

@@ -58,25 +58,43 @@ Ele cria `teste.dev@stackmatch.app` (desenvolvedor, com o perfil do Gabriel Bote
 
 A senha está no código público: qualquer pessoa pode entrar nessas contas e alterar os dados delas. Rode o seed só se elas forem úteis nesse banco, por exemplo para uma demonstração.
 
-## 4. Fazer um novo deploy
+## 4. Criar o armazenamento de imagens
+
+Fotos de perfil e capas de projeto ficam no Vercel Blob; o banco guarda só a URL de cada uma. Sem ele, o site publicado não consegue salvar imagens novas.
+
+1. No painel da Vercel, no projeto **stackmatch-connect**, vá em **Storage → Create Database → Blob**, dê um nome e conecte ao projeto, nos ambientes **Production**, **Preview** e **Development**.
+2. A integração cria a variável **`BLOB_READ_WRITE_TOKEN`** no projeto. Não precisa copiar nada para a Vercel.
+3. Se o banco tem imagens de antes do armazenamento (gravadas como data URL), mova-as: copie o token do Blob store (**Storage → (o store) → .env.local**) para o `.env.migrate.local`, ao lado da `DATABASE_URL`, e rode:
+
+   ```sh
+   npm run images:migrate
+   ```
+
+   Ele termina com `Moved N profile photo(s) and N project cover(s).` Rodar de novo não faz nada quando tudo já foi movido. Sem o token no arquivo, o comando para com uma mensagem, em vez de gravar as imagens numa pasta local.
+
+O token dá acesso de escrita ao Blob store: as mesmas regras da connection string valem para ele.
+
+## 5. Fazer um novo deploy
 
 A integração não refaz o deploy sozinha. Em **Deployments**, abra o último deploy e use **⋯ → Redeploy**.
 
-## 5. Conferir
+## 6. Conferir
 
 No site publicado:
 
 1. Se rodou o seed, entre com `teste.emp@stackmatch.app` / `teste1234`. O Discover deve mostrar o Gabriel Botelho.
 2. Crie uma conta nova, saia e entre de novo.
 3. Como empresa, salve um talento e recarregue a página: ele continua em Talentos salvos.
+4. Como desenvolvedor, envie uma foto no perfil e conclua: no Discover, a foto deve vir de um endereço `*.public.blob.vercel-storage.com`.
 
 Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os mais comuns:
 
-| Erro                                                         | Causa                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| `DATABASE_URL must point to a Postgres server in production` | A variável não está no ambiente do deploy. Confira o passo 1 e refaça o deploy. |
-| `relation "users" does not exist`                            | As migrações não foram aplicadas nesse banco. Rode o passo 2.                   |
-| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 4).                   |
+| Erro                                                         | Causa                                                                            |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `DATABASE_URL must point to a Postgres server in production` | A variável não está no ambiente do deploy. Confira o passo 1 e refaça o deploy.  |
+| `relation "users" does not exist`                            | As migrações não foram aplicadas nesse banco. Rode o passo 2.                    |
+| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 5).                    |
+| `BLOB_READ_WRITE_TOKEN must be set in production`            | O Blob store não está conectado ao projeto. Confira o passo 4 e refaça o deploy. |
 
 ## Depois de mudar o schema
 

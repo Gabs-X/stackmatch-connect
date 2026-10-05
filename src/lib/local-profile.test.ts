@@ -165,6 +165,13 @@ describe("profileInputSchema", () => {
     );
   });
 
+  it("takes a location only as the form builds it, a city and its state", () => {
+    expect(profileInputSchema.safeParse({ ...complete, location: "Recife" }).success).toBe(false);
+    expect(profileInputSchema.safeParse({ ...complete, location: "Recife, XX" }).success).toBe(
+      false,
+    );
+  });
+
   it("only takes profile photos made by the form", () => {
     const withPhoto = (photo: string) => ({ ...complete, photo });
     expect(profileInputSchema.safeParse(withPhoto("")).success).toBe(true);
@@ -174,6 +181,17 @@ describe("profileInputSchema", () => {
     expect(profileInputSchema.safeParse(withPhoto("https://example.com/me.png")).success).toBe(
       false,
     );
+    // URLs file storage gave earlier saves.
+    expect(
+      profileInputSchema.safeParse(
+        withPhoto("https://abc123.public.blob.vercel-storage.com/photos/ana/1.jpg"),
+      ).success,
+    ).toBe(true);
+    expect(profileInputSchema.safeParse(withPhoto("/uploads/photos/ana/1.jpg")).success).toBe(true);
+    expect(
+      profileInputSchema.safeParse(withPhoto("http://abc123.public.blob.vercel-storage.com/a.jpg"))
+        .success,
+    ).toBe(false);
   });
 
   it("only takes project covers made by the form", () => {

@@ -19,6 +19,7 @@ import {
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { ProfilePhotoField } from "@/components/profile-photo-field";
+import { LocationField } from "@/components/location-field";
 import { SkillCombobox } from "@/components/skill-combobox";
 import { ProfilePreview } from "@/components/profile-preview";
 import { ProjectCover } from "@/components/project-cover";
@@ -315,12 +316,9 @@ function CreateProfile() {
                 required
                 error={errorFor("role")}
               />
-              <Field
-                label={t.create.location}
-                placeholder={t.create.locationPh}
+              <LocationField
                 value={profile.location}
                 onChange={(value) => updateField("location", value)}
-                required
                 error={errorFor("location")}
               />
               <SelectField

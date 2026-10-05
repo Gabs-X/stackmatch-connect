@@ -11,6 +11,7 @@ import {
   saveProfile,
 } from "./profiles";
 import { seedDatabase, seedDeveloperId, seedDeveloperProfile } from "./seed";
+import { localImagePath, readLocalImage } from "./storage";
 import { createTestDb } from "./test-db";
 
 let db: Db;
@@ -48,10 +49,9 @@ const ana: LocalProfile = {
   rate: 95.5,
   hiringTypes: ["PJ", "CLT"],
   github: "https://github.com/anasouza",
-  photo: "data:image/jpeg;base64,AAAA",
   projects: [
     newProject({ name: "Clinic Booking", tech: ["Vue", "TypeScript"], demo: "clinic.app" }),
-    newProject({ name: "Portfolio", image: "data:image/jpeg;base64,AAAA" }),
+    newProject({ name: "Portfolio" }),
   ],
 };
 
@@ -120,8 +120,7 @@ describe("published profiles", () => {
       role: "Staff Engineer",
       experience: "4 anos",
       rate: 95.5,
-      // The uploaded photo wins over the GitHub avatar.
-      image: "data:image/jpeg;base64,AAAA",
+      image: "https://github.com/anasouza.png?size=768",
     });
     expect(published[0]?.projects[0]?.links.demo).toBe("https://clinic.app/");
   });
@@ -176,5 +175,63 @@ describe("skill catalog", () => {
     // Bia fixes the typo: it stays in the table but stops being suggested.
     await saveProfile(db, biaId, { ...ana, skills: ["React"], projects: [] });
     expect(await listSkillCatalog(db)).toEqual(["React", "Go"]);
+  });
+});
+
+describe("images", () => {
+  // A tiny but real JPEG would do; the storage only keeps bytes.
+  const newImage = `data:image/jpeg;base64,${Buffer.from("jpeg bytes").toString("base64")}`;
+  const stored = (url: string) => readLocalImage(url.slice(localImagePath.length));
+
+  it("move new images to file storage and keep only their URL", async () => {
+    const id = await developerAccount("ana@example.com");
+    await saveProfile(db, id, {
+      ...ana,
+      photo: newImage,
+      projects: [newProject({ name: "Portfolio", image: newImage })],
+    });
+
+    const saved = await loadProfile(db, id);
+    expect(saved?.photo).toMatch(/^\/uploads\/photos\/[a-z0-9-]+\/[a-z0-9-]+\.jpg$/);
+    expect(saved?.projects[0]?.image).toMatch(/^\/uploads\/covers\//);
+    expect((await stored(saved?.photo ?? ""))?.toString()).toBe("jpeg bytes");
+    expect((await loadPublishedProfile(db, id))?.image).toBe(saved?.photo);
+  });
+
+  it("keep stored images across saves and delete the ones the profile stops using", async () => {
+    const id = await developerAccount("ana@example.com");
+    await saveProfile(db, id, {
+      ...ana,
+      photo: newImage,
+      projects: [newProject({ name: "Portfolio", image: newImage })],
+    });
+    const first = await loadProfile(db, id);
+    if (!first) throw new Error("not saved");
+
+    // Edited without touching the images: same URLs, files still there.
+    await saveProfile(db, id, { ...first, bio: "Outra bio." });
+    const second = await loadProfile(db, id);
+    expect(second?.photo).toBe(first.photo);
+    expect(second?.projects[0]?.image).toBe(first.projects[0]?.image);
+
+    // A new photo and no project: both old files go.
+    await saveProfile(db, id, { ...first, photo: newImage, projects: [] });
+    const third = await loadProfile(db, id);
+    expect(third?.photo).not.toBe(first.photo);
+    expect(await stored(first.photo)).toBeNull();
+    expect(await stored(first.projects[0]?.image ?? "")).toBeNull();
+    expect(await stored(third?.photo ?? "")).not.toBeNull();
+  });
+
+  it("ignore image URLs that aren't this profile's own", async () => {
+    const anaId = await developerAccount("ana@example.com");
+    const biaId = await developerAccount("bia@example.com");
+    await saveProfile(db, anaId, { ...ana, photo: newImage });
+    const anaPhoto = (await loadProfile(db, anaId))?.photo ?? "";
+
+    await saveProfile(db, biaId, { ...ana, photo: anaPhoto });
+    expect((await loadProfile(db, biaId))?.photo).toBe("");
+    // Ana's photo is untouched.
+    expect(await stored(anaPhoto)).not.toBeNull();
   });
 });

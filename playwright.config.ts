@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const port = 5299;
@@ -34,8 +36,13 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
-    // A throwaway in-memory database, and the reset endpoint the fixtures call before each test.
-    env: { DATABASE_URL: "memory://", E2E: "1" },
+    // A throwaway in-memory database and image folder, and the reset endpoint the fixtures call
+    // before each test.
+    env: {
+      DATABASE_URL: "memory://",
+      UPLOADS_DIR: path.join(os.tmpdir(), "stackmatch-e2e-uploads"),
+      E2E: "1",
+    },
     reuseExistingServer: !isCI,
     timeout: 120_000,
   },

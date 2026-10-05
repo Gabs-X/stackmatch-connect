@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
@@ -10,5 +12,7 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     environment: "node",
+    // Images saved by the tests go to a throwaway folder.
+    env: { UPLOADS_DIR: path.join(os.tmpdir(), "stackmatch-test-uploads") },
   },
 });

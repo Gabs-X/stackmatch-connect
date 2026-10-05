@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "images:migrate": "tsx scripts/migrate-images.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -34,6 +35,7 @@
     "@tanstack/react-start": "1.168.60",
     "@tanstack/router-plugin": "1.168.42",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/blob": "^2.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

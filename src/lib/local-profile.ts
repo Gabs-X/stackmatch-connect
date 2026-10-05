@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isLocation } from "./cities";
 import {
   availabilityOptions,
   githubAvatarUrl,
@@ -13,7 +14,7 @@ const projectSchema = z.object({
   name: z.string(),
   description: z.string(),
   tech: z.array(z.string()),
-  /** JPEG data URL produced by readProjectImage, or "" when there is no cover. */
+  /** Cover made by readProjectImage, or "" for none: see isProfileImage. */
   image: z.string(),
   github: z.string(),
   demo: z.string(),
@@ -41,11 +42,22 @@ export function newProject(fields: Partial<LocalProject> = {}): LocalProject {
 
 const text = (max: number) => z.string().trim().max(max);
 const link = text(500);
-/** Images are downscaled in the browser to about 100 KB; anything else isn't one of ours. */
-const jpegDataUrl = z
-  .string()
-  .max(1_000_000)
-  .refine((value) => !value || value.startsWith("data:image/jpeg;base64,"));
+/**
+ * A profile image: "" for none, a JPEG data URL for a new one (downscaled in the browser to about
+ * 100 KB), or the URL file storage gave an image saved before. Anything else isn't one of ours.
+ */
+export function isProfileImage(value: string) {
+  if (!value || value.startsWith("data:image/jpeg;base64,")) return true;
+  if (value.startsWith("/uploads/")) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
+const profileImage = z.string().max(1_000_000).refine(isProfileImage);
 
 const profileSchema = z.object({
   name: text(120),
@@ -55,8 +67,8 @@ const profileSchema = z.object({
   availability: z.string(),
   workMode: z.string(),
   bio: text(2000),
-  /** Square JPEG data URL made by readProfilePhoto, or "" to use the GitHub avatar. */
-  photo: jpegDataUrl,
+  /** Square photo made by readProfilePhoto, or "" to use the GitHub avatar: see isProfileImage. */
+  photo: profileImage,
   github: link,
   linkedin: link,
   website: link,
@@ -70,7 +82,7 @@ const profileSchema = z.object({
         name: text(80).min(1),
         description: text(400),
         tech: z.array(text(50).min(1)).max(20),
-        image: jpegDataUrl,
+        image: profileImage,
         github: link,
         demo: link,
       }),
@@ -84,6 +96,8 @@ const profileSchema = z.object({
  */
 export const profileInputSchema = profileSchema
   .extend({
+    // A city chosen in the form, with its state; left blank, missingProfileFields reports it.
+    location: text(120).refine((value) => !value || isLocation(value), "location"),
     seniority: z.enum(seniorityOptions),
     availability: z.enum(availabilityOptions),
     workMode: z.enum(workModeOptions),

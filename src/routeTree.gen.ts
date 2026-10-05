@@ -22,6 +22,7 @@ import { Route as ApiTestResetRouteImport } from './routes/api.test-reset'
 import { Route as ApiTestSeedRouteImport } from './routes/api.test-seed'
 import { Route as CompanyIdRouteImport } from './routes/company.$id'
 import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
+import { Route as UploadsSplatRouteImport } from './routes/uploads.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -88,6 +89,11 @@ const DeveloperIdRoute = DeveloperIdRouteImport.update({
   path: '/developer/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadsSplatRoute = UploadsSplatRouteImport.update({
+  id: '/uploads/$',
+  path: '/uploads/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
+  '/uploads/$': typeof UploadsSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
+  '/uploads/$': typeof UploadsSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
+  '/uploads/$': typeof UploadsSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/test-seed'
     | '/company/$id'
     | '/developer/$id'
+    | '/uploads/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/api/test-seed'
     | '/company/$id'
     | '/developer/$id'
+    | '/uploads/$'
   id:
     | '__root__'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/test-seed'
     | '/company/$id'
     | '/developer/$id'
+    | '/uploads/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   ApiTestSeedRoute: typeof ApiTestSeedRoute
   CompanyIdRoute: typeof CompanyIdRoute
   DeveloperIdRoute: typeof DeveloperIdRoute
+  UploadsSplatRoute: typeof UploadsSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeveloperIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/uploads/$': {
+      id: '/uploads/$'
+      path: '/uploads/$'
+      fullPath: '/uploads/$'
+      preLoaderRoute: typeof UploadsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTestSeedRoute: ApiTestSeedRoute,
   CompanyIdRoute: CompanyIdRoute,
   DeveloperIdRoute: DeveloperIdRoute,
+  UploadsSplatRoute: UploadsSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

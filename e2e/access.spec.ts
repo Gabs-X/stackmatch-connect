@@ -1,4 +1,4 @@
-import { expect, signInAs, test, uniqueEmail } from "./fixtures";
+import { chooseLocation, expect, signInAs, test, uniqueEmail } from "./fixtures";
 
 test("visitors are sent to the login before account-only pages", async ({ page }) => {
   await page.goto("/interests");
@@ -78,7 +78,7 @@ test("each developer account has its own profile, and companies see them all", a
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
   await expect(page).toHaveURL(/\/create-profile$/);
-  await page.getByLabel("Localização").fill("Fortaleza, CE");
+  await chooseLocation(page, "Fortaleza", "CE");
   await page.getByLabel("Senioridade").selectOption("Pleno");
   await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
   await page.getByLabel("Disponibilidade").selectOption("Disponível agora");
