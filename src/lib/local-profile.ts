@@ -90,6 +90,28 @@ export const emptyProfile: LocalProfile = {
   projects: [],
 };
 
+/** What a profile needs before it's saved, and the form step that asks for it. */
+export const requiredProfileFields = {
+  name: 1,
+  role: 1,
+  location: 1,
+  seniority: 1,
+  workMode: 1,
+  availability: 1,
+  bio: 1,
+  skills: 2,
+} as const satisfies Partial<Record<keyof LocalProfile, number>>;
+
+export type RequiredProfileField = keyof typeof requiredProfileFields;
+
+/** Required fields still blank, in form order. Projects, links, rate and experience are optional. */
+export function missingProfileFields(profile: LocalProfile): RequiredProfileField[] {
+  return (Object.keys(requiredProfileFields) as RequiredProfileField[]).filter((field) => {
+    const value = profile[field];
+    return typeof value === "string" ? !value.trim() : value.length === 0;
+  });
+}
+
 /**
  * Front-end stand-in for the profile API: each developer account owns one profile, kept here by
  * account id. When the backend exists, swap these for `GET/PUT /me/profile` and `GET /profiles`.

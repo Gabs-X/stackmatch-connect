@@ -144,6 +144,7 @@ const pt = {
       "Liderança técnica, arquitetura de aplicações e entrega contínua de experiências de alta qualidade.",
     portfolio: "Portfólio",
     featured: "Projetos em destaque",
+    noProjects: "Este profissional ainda não adicionou projetos ao perfil.",
     availability: "Disponibilidade",
     rate: "Valor por hora",
     links: "Links profissionais",
@@ -265,7 +266,17 @@ const pt = {
     finish: "Concluir perfil",
     finishToast: "Perfil salvo neste navegador!",
     finishDesc: "Demonstração local; nenhum dado foi enviado ou publicado.",
-    requiredFields: "Preencha seu nome e cargo antes de concluir.",
+    requiredFields: "Preencha os campos obrigatórios para continuar.",
+    requiredNote: "Campos marcados com * são obrigatórios.",
+    requiredErrors: {
+      text: "Preencha este campo.",
+      select: "Escolha uma opção.",
+      skills: "Adicione pelo menos uma skill.",
+    },
+    optional: "Opcional",
+    projectsOptional:
+      "Projetos são opcionais. Você pode concluir o perfil agora e adicioná-los depois, editando o perfil.",
+    skipProjects: "Continuar sem projetos",
     saveError:
       "Não foi possível salvar o perfil neste navegador. Seus dados continuam no formulário.",
   },
@@ -669,6 +680,7 @@ const en: Dict = {
       "Technical leadership, application architecture and continuous delivery of high-quality experiences.",
     portfolio: "Portfolio",
     featured: "Featured projects",
+    noProjects: "This professional hasn't added any projects yet.",
     availability: "Availability",
     rate: "Hourly rate",
     links: "Professional links",
@@ -790,7 +802,17 @@ const en: Dict = {
     finish: "Finish profile",
     finishToast: "Profile saved in this browser!",
     finishDesc: "Local demo; no data was sent or published.",
-    requiredFields: "Enter your name and title before finishing.",
+    requiredFields: "Fill in the required fields to continue.",
+    requiredNote: "Fields marked with * are required.",
+    requiredErrors: {
+      text: "Fill in this field.",
+      select: "Choose an option.",
+      skills: "Add at least one skill.",
+    },
+    optional: "Optional",
+    projectsOptional:
+      "Projects are optional. You can finish your profile now and add them later by editing it.",
+    skipProjects: "Continue without projects",
     saveError: "Couldn't save the profile in this browser. Your data is still in the form.",
   },
   schedule: {

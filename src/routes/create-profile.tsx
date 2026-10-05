@@ -39,12 +39,16 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   emptyProfile,
   loadAccountProfile,
+  missingProfileFields,
   newProject,
+  requiredProfileFields,
   saveAccountProfile,
   profileLink,
   type LocalProfile,
   type LocalProject,
+  type RequiredProfileField,
 } from "@/lib/local-profile";
+import { FieldError } from "@/components/auth-layout";
 import {
   availabilityOptions,
   hiringOptions,
@@ -115,12 +119,39 @@ function CreateProfile() {
     setProfile((current) => ({ ...current, [field]: value }));
     setCompleted(false);
   };
+  // Blank required fields show as errors only once the developer tried to leave their step.
+  const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
+  const [focusRequest, setFocusRequest] = useState(0);
+  useEffect(() => {
+    if (focusRequest) document.querySelector<HTMLElement>('main [aria-invalid="true"]')?.focus();
+  }, [focusRequest]);
+  const missing = missingProfileFields(profile);
+  const errorFor = (field: RequiredProfileField) => {
+    if (!checkedSteps.includes(requiredProfileFields[field]) || !missing.includes(field))
+      return undefined;
+    if (field === "skills") return t.create.requiredErrors.skills;
+    return field === "seniority" || field === "workMode" || field === "availability"
+      ? t.create.requiredErrors.select
+      : t.create.requiredErrors.text;
+  };
+  /** Stops at the first step before `target` with blank required fields; true when none. */
+  const requiredFilledBefore = (target: number) => {
+    const blockedSteps = missing
+      .map((field) => requiredProfileFields[field])
+      .filter((fieldStep) => fieldStep < target);
+    if (!blockedSteps.length) return true;
+    const blocked = Math.min(...blockedSteps);
+    setCheckedSteps((current) => (current.includes(blocked) ? current : [...current, blocked]));
+    setStep(blocked);
+    setFocusRequest((current) => current + 1);
+    toast.error(t.create.requiredFields);
+    return false;
+  };
+  const goToStep = (target: number) => {
+    if (target <= step || requiredFilledBefore(target)) setStep(target);
+  };
   const finishProfile = () => {
-    if (!profile.name.trim() || !profile.role.trim()) {
-      setStep(1);
-      toast.error(t.create.requiredFields);
-      return;
-    }
+    if (!requiredFilledBefore(steps.length + 1)) return;
     try {
       const saved = saveAccountProfile(accountId, profile);
       setProfile(saved);
@@ -241,7 +272,7 @@ function CreateProfile() {
             {steps.map((name, i) => (
               <button
                 key={name}
-                onClick={() => setStep(i + 1)}
+                onClick={() => goToStep(i + 1)}
                 aria-current={step === i + 1 ? "step" : undefined}
                 className={`flex w-full flex-col items-center gap-1 rounded-lg p-2 text-center text-[11px] font-semibold leading-tight lg:flex-row lg:gap-3 lg:p-3 lg:text-left lg:text-sm ${step === i + 1 ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
               >
@@ -258,7 +289,15 @@ function CreateProfile() {
         <section className="stagger-item stagger-1 rounded-xl border bg-card p-6 shadow-soft sm:p-8">
           <div className="mb-8">
             <p className="text-xs font-bold text-primary">{t.create.stepOf(step)}</p>
-            <h2 className="mt-1 text-2xl font-bold">{steps[step - 1]}</h2>
+            <h2 className="mt-1 flex flex-wrap items-center gap-2 text-2xl font-bold">
+              {steps[step - 1]}
+              {step >= 3 && <span className="level-badge">{t.create.optional}</span>}
+            </h2>
+            {step < 4 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {step === 3 ? t.create.projectsOptional : t.create.requiredNote}
+              </p>
+            )}
           </div>
           {step === 1 && (
             <div className="grid gap-5 sm:grid-cols-2">
@@ -267,34 +306,46 @@ function CreateProfile() {
                 placeholder={t.create.fullNamePh}
                 value={profile.name}
                 onChange={(value) => updateField("name", value)}
+                required
+                error={errorFor("name")}
               />
               <Field
                 label={t.create.role}
                 placeholder={t.create.rolePh}
                 value={profile.role}
                 onChange={(value) => updateField("role", value)}
+                required
+                error={errorFor("role")}
               />
               <Field
                 label={t.create.location}
                 placeholder={t.create.locationPh}
                 value={profile.location}
                 onChange={(value) => updateField("location", value)}
+                required
+                error={errorFor("location")}
               />
               <SelectField
                 label={t.create.seniority}
                 value={profile.seniority}
+                required
+                error={errorFor("seniority")}
                 options={seniorityOptions}
                 onChange={(value) => updateField("seniority", value)}
               />
               <SelectField
                 label={t.create.workMode}
                 value={profile.workMode}
+                required
+                error={errorFor("workMode")}
                 options={workModeOptions}
                 onChange={(value) => updateField("workMode", value)}
               />
               <SelectField
                 label={t.create.availability}
                 value={profile.availability}
+                required
+                error={errorFor("availability")}
                 options={availabilityOptions}
                 onChange={(value) => updateField("availability", value)}
               />
@@ -340,20 +391,30 @@ function CreateProfile() {
                 </div>
               </fieldset>
               <div className="sm:col-span-2">
-                <Label htmlFor={bioId}>{t.create.bio}</Label>
+                <Label htmlFor={bioId}>
+                  {t.create.bio}
+                  <RequiredMark />
+                </Label>
                 <Textarea
                   id={bioId}
                   className="mt-2 min-h-28"
                   placeholder={t.create.bioPh}
                   value={profile.bio}
                   onChange={(event) => updateField("bio", event.target.value)}
+                  aria-required="true"
+                  aria-invalid={errorFor("bio") ? true : undefined}
+                  aria-describedby={errorFor("bio") ? `${bioId}-error` : undefined}
                 />
+                <FieldError id={`${bioId}-error`} message={errorFor("bio")} />
               </div>
             </div>
           )}
           {step === 2 && (
             <div>
-              <Label htmlFor={skillId}>{t.create.tech}</Label>
+              <Label htmlFor={skillId}>
+                {t.create.tech}
+                <RequiredMark />
+              </Label>
               <div className="mt-2 flex gap-2">
                 <Input
                   id={skillId}
@@ -366,6 +427,9 @@ function CreateProfile() {
                     }
                   }}
                   placeholder={t.create.skillPh}
+                  aria-required="true"
+                  aria-invalid={errorFor("skills") ? true : undefined}
+                  aria-describedby={errorFor("skills") ? `${skillId}-error` : undefined}
                 />
                 <Button
                   onClick={addSkill}
@@ -375,6 +439,7 @@ function CreateProfile() {
                   {t.create.add}
                 </Button>
               </div>
+              <FieldError id={`${skillId}-error`} message={errorFor("skills")} />
               <div className="mt-5 flex flex-wrap gap-2">
                 {skills.map((s) => (
                   <button
@@ -480,6 +545,12 @@ function CreateProfile() {
                     {t.create.importGh}
                   </Button>
                 </DialogTrigger>
+                {projects.length === 0 && (
+                  <Button variant="ghost" className="mt-2 w-full" onClick={() => goToStep(4)}>
+                    {t.create.skipProjects}
+                    <ChevronRight />
+                  </Button>
+                )}
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{t.create.importTitle}</DialogTitle>
@@ -555,7 +626,7 @@ function CreateProfile() {
               {t.create.back}
             </Button>
             {step < 4 ? (
-              <Button onClick={() => setStep(step + 1)}>
+              <Button onClick={() => goToStep(step + 1)}>
                 {t.create.next}
                 <ChevronRight />
               </Button>
@@ -576,11 +647,15 @@ function SelectField({
   value,
   options,
   onChange,
+  required = false,
+  error,
 }: {
   label: string;
   value: string;
   options: readonly string[];
   onChange: (value: string) => void;
+  required?: boolean;
+  error?: string | undefined;
 }) {
   const { t, tv } = useI18n();
   const id = useId();
@@ -588,13 +663,19 @@ function SelectField({
   const legacy = value && !options.includes(value) ? value : "";
   return (
     <div>
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label}
+        {required && <RequiredMark />}
+      </Label>
       <div className="relative mt-2">
         {/* appearance-none: Chrome paints its own dark menulist over the author background. */}
         <select
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          aria-required={required || undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
           className={cn(
             "h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent pl-3 pr-9 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm",
             !value && "text-muted-foreground",
@@ -616,6 +697,7 @@ function SelectField({
           className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
         />
       </div>
+      <FieldError id={`${id}-error`} message={error} />
     </div>
   );
 }
@@ -631,17 +713,24 @@ function Field({
   value,
   onChange,
   inputMode,
+  required = false,
+  error,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
   inputMode?: "numeric";
+  required?: boolean;
+  error?: string | undefined;
 }) {
   const id = useId();
   return (
     <div>
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label}
+        {required && <RequiredMark />}
+      </Label>
       <Input
         id={id}
         className="mt-2"
@@ -649,7 +738,20 @@ function Field({
         {...(inputMode ? { inputMode } : {})}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        aria-required={required || undefined}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
       />
+      <FieldError id={`${id}-error`} message={error} />
     </div>
+  );
+}
+
+/** Asterisk after a required label; screen readers get aria-required from the field instead. */
+function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="ml-0.5 text-destructive">
+      *
+    </span>
   );
 }

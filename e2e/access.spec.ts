@@ -76,6 +76,11 @@ test("each developer account has its own profile, and companies see them all", a
   await form.getByLabel(/Li e aceito/).check();
   await form.getByRole("button", { name: "Criar conta" }).click();
   await expect(page).toHaveURL(/\/create-profile$/);
+  await page.getByLabel("Localização").fill("Fortaleza, CE");
+  await page.getByLabel("Senioridade").selectOption("Pleno");
+  await page.getByLabel("Modelo de trabalho").selectOption("Remoto");
+  await page.getByLabel("Disponibilidade").selectOption("Disponível agora");
+  await page.getByLabel("Bio profissional").fill("Construo APIs em Node.js.");
   await page.getByRole("button", { name: "4 Links" }).click();
   await page.getByRole("button", { name: "Concluir perfil" }).click();
   await page.getByRole("button", { name: "Ver como card" }).click();

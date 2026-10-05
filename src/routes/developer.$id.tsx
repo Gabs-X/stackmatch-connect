@@ -136,6 +136,11 @@ function CatalogDeveloperPage({ d }: { d: Developer }) {
               <span className="section-kicker">{t.profile.portfolioLink}</span>
               <h2 className="section-title">{t.profile.featured}</h2>
             </div>
+            {d.projects.length === 0 && (
+              <p className="mt-4 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                {t.profile.noProjects}
+              </p>
+            )}
             <div className="mt-6 grid gap-5 md:grid-cols-3">
               {d.projects.map((p, index) => (
                 <article

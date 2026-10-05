@@ -6,6 +6,7 @@ import {
   loadPublishedProfiles,
   loadSavedProfile,
   localProfileToDeveloper,
+  missingProfileFields,
   newProject,
   profileLink,
   profilesStorageKey,
@@ -204,5 +205,40 @@ describe("experience, rate and hiring types", () => {
     expect(developer).toMatchObject({ experience: "4 anos", rate: 95, hiringTypes: ["PJ", "CLT"] });
     expect(experienceLabel(1)).toBe("1 ano");
     expect(experienceLabel(0)).toBe("0 anos");
+  });
+});
+
+describe("missingProfileFields", () => {
+  const complete = {
+    ...emptyProfile,
+    name: "Ana Souza",
+    role: "Frontend Developer",
+    location: "Recife, PE",
+    seniority: "Pleno",
+    workMode: "Remoto",
+    availability: "Disponível agora",
+    bio: "Desenvolvo interfaces acessíveis.",
+  };
+
+  it("lists blank required fields in form order", () => {
+    expect(missingProfileFields({ ...emptyProfile, skills: [] })).toEqual([
+      "name",
+      "role",
+      "location",
+      "seniority",
+      "workMode",
+      "availability",
+      "bio",
+      "skills",
+    ]);
+  });
+
+  it("treats whitespace as blank", () => {
+    expect(missingProfileFields({ ...complete, name: "   " })).toEqual(["name"]);
+  });
+
+  it("accepts a profile without projects, links, rate or experience", () => {
+    expect(complete.projects).toEqual([]);
+    expect(missingProfileFields(complete)).toEqual([]);
   });
 });

@@ -45,7 +45,9 @@ test("a developer signs up, lands on the profile form prefilled, and signs out",
 
   await expect(page).toHaveURL(/\/create-profile$/);
   await expect(page.getByLabel("Nome completo")).toHaveValue("Ana Souza");
-  await expect(page.getByLabel("Cargo", { exact: true })).toHaveValue("Frontend Developer");
+  await expect(page.getByRole("textbox", { name: "Cargo", exact: true })).toHaveValue(
+    "Frontend Developer",
+  );
 
   await page.getByRole("button", { name: "Menu da conta de Ana Souza" }).click();
   const menu = page.getByRole("menu");
