@@ -1054,6 +1054,49 @@ const en: Dict = {
 
 // Translations for mock data values (stored in Portuguese).
 const dataEn: Record<string, string> = {
+  "Painel de notas fiscais com filtros e exportação.": "Invoice dashboard with filters and export.",
+  "Calendário escolar com avisos para pais e professores.":
+    "School calendar with notices for parents and teachers.",
+  "API de divisão de pagamentos entre parceiros.": "API that splits payments between partners.",
+  "Serviço de notificações por e-mail e push com filas.":
+    "Queue-based e-mail and push notification service.",
+  "Sistema de prontuários e agenda para clínicas.":
+    "Medical records and scheduling system for clinics.",
+  "Rastreamento de cargas com mapas em tempo real.": "Freight tracking with real-time maps.",
+  "Modelo que prevê cancelamentos de clientes.": "Model that predicts customer churn.",
+  "Extração automática de dados de documentos digitalizados.":
+    "Automatic data extraction from scanned documents.",
+  "Site pessoal com blog e modo escuro.": "Personal website with a blog and dark mode.",
+  "Catálogo de receitas com busca por ingredientes.": "Recipe catalog with search by ingredient.",
+  "Integração de sistemas públicos com alto volume de acessos.":
+    "Integration of high-traffic public sector systems.",
+  "Motor de faturamento para operadoras de telecom.": "Billing engine for telecom carriers.",
+  "Padronização de clusters Kubernetes para vários times.":
+    "Standardized Kubernetes clusters for multiple teams.",
+  "Alertas de custo de nuvem por time e projeto.": "Cloud cost alerts per team and project.",
+  "App de lista de compras compartilhada.": "Shared shopping list app.",
+  "App de trilhas de bicicleta com mapas offline.": "Bike trail app with offline maps.",
+  "Controle de estoque para redes de varejo.": "Inventory control for retail chains.",
+  "Área do cliente com segunda via e chamados.":
+    "Customer portal with invoice copies and support tickets.",
+  "Desenvolvo interfaces em Angular e TypeScript para sistemas de gestão, com atenção a formulários complexos e performance.":
+    "I build Angular and TypeScript interfaces for management systems, with attention to complex forms and performance.",
+  "Construo APIs em Node.js e NestJS, com filas, cache e testes automatizados para serviços que precisam escalar.":
+    "I build Node.js and NestJS APIs with queues, caching and automated tests for services that need to scale.",
+  "Atuo de ponta a ponta com React e Node.js e já liderei times pequenos na entrega de produtos para saúde e logística.":
+    "I work end to end with React and Node.js and have led small teams shipping products for healthcare and logistics.",
+  "Treino e coloco em produção modelos de machine learning com Python, do experimento ao monitoramento em AWS.":
+    "I train and ship machine learning models with Python, from experimentation to monitoring on AWS.",
+  "Estou no início da carreira e gosto de transformar layouts em interfaces acessíveis com React, Next.js e Tailwind.":
+    "I am early in my career and enjoy turning layouts into accessible interfaces with React, Next.js and Tailwind.",
+  "Trabalho com Java e Spring Boot há mais de dez anos em sistemas críticos de governo e telecom, com foco em estabilidade.":
+    "I have worked with Java and Spring Boot for over ten years on critical government and telecom systems, focused on stability.",
+  "Cuido de infraestrutura como código, Kubernetes e pipelines de CI/CD, ajudando times a fazer deploy com segurança.":
+    "I handle infrastructure as code, Kubernetes and CI/CD pipelines, helping teams deploy safely.",
+  "Desenvolvo apps em Flutter e estou aprofundando integração com Firebase, testes e publicação nas lojas.":
+    "I build Flutter apps and am deepening my work on Firebase integration, testing and store releases.",
+  "Desenvolvo sistemas em C# e .NET com front-end em Vue, integrando ERPs e serviços em Azure.":
+    "I build C# and .NET systems with Vue front ends, integrating ERPs and Azure services.",
   "Fintech de pagamentos digitais para pequenos e médios negócios. Nosso time de tecnologia tem 40 pessoas, divididas entre produto, plataforma e dados.":
     "Digital payments fintech for small and mid-sized businesses. Our tech team has 40 people across product, platform and data.",
   "Estúdio de produto que cria aplicativos web e mobile para startups de saúde e educação. Time enxuto, 100% remoto e com bastante autonomia.":

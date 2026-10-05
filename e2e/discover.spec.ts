@@ -26,7 +26,7 @@ test("checks the account before showing any profile, then the first one", async 
   expect(html).not.toContain("Gabriel Botelho");
 
   await page.goto("/discover");
-  await expect(counter(page)).toHaveText("1 de 8 perfis");
+  await expect(counter(page)).toHaveText("1 de 17 perfis");
   await expect(card(page)).toContainText("Full Stack Developer");
 });
 
@@ -34,7 +34,7 @@ test("marking interest saves the profile and moves to the next one", async ({ pa
   await page.getByRole("button", { name: "Interessado" }).click();
 
   await expect(page.getByText("Interesse registrado", { exact: true })).toBeVisible();
-  await expect(counter(page)).toHaveText("2 de 8 perfis");
+  await expect(counter(page)).toHaveText("2 de 17 perfis");
   await expect(card(page)).toContainText("Marina Costa");
   await expect(savedBadge(page)).toHaveText("1");
 });
@@ -56,15 +56,15 @@ test("profiles already saved stay out of Discover", async ({ page }) => {
   );
   await page.reload();
 
-  await expect(counter(page)).toHaveText("1 de 7 perfis");
+  await expect(counter(page)).toHaveText("1 de 16 perfis");
   await expect(card(page)).not.toContainText("Gabriel Botelho");
   await expect(page.getByRole("link", { name: "· 1 já salvo fora da lista" })).toBeVisible();
 
   // Saving during the round keeps the card in the list, so undo still brings it back.
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(counter(page)).toHaveText("2 de 7 perfis");
+  await expect(counter(page)).toHaveText("2 de 16 perfis");
   await page.getByRole("main").getByRole("button", { name: "Desfazer" }).click();
-  await expect(counter(page)).toHaveText("1 de 7 perfis");
+  await expect(counter(page)).toHaveText("1 de 16 perfis");
   await expect(savedBadge(page)).toHaveText("1");
 });
 
@@ -72,7 +72,14 @@ test("a search whose talents are all saved points to the shortlist", async ({ pa
   await page.evaluate(() =>
     localStorage.setItem(
       "stackmatch-saved",
-      JSON.stringify(["marina-costa", "rafael-lima", "amanda-rocha"]),
+      JSON.stringify([
+        "marina-costa",
+        "rafael-lima",
+        "amanda-rocha",
+        "larissa-souza",
+        "thiago-nascimento",
+        "rodrigo-martins",
+      ]),
     ),
   );
   await page.reload();
@@ -88,19 +95,20 @@ test("a search whose talents are all saved points to the shortlist", async ({ pa
 test("filters narrow the list and active chips can be removed", async ({ page }) => {
   await filterChip(page, "Sênior").click();
 
-  await expect(counter(page)).toHaveText("1 de 3 perfis");
+  await expect(counter(page)).toHaveText("1 de 6 perfis");
   await expect(card(page)).toContainText("Sênior");
 
   await page.getByRole("button", { name: "Remover filtro: Sênior" }).click();
-  await expect(counter(page)).toHaveText("1 de 8 perfis");
+  await expect(counter(page)).toHaveText("1 de 17 perfis");
 });
 
 test("a search without results offers to clear the filters", async ({ page }) => {
   await filterChip(page, "Angular").click();
+  await filterChip(page, "Presencial").click();
 
   await expect(page.getByRole("heading", { name: "Nenhum talento encontrado" })).toBeVisible();
   await page.getByRole("button", { name: "Limpar filtros" }).click();
-  await expect(counter(page)).toHaveText("1 de 8 perfis");
+  await expect(counter(page)).toHaveText("1 de 17 perfis");
 });
 
 test("reaching the end of the list offers to review again", async ({ page }) => {

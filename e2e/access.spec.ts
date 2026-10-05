@@ -95,7 +95,7 @@ test("each developer account has its own profile, and companies see them all", a
   const cards = page.locator("main section article");
   await expect(cards.first()).toContainText("Gabriel Botelho");
   await expect(cards.first()).not.toContainText("Seu perfil");
-  await expect(page.getByText(/^1 de 9 perfis$/)).toBeVisible();
+  await expect(page.getByText(/^1 de 18 perfis$/)).toBeVisible();
   await page.getByRole("button", { name: "Passar" }).click();
   await expect(cards.first()).toContainText("Diego Fernandes");
 
