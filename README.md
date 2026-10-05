@@ -23,11 +23,14 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Contas:** telas de entrar, criar conta (empresa ou desenvolvedor) e recuperar senha, com validação por campo, menu da conta no cabeçalho e retorno à página de origem após o login.
 - **Acesso por tipo de conta:** Discover e Talentos salvos são exclusivos de empresas; Meu perfil e Empresas interessadas são exclusivos de desenvolvedores. Visitantes são levados ao login (voltando à página depois) e a conta do outro tipo vê um aviso. A página individual de cada perfil continua aberta para links compartilhados. Sem login, o cabeçalho mostra apenas Entrar e Criar conta; com login, só as áreas da conta conectada.
 - **Empresas interessadas:** aba do desenvolvedor com as empresas que marcaram interesse no perfil dele pelo Discover ou propuseram uma conversa, com contato, horário sugerido, mensagem e botão para responder por e-mail.
+- **Detalhes da empresa:** em Empresas interessadas, o nome da empresa ou o botão "Ver empresa" abre `/company/<id da conta>`, com a descrição, a localização e o site que a empresa preencheu em Dados da empresa, o contato (nome, cargo, e-mail e telefone), o que ela fez (interesse ou proposta) e o botão de resposta. O desenvolvedor só vê empresas que entraram em contato com ele; outros endereços mostram "Empresa não encontrada".
 - **Dados da empresa:** página da conta de empresa (`/company-settings`, no menu da conta) com site, localização, descrição e o contato para os desenvolvedores (nome do colaborador, cargo, e-mail e telefone). Propostas de reunião e interesses marcados no Discover saem assinados com esse contato, e as respostas vão para o e-mail de contato. Nome da empresa, CNPJ e e-mail de login aparecem só para consulta. O CNPJ é pedido no cadastro de empresa, com máscara e validação dos dígitos verificadores; a conta `teste.emp` usa o CNPJ de exemplo 11.222.333/0001-81.
-- **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`); a tela de login tem atalhos que preenchem cada uma. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado. Em deploys públicos, defina `VITE_DEMO_ACCOUNTS=false`: isso remove as contas de teste, os atalhos do login e o perfil de demonstração do Gabriel, já que a senha fica no código.
+- **Contas de teste:** `teste.dev` (desenvolvedor) e `teste.emp` (empresa), ambas com a senha `teste1234`. Entre pelo usuário ou pelo e-mail (`teste.dev@stackmatch.app` / `teste.emp@stackmatch.app`), digitando as credenciais: a tela de login não as exibe. A conta `teste.dev` é o Gabriel Botelho e já vem com o perfil dele publicado. Em deploys públicos, defina `VITE_DEMO_ACCOUNTS=false`: isso remove as contas de teste e o perfil de demonstração do Gabriel, já que a senha fica no código.
 - **Perfil completo:** bio, cargo, senioridade, experiência, tecnologias e projetos.
-- **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist.
+- **Talentos salvos:** cards compactos com dados para consulta, acesso ao perfil e remoção da shortlist. Cada conta de empresa tem a própria shortlist, mesmo quando várias usam o mesmo navegador.
 - **Criação de perfil:** formulário em etapas (incluindo anos de experiência, valor por hora e tipos de contratação, usados pelos filtros do Discover), skills, projetos com descrição, tecnologias, imagem de capa, repositório e demo (com edição e remoção), links, preview com o card que as empresas veem no Discover e salvamento local ao concluir.
+- **Campos obrigatórios do perfil:** nome, cargo, localização, senioridade, modelo de trabalho, disponibilidade, bio e pelo menos uma skill, marcados com `*`. Com algum em branco, o formulário não avança de etapa nem conclui: mostra a mensagem em cada campo e leva o foco ao primeiro. A regra fica em `missingProfileFields` (`src/lib/local-profile.ts`).
+- **Perfil sem projetos:** a etapa Projetos é opcional, com a opção "Continuar sem projetos". Na página do perfil, um desenvolvedor sem projetos mostra um aviso no lugar da seção vazia.
 - **Importação simulada do GitHub:** seleção de projetos fictícios para o perfil.
 - **Proposta de reunião:** uma conta de empresa sugere um horário (data e hora, em GMT−3) e escreve uma mensagem opcional. O profissional recebe a proposta por e-mail e responde direto para a empresa: o StackMatch não gerencia a reunião nem bloqueia horários. O diálogo mostra uma prévia do e-mail e avisa quando já houve proposta para o mesmo profissional. Visitantes são levados ao login; contas de desenvolvedor não enviam propostas.
 - **Assistente (prévia):** chat flutuante com sugestões, digitação em streaming e opção de parar a resposta, pronto para conectar a um backend de IA.
@@ -42,10 +45,10 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - Framer Motion para animações e arraste dos cards.
 - Lucide para ícones e Sonner para notificações.
 - date-fns e React DayPicker para datas e calendário.
-- Zod para validação da estrutura do perfil local.
+- Zod e React Hook Form para validação dos formulários e da estrutura dos dados locais.
+- TanStack Query para as consultas à API simulada (catálogo, atividade das empresas, dados e perfil das empresas), com estados de carregamento e erro.
 - ESLint e Prettier para verificação e formatação.
-
-TanStack Query está configurado na base do projeto, mas os fluxos atuais não dependem de consultas a uma API de produto.
+- Vitest e Playwright para os testes.
 
 ## Como executar
 
@@ -70,31 +73,38 @@ npm run test:e2e
 npm run build
 ```
 
-Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos e usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem Discover (ações, desfazer, filtros), perfil (links reais e de demonstração, avatar do GitHub e fallback), criação de perfil até o Discover, idioma e tema, assistente, proposta de reunião e o layout em celular.
+Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos e usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro, login e recuperação de senha; acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links reais e de demonstração, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
 
-Para visualizar o build localmente:
+Para rodar o build de produção localmente, use o servidor gerado pelo Nitro (o `npm run preview` procura o build em `dist/` e não funciona com essa configuração):
 
 ```sh
-npm run preview
+npm run build
+node .output/server/index.mjs
 ```
+
+O servidor usa a porta 3000; para outra, defina `PORT`.
 
 O lint pode apresentar avisos de `react-refresh/only-export-components` em módulos que exportam componentes junto com funções ou constantes. Eles se referem ao Fast Refresh em desenvolvimento.
 
 ## Arquitetura em alto nível
 
-| Local                         | Responsabilidade                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------- |
-| `src/routes/`                 | Páginas: início, Discover, perfil, talentos salvos e criação de perfil.          |
-| `src/components/`             | Componentes de produto, como cards, filtros, cabeçalho e proposta de reunião.    |
-| `src/components/ui/`          | Primitivas reutilizáveis de interface.                                           |
-| `src/lib/developers.ts`       | Tipos e catálogo mockado de profissionais e projetos.                            |
-| `src/lib/app-context.tsx`     | Estado compartilhado de shortlist, interesses e propostas de reunião enviadas.   |
-| `src/lib/meeting-requests.ts` | Formato das propostas de reunião, horários aceitos e leitura do histórico local. |
-| `src/lib/local-profile.ts`    | Estrutura, validação e persistência dos perfis, um por conta de desenvolvedor.   |
-| `src/lib/i18n.tsx`            | Dicionários, idioma ativo e formatação de valores.                               |
-| `src/styles.css`              | Estilos globais e tokens visuais.                                                |
+| Local                          | Responsabilidade                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/`                  | Páginas: início, login, cadastro, Discover, perfil, talentos salvos, criação de perfil, empresas interessadas, detalhes e dados da empresa. |
+| `src/components/`              | Componentes de produto, como cards, filtros, cabeçalho e proposta de reunião.                                                               |
+| `src/components/ui/`           | Primitivas reutilizáveis de interface (só as usadas pelo app).                                                                              |
+| `src/lib/api.ts`               | API simulada: único ponto a trocar por chamadas ao backend.                                                                                 |
+| `src/lib/auth.ts`              | Contas, sessão, validação de cadastro e contas de teste.                                                                                    |
+| `src/lib/developers.ts`        | Tipos e catálogo mockado de profissionais, projetos e empresas de demonstração.                                                             |
+| `src/lib/app-context.tsx`      | Estado compartilhado: shortlist e interesses (por conta de empresa), propostas e marcações de interesse.                                    |
+| `src/lib/meeting-requests.ts`  | Formato das propostas de reunião, horários aceitos e leitura do histórico local.                                                            |
+| `src/lib/profile-interests.ts` | Marcações de interesse e agrupamento das empresas interessadas por conta.                                                                   |
+| `src/lib/company-settings.ts`  | Dados da empresa e o perfil público que o desenvolvedor vê.                                                                                 |
+| `src/lib/local-profile.ts`     | Estrutura, campos obrigatórios e persistência dos perfis, um por conta de desenvolvedor.                                                    |
+| `src/lib/i18n.tsx`             | Dicionários, idioma ativo e formatação de valores.                                                                                          |
+| `src/styles.css`               | Estilos globais e tokens visuais.                                                                                                           |
 
-Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist, interesses, propostas enviadas, perfil concluído e preferência de idioma usam `localStorage`.
+Estados transitórios, como filtros, etapa do formulário e posição na lista, ficam nos componentes. Os dados compartilhados usam Context; shortlist e interesses (com uma chave por conta de empresa, `stackmatch-saved:<id>` e `stackmatch-interests:<id>`), propostas enviadas, perfil concluído e preferência de idioma usam `localStorage`.
 
 Embora TanStack Start tenha infraestrutura de renderização no servidor, não há backend de negócio, banco de dados ou API de contratação implementados.
 
@@ -106,7 +116,8 @@ Os valores dos mocks são traduzidos na apresentação, preservando os dados usa
 
 ## O que está mockado
 
-- Os sete profissionais do catálogo, suas bios, projetos, valores, experiências e disponibilidades são fictícios. A home não faz alegações de volume ou verificação de perfis.
+- Os dezesseis profissionais do catálogo, suas bios, projetos, valores, experiências e disponibilidades são fictícios; com o perfil da conta `teste.dev`, o Discover mostra 17. A home não faz alegações de volume ou verificação de perfis.
+- As empresas da atividade de demonstração (NuvemPay, Órbita Labs e VerdeTech) têm descrição, cidade, site de exemplo e cargo do contato fictícios (`demoCompanyProfiles` em `src/lib/developers.ts`). `fetchCompanyProfile` em `src/lib/api.ts` faz o papel do futuro `GET /companies/:id`: devolve esses dados ou o que uma conta de empresa salvou em Dados da empresa neste navegador.
 - A importação do GitHub é uma **simulação de front-end**, sem OAuth ou consulta a repositórios reais.
 - O envio da proposta de reunião é **simulado**: `sendMeetingRequest` em `src/lib/api.ts` faz o papel do futuro `POST /meeting-requests`, que enviará o e-mail ao profissional com `Reply-To` da empresa. Nenhum e-mail é enviado; a proposta fica registrada neste navegador para a empresa lembrar com quem já falou.
 - O interesse é um registro local, sem notificação, chat ou contato externo; quando feito por uma conta de empresa, aparece para o desenvolvedor em Empresas interessadas.
@@ -168,7 +179,8 @@ Sem essa variável, o componente não é incluído no build.
 - A proposta de reunião não consulta a agenda do profissional; confirmar ou remarcar acontece por e-mail, fora do app.
 - Os perfis de desenvolvedor ficam neste navegador (`stackmatch-profiles`), um por conta e identificados pelo id dela, no lugar do futuro `GET/PUT /me/profile` e `GET /profiles`. Cada conta edita só o próprio perfil, e o Discover lista os de todas as contas de desenvolvedor criadas aqui. Para empresas, cada um é um candidato como os outros, com página em `/developer/<id da conta>` no mesmo formato dos demais; o selo "Seu perfil" aparece só para o dono. Versões anteriores guardavam um único perfil sem dono (`stackmatch-profile`), que é descartado. Perfis que deixam valor por hora ou tipo de contratação em branco saem da lista quando esses filtros estão ativos. As imagens de capa dos projetos são reduzidas e salvas no `localStorage`, que tem limite de cerca de 5 MB por site.
 - O catálogo é pequeno e estático; algumas opções de filtro podem não retornar resultados. Não há busca geográfica, ranking ou recomendação automática.
-- As imagens de perfil incluem reutilizações entre personagens fictícios.
+- As imagens de perfil incluem reutilizações entre personagens fictícios; os perfis adicionados por último não têm foto e mostram as iniciais.
+- Shortlists salvas antes da separação por conta ficavam numa chave única do navegador, sem dono conhecido, e são descartadas.
 - Filtros, posição na descoberta e histórico de desfazer não persistem entre sessões. O formulário guarda seu conteúdo em estado durante a edição e persiste ao concluir.
 - Acessibilidade e responsividade receberam ajustes pontuais; ainda cabe uma validação mais ampla com usuários, leitores de tela e diferentes dispositivos.
 - Os testes automatizados cobrem a lógica (Vitest, `npm test`) e os principais fluxos no navegador (Playwright, `npm run test:e2e`).
@@ -176,7 +188,8 @@ Sem essa variável, o componente não é incluído no build.
 ## Próximos passos
 
 1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
-2. Rodar as suítes automaticamente a cada push (CI).
-3. Refinar validações do formulário e ampliar o cadastro de projetos, conforme feedback de uso.
+2. Definir uma regra de compatibilidade entre vaga e perfil, para que o "match" do produto seja calculado.
+3. Rodar as suítes automaticamente a cada push (CI).
 4. Em uma etapa com backend, definir contratos de API, autenticação, publicação de perfis e persistência por usuário.
-5. Integrar o GitHub e o envio de e-mails apenas após definir permissões, privacidade e limites contra spam nas propostas de reunião.
+5. Mostrar o status das propostas de reunião para os dois lados (enviada, vista, respondida).
+6. Integrar o GitHub e o envio de e-mails apenas após definir permissões, privacidade e limites contra spam nas propostas de reunião.
