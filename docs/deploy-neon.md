@@ -89,12 +89,13 @@ No site publicado:
 
 Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os mais comuns:
 
-| Erro                                                         | Causa                                                                            |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `DATABASE_URL must point to a Postgres server in production` | A variável não está no ambiente do deploy. Confira o passo 1 e refaça o deploy.  |
-| `relation "users" does not exist`                            | As migrações não foram aplicadas nesse banco. Rode o passo 2.                    |
-| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 5).                    |
-| `BLOB_READ_WRITE_TOKEN must be set in production`            | O Blob store não está conectado ao projeto. Confira o passo 4 e refaça o deploy. |
+| Erro                                                         | Causa                                                                                              |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL must point to a Postgres server in production` | A variável não está no ambiente do deploy. Confira o passo 1 e refaça o deploy.                    |
+| `relation "users" does not exist`                            | As migrações não foram aplicadas nesse banco. Rode o passo 2.                                      |
+| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 5).                                      |
+| `No Blob store connected`                                    | O Blob store não está conectado ao projeto. Confira o passo 4 e refaça o deploy.                   |
+| `Profile not saved:` seguido de um erro do Blob              | A `BLOB_READ_WRITE_TOKEN` do projeto não é a do store público. Copie a do store e refaça o deploy. |
 
 ## Depois de mudar o schema
 

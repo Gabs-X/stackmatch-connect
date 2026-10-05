@@ -113,7 +113,8 @@ const pt = {
     loadError: "Não foi possível carregar os talentos",
     loadErrorSub: "Verifique sua conexão e tente novamente.",
     saveFeedback: "salvo na shortlist.",
-    interestFeedback: "interesse registrado localmente e perfil salvo. Nenhum contato foi enviado.",
+    interestFeedback:
+      "interesse registrado e perfil salvo. O profissional vê sua empresa em Empresas interessadas; nenhum e-mail foi enviado.",
     finishedTitle: "Você chegou ao fim da lista",
     finishedSub: "Revise estes perfis novamente ou ajuste os filtros para uma nova busca.",
     restart: "Rever perfis",
@@ -245,7 +246,7 @@ const pt = {
     next: "Continuar",
     finish: "Concluir perfil",
     finishToast: "Perfil salvo!",
-    finishDesc: "Demonstração local; nenhum dado foi enviado ou publicado.",
+    finishDesc: "Empresas já podem encontrar seu perfil no Discover.",
     requiredFields: "Preencha os campos obrigatórios para continuar.",
     requiredNote: "Campos marcados com * são obrigatórios.",
     requiredErrors: {
@@ -624,7 +625,8 @@ const en: Dict = {
     loadError: "Couldn't load talent",
     loadErrorSub: "Check your connection and try again.",
     saveFeedback: "saved to your shortlist.",
-    interestFeedback: "interest recorded locally and profile saved. No contact was sent.",
+    interestFeedback:
+      "interest recorded and profile saved. They see your company under Interested companies; no e-mail was sent.",
     finishedTitle: "You reached the end of the list",
     finishedSub: "Review these profiles again or adjust your filters for a new search.",
     restart: "Review profiles",
@@ -757,7 +759,7 @@ const en: Dict = {
     next: "Continue",
     finish: "Finish profile",
     finishToast: "Profile saved!",
-    finishDesc: "Local demo; no data was sent or published.",
+    finishDesc: "Companies can now find your profile in Discover.",
     requiredFields: "Fill in the required fields to continue.",
     requiredNote: "Fields marked with * are required.",
     requiredErrors: {

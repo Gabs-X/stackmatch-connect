@@ -39,23 +39,43 @@ export async function readLocalImage(key: string) {
   return readFile(path.join(localDir(), key)).catch(() => null);
 }
 
+/**
+ * The token's store when BLOB_READ_WRITE_TOKEN is set. Passed explicitly because, on Vercel, the
+ * SDK otherwise prefers the deployment's OIDC credentials with BLOB_STORE_ID, which can point to
+ * another store connected to the project.
+ */
+const blobCredentials = () => {
+  const token = process.env["BLOB_READ_WRITE_TOKEN"]?.trim();
+  return token ? { token } : {};
+};
+
 const blobStorage: Storage = {
   async put(key, bytes) {
     const { put } = await import("@vercel/blob");
-    const blob = await put(key, bytes, { access: "public", contentType: "image/jpeg" });
+    const blob = await put(key, bytes, {
+      access: "public",
+      contentType: "image/jpeg",
+      ...blobCredentials(),
+    });
     return blob.url;
   },
   async remove(url) {
     const { del } = await import("@vercel/blob");
-    await del(url);
+    await del(url, blobCredentials());
   },
 };
 
+/** A Blob store is connected: by its read-write token, or by store id with Vercel's OIDC. */
+const blobConfigured = () =>
+  Boolean(process.env["BLOB_READ_WRITE_TOKEN"]?.trim() || process.env["BLOB_STORE_ID"]?.trim());
+
 function storage(): Storage {
-  if (process.env["BLOB_READ_WRITE_TOKEN"]) return blobStorage;
+  if (blobConfigured()) return blobStorage;
   // The deployment's file system doesn't keep files between requests.
   if (process.env["NODE_ENV"] === "production")
-    throw new Error("BLOB_READ_WRITE_TOKEN must be set in production to store images.");
+    throw new Error(
+      "No Blob store connected: set BLOB_READ_WRITE_TOKEN (or BLOB_STORE_ID) in production to store images.",
+    );
   return localStorage;
 }
 

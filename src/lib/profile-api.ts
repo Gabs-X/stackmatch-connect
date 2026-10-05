@@ -24,7 +24,13 @@ export const saveMyProfile = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const user = await requireAccount("developer");
     const db = await database();
-    await saveProfile(db, user.id, data);
+    try {
+      await saveProfile(db, user.id, data);
+    } catch (error) {
+      // The form only says it couldn't save; the reason goes to the server logs.
+      console.error("Profile not saved:", error);
+      throw error;
+    }
     return loadProfile(db, user.id);
   });
 
