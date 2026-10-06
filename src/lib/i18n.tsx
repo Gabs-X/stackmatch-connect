@@ -538,6 +538,19 @@ const pt = {
     notFoundSub:
       "Só aparecem aqui empresas que marcaram interesse no seu perfil ou propuseram uma conversa.",
   },
+  // Why a company couldn't reach out: see src/lib/outreach.ts.
+  outreach: {
+    wait: (seconds: number) =>
+      seconds < 3600
+        ? `${Math.max(1, Math.ceil(seconds / 60))} min`
+        : `${Math.ceil(seconds / 3600)} h`,
+    interestLimit: (max: number, wait: string) =>
+      `Sua empresa atingiu o limite de ${max} interesses em 24 horas. Tente de novo em ${wait}.`,
+    meetingLimit: (max: number, wait: string) =>
+      `Sua empresa atingiu o limite de ${max} propostas em 24 horas. Tente de novo em ${wait}.`,
+    developerMeetingLimit: (max: number, days: number, wait: string) =>
+      `Você já enviou ${max} propostas para esta pessoa nos últimos ${days} dias. Aguarde a resposta por e-mail ou tente de novo em ${wait}.`,
+  },
   // The e-mail a developer gets when a company marks interest in their profile.
   interestEmail: {
     subject: (company: string) => `${company} tem interesse no seu perfil no StackMatch`,
@@ -1079,6 +1092,18 @@ const en: Dict = {
     notFoundTitle: "Company not found",
     notFoundSub:
       "Only companies that marked your profile as interesting or proposed a call show up here.",
+  },
+  outreach: {
+    wait: (seconds: number) =>
+      seconds < 3600
+        ? `${Math.max(1, Math.ceil(seconds / 60))} min`
+        : `${Math.ceil(seconds / 3600)} h`,
+    interestLimit: (max: number, wait: string) =>
+      `Your company reached the limit of ${max} interest marks in 24 hours. Try again in ${wait}.`,
+    meetingLimit: (max: number, wait: string) =>
+      `Your company reached the limit of ${max} proposals in 24 hours. Try again in ${wait}.`,
+    developerMeetingLimit: (max: number, days: number, wait: string) =>
+      `You already sent ${max} proposals to this person in the last ${days} days. Wait for their reply by e-mail or try again in ${wait}.`,
   },
   interestEmail: {
     subject: (company: string) => `${company} is interested in your StackMatch profile`,

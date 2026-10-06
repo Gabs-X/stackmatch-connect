@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { sendMeetingRequestFn, sentMeetingRequestsQuery } from "@/lib/meetings-api";
+import { outreachLimits } from "@/lib/outreach";
 import { useCompanySettings } from "@/lib/use-company-settings";
 import { isProposedTimeValid, lastRequestTo, meetingTimes } from "@/lib/meeting-requests";
 
@@ -138,7 +139,22 @@ export function ScheduleDialog({
           setNow(Date.now());
           setTime("");
           setStep("schedule");
-        } else toast.error(t.schedule.sendError);
+        } else if (result.error === "meeting-limit")
+          toast.error(
+            t.outreach.meetingLimit(
+              outreachLimits.meetingsPerDay,
+              t.outreach.wait(result.retryInSeconds),
+            ),
+          );
+        else if (result.error === "developer-meeting-limit")
+          toast.error(
+            t.outreach.developerMeetingLimit(
+              outreachLimits.meetingsPerDeveloper,
+              outreachLimits.meetingsPerDeveloperDays,
+              t.outreach.wait(result.retryInSeconds),
+            ),
+          );
+        else toast.error(t.schedule.sendError);
         return;
       }
       queryClient.setQueryData(sentQuery.queryKey, (current = []) => [...current, result.request]);

@@ -6,11 +6,13 @@ import {
   type MeetingRequestInput,
 } from "@/lib/meeting-requests";
 import type { Lang } from "@/lib/i18n";
+import type { OutreachLimitError } from "@/lib/outreach";
 import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
 import { developerProfiles, interests, meetingRequests } from "./db/schema";
 import { sendEmail } from "./email";
 import { developerEmail, meetingEmail } from "./notifications";
+import { meetingLimit } from "./outreach";
 
 type MeetingRow = typeof meetingRequests.$inferSelect;
 
@@ -39,7 +41,9 @@ async function developerName(db: Db, developerId: string) {
 }
 
 export type SendResult =
-  { request: MeetingRequest } | { error: "time-passed" | "unknown-developer" | "not-sent" };
+  | { request: MeetingRequest }
+  | { error: "time-passed" | "unknown-developer" | "not-sent" }
+  | OutreachLimitError;
 
 /**
  * Records the proposal, signed with the company's current contact, and e-mails it to the developer
@@ -56,6 +60,8 @@ export async function sendMeetingRequest(
   if (!isProposedTimeValid(input.date, input.time, now)) return { error: "time-passed" };
   const name = await developerName(db, input.developerId);
   if (name === null) return { error: "unknown-developer" };
+  const limit = await meetingLimit(db, company.id, input.developerId, now);
+  if (limit) return limit;
   const contact = await loadCompanySettings(db, company);
   const [row] = await db
     .insert(meetingRequests)

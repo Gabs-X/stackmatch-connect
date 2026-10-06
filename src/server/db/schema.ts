@@ -175,6 +175,27 @@ export const meetingRequests = pgTable(
   ],
 );
 
+/**
+ * Every interest mark a company made, kept when it's undone: the daily limit counts marks, and the
+ * developer is e-mailed about a company at most once in a while (see src/lib/outreach.ts).
+ */
+export const interestEvents = pgTable(
+  "interest_events",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Whether this mark e-mailed the developer. */
+    notified: boolean("notified").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("interest_events_company_created_at_idx").on(table.companyId, table.createdAt)],
+);
+
 /** A developer account's public profile; companies find it in Discover once it exists. */
 export const developerProfiles = pgTable("developer_profiles", {
   userId: text("user_id")

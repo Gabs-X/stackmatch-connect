@@ -85,6 +85,13 @@
       "when": 1791257949770,
       "tag": "0011_login_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791290062398,
+      "tag": "0012_interest_events",
+      "breakpoints": true
     }
   ]
 }

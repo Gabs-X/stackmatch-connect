@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { confirmEmail, expect, lastEmail, test, uniqueEmail } from "./fixtures";
+import { confirmEmail, expect, lastEmail, signInAs, test, uniqueEmail } from "./fixtures";
 
 // Thursday noon in Brasília, so the next day (Friday) has every time open. The server checks the
 // proposed time against its own clock, so the browser's is set to a date still ahead.
@@ -86,4 +86,31 @@ test("developer accounts can't send proposals", async ({ page }) => {
   await page.goto("/developer/marina-costa");
   await page.getByRole("button", { name: "Propor reunião" }).click();
   await expect(page.getByRole("dialog")).toContainText("Disponível para contas de empresa");
+});
+
+test("a company can't flood the same developer with proposals", async ({ page }) => {
+  await signInAs(page, "company");
+  await page.goto("/developer/marina-costa");
+  const dialog = page.getByRole("dialog");
+  const propose = async (time: string) => {
+    await page.getByRole("button", { name: "Propor reunião" }).click();
+    await dialog.locator('[data-day="04/10/2030"]').click();
+    await dialog.getByRole("button", { name: time }).click();
+    await dialog.getByRole("button", { name: "Continuar" }).click();
+    await dialog.getByRole("button", { name: "Enviar proposta" }).click();
+  };
+
+  for (const time of ["09:00", "10:30", "14:00"]) {
+    await propose(time);
+    await expect(dialog.getByRole("heading", { name: "Proposta enviada" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Concluir" }).click();
+  }
+
+  // The fourth in a week is refused, and Marina's last e-mail is still the third proposal.
+  await propose("15:30");
+  await expect(
+    page.getByText("Você já enviou 3 propostas para esta pessoa nos últimos 7 dias."),
+  ).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Proposta enviada" })).toBeHidden();
+  expect((await lastEmail(page, "marina-costa@example.com")).text).toContain("às 14:00");
 });

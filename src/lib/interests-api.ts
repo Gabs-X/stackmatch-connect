@@ -1,14 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import {
-  listInterestsBy,
-  listInterestsFor,
-  markInterest,
-  removeInterest,
-} from "@/server/interests";
+import { listInterestsBy, listInterestsFor, removeInterest } from "@/server/interests";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { notifyInterest } from "@/server/notifications";
+import { markInterestAndNotify, type MarkResult } from "@/server/outreach";
 import { database, requireAccount } from "@/server/session";
 
 const developerId = z.string().min(1).max(200);
@@ -19,24 +14,20 @@ export const fetchMyInterests = createServerFn({ method: "GET" }).handler(async 
 );
 
 /**
- * Stands for `POST /interests`. The first mark on a profile e-mails the developer, in the language
- * of the company's screen; a failed e-mail doesn't undo the mark.
+ * Stands for `POST /interests`. Within the daily limit, marks interest and e-mails the developer in
+ * the language of the company's screen (see markInterestAndNotify); a refusal says which limit.
  */
 export const markInterestFn = createServerFn({ method: "POST" })
   .validator(z.object({ developerId, language: z.enum(["pt", "en"]).default("pt") }))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<MarkResult> => {
     const company = await requireAccount("company");
-    const db = await database();
-    const result = await markInterest(db, company.id, data.developerId);
-    if (result === "unknown") throw new Error("Unknown developer profile.");
-    if (result === "created")
-      await notifyInterest(
-        db,
-        company.id,
-        data.developerId,
-        data.language,
-        getRequestUrl().origin,
-      ).catch((error: unknown) => console.error("Interest not e-mailed:", error));
+    return markInterestAndNotify(
+      await database(),
+      company.id,
+      data.developerId,
+      data.language,
+      getRequestUrl().origin,
+    );
   });
 
 /** Stands for `DELETE /interests/:developerId`, used to undo a mark. */

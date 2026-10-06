@@ -2,7 +2,10 @@ import type React from "react";
 import { useAuth } from "./auth-context";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { toast } from "sonner";
+import type { MarkResult } from "@/server/outreach";
 import { useI18n, type Lang } from "./i18n";
+import { outreachLimits } from "./outreach";
 import { fetchMyInterests, markInterestFn, removeInterestFn } from "./interests-api";
 import { fetchSavedTalents, removeSavedTalentFn, saveTalentFn } from "./saved-talents-api";
 
@@ -26,6 +29,14 @@ const AppContext = (globalStore.__stackmatchAppContext ??= createContext<AppStat
 
 type ListName = "saved" | "interests";
 
+/** The server turned the change down, for instance because of a limit (src/lib/outreach.ts). */
+class Refused extends Error {
+  constructor(readonly result: Exclude<MarkResult, { ok: true }>) {
+    super(result.error);
+    this.name = "Refused";
+  }
+}
+
 /** Each hiring account's shortlist and interest marks, kept on the server. */
 const lists = {
   saved: {
@@ -43,8 +54,8 @@ const lists = {
 } satisfies Record<ListName, unknown>;
 
 /**
- * Before lists and proposals moved to the server, the browser kept them under these keys. They are dropped
- * rather than handed to whoever signs in next.
+ * Before lists and proposals moved to the server, the browser kept them under these keys. They
+ * are dropped rather than handed to whoever signs in next.
  */
 const legacyListKeys =
   /^stackmatch-(saved|interests)(:|$)|^stackmatch-(profile-interests|meeting-requests)$/;
@@ -59,7 +70,7 @@ type AccountLists = { owner: string | null; saved: string[]; interests: string[]
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user, ready } = useAuth();
-  const { lang } = useI18n();
+  const { t, lang } = useI18n();
   // Only hiring accounts save talents and mark interest; other sessions get empty lists.
   // Only confirmed company accounts have lists; the server refuses anyone else.
   const owner = user?.accountType === "company" && user.emailVerified ? user.id : null;
@@ -104,18 +115,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const remove = (id: string) => (ids: string[]) =>
     ids.includes(id) ? ids.filter((item) => item !== id) : ids;
   /**
-   * Shows the change right away and sends it to the server. If the server refuses, the list goes
-   * back to what the server has.
+   * Shows the change right away and sends it to the server. If the server refuses (a limit, or an
+   * error), the list goes back to what the server has.
    */
   const setInList = (list: ListName, id: string, keep: boolean) => {
     updateList(list, keep ? add(id) : remove(id));
     // One request at a time per list, so an undo right after an action reaches the server last.
     pending.current[list] = pending.current[list]
-      .then(() =>
-        keep ? lists[list].add({ data: id, language: lang }) : lists[list].remove({ data: id }),
-      )
+      .then(async () => {
+        const result = keep
+          ? await lists[list].add({ data: id, language: lang })
+          : await lists[list].remove({ data: id });
+        if (result && typeof result === "object" && "error" in result) throw new Refused(result);
+      })
       .catch(async (error: unknown) => {
-        console.error(error);
+        if (error instanceof Refused && error.result.error === "interest-limit")
+          toast.error(
+            t.outreach.interestLimit(
+              outreachLimits.interestsPerDay,
+              t.outreach.wait(error.result.retryInSeconds),
+            ),
+          );
+        else console.error(error);
         const stored = await lists[list].fetch().catch(() => null);
         if (stored) updateList(list, () => stored);
       });
