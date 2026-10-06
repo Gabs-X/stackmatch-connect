@@ -4,6 +4,7 @@ import { hashPassword } from "./auth";
 import type { Db } from "./db";
 import { sessions, users } from "./db/schema";
 import { codeEmail, sendEmail, type EmailLanguage } from "./email";
+import { clearLoginFailures } from "./login-throttle";
 import { codeLifetimeMinutes, consumeCode, issueCode, type CodeCheck } from "./email-codes";
 
 /** Sent, or how long to wait before asking for another code. */
@@ -88,5 +89,7 @@ export async function resetPassword(
     })
     .where(eq(users.id, user.id));
   await db.delete(sessions).where(eq(sessions.userId, user.id));
+  // The owner proved access to the inbox: wrong passwords tried before don't lock them out.
+  await clearLoginFailures(db, user.email);
   return { ok: true };
 }

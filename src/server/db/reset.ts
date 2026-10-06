@@ -10,6 +10,8 @@ import { skills } from "./schema";
 export async function resetDatabase(db: Db) {
   // Every account's data references users, so CASCADE empties it as well.
   await db.execute(sql`TRUNCATE users CASCADE`);
+  // Sign-in failures aren't tied to accounts: tests share an address and would lock each other.
+  await db.execute(sql`TRUNCATE login_failures`);
   await db.delete(skills).where(eq(skills.curated, false));
   await seedDatabase(db);
 }

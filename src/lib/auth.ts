@@ -22,13 +22,18 @@ export type AuthUser = {
   emailVerified: boolean;
 };
 
-export type AuthErrorCode = "email-taken" | "invalid-credentials";
+/** "login-locked": too many wrong passwords lately; see src/server/login-throttle.ts. */
+export type AuthErrorCode = "email-taken" | "invalid-credentials" | "login-locked";
 
 /** Why a code from an e-mail wasn't accepted. */
 export type CodeErrorCode = "invalid-code" | "expired-code" | "too-many-attempts";
 
 export class AuthError extends Error {
-  constructor(readonly code: AuthErrorCode) {
+  constructor(
+    readonly code: AuthErrorCode,
+    /** For "login-locked": seconds until signing in is allowed again. */
+    readonly retryInSeconds = 0,
+  ) {
     super(code);
     this.name = "AuthError";
   }

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestIP } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
   confirmEmail,
@@ -10,6 +11,7 @@ import {
 import { authenticate, createAccount, createSession, deleteSession } from "@/server/auth";
 import type { Db } from "@/server/db";
 import type { EmailLanguage } from "@/server/email";
+import { clearLoginFailures, loginLockedFor, recordLoginFailure } from "@/server/login-throttle";
 import {
   clearSessionToken,
   currentUser,
@@ -33,7 +35,7 @@ import {
  * only ever see the account. Expected failures come back as a code instead of an exception, so
  * they keep their meaning across the network.
  */
-type AuthResult = { user: AuthUser } | { error: AuthErrorCode };
+type AuthResult = { user: AuthUser } | { error: AuthErrorCode; retryInSeconds?: number };
 
 /** The language of the screen, for the e-mails the request sends. */
 const language = z.enum(["pt", "en"]).default("pt");
@@ -62,12 +64,32 @@ export const signUpFn = createServerFn({ method: "POST" })
     return { user };
   });
 
+/** The client's address, as Vercel's proxy reports it; null when unknown (as in some local runs). */
+function clientIp() {
+  try {
+    return getRequestIP({ xForwardedFor: true }) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Signs in, unless the e-mail or the address had too many wrong passwords lately: then even the
+ * right one is refused until the lock ends, and the screen says when.
+ */
 export const signInFn = createServerFn({ method: "POST" })
   .validator(signInSchema.extend({ language }))
   .handler(async ({ data }): Promise<AuthResult> => {
     const db = await database();
+    const ip = clientIp();
+    const retryInSeconds = await loginLockedFor(db, data.email, ip);
+    if (retryInSeconds) return { error: "login-locked", retryInSeconds };
     const user = await authenticate(db, data.email, data.password);
-    if (!user) return { error: "invalid-credentials" };
+    if (!user) {
+      await recordLoginFailure(db, data.email, ip);
+      return { error: "invalid-credentials" };
+    }
+    await clearLoginFailures(db, data.email);
     writeSessionToken(await createSession(db, user.id));
     await sendCodeAfterSignIn(db, user, data.language);
     return { user };

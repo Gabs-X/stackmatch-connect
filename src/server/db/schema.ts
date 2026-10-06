@@ -53,6 +53,20 @@ export const sessions = pgTable(
 
 export type UserRow = typeof users.$inferSelect;
 
+/**
+ * Failed sign-ins, one row each, keyed by "email:<address>" and "ip:<address>" (see
+ * src/server/login-throttle.ts). Rows older than the throttle window are deleted as new ones come.
+ */
+export const loginFailures = pgTable(
+  "login_failures",
+  {
+    id: serial("id").primaryKey(),
+    key: text("key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("login_failures_key_created_at_idx").on(table.key, table.createdAt)],
+);
+
 export const emailCodePurpose = pgEnum("email_code_purpose", ["VERIFY_EMAIL", "RESET_PASSWORD"]);
 
 /** The code e-mailed to an account, one per purpose; a new one replaces the previous. */

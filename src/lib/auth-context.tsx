@@ -77,8 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = (result: { user: AuthUser } | { error: AuthError["code"] }) => {
-    if ("error" in result) throw new AuthError(result.error);
+  const start = (
+    result: { user: AuthUser } | { error: AuthError["code"]; retryInSeconds?: number },
+  ) => {
+    if ("error" in result) throw new AuthError(result.error, result.retryInSeconds);
     setUser(result.user);
     announceSessionChange();
     return result.user;

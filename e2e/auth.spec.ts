@@ -240,3 +240,43 @@ test("signing in before confirming asks for the code again", async ({ page }) =>
   await confirmEmail(page);
   await expect(page).toHaveURL(/\/saved$/);
 });
+
+test("repeated wrong passwords lock the sign-in until the password is reset", async ({ page }) => {
+  const email = "teste.emp@example.com";
+  const signIn = async (address: string, password: string) => {
+    await main(page).getByLabel("E-mail").fill(address);
+    await main(page).getByLabel("Senha", { exact: true }).fill(password);
+    await main(page).getByRole("button", { name: "Entrar" }).click();
+  };
+  await page.goto("/login");
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await signIn(email, `errada${attempt}x`);
+    await expect(main(page).getByRole("alert")).toHaveText("E-mail ou senha incorretos.");
+  }
+
+  // Locked: even the right password is refused for now.
+  await signIn(email, "teste1234");
+  await expect(main(page).getByRole("alert")).toHaveText(
+    "Muitas tentativas de login sem sucesso. Por segurança, tente de novo em 15 minutos ou redefina sua senha.",
+  );
+  await expect(page).toHaveURL(/\/login$/);
+
+  // Other accounts aren't affected.
+  await signIn("teste.dev@example.com", "teste1234");
+  await expect(page).toHaveURL(/\/create-profile$/);
+  await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+
+  // Resetting the password proves access to the inbox and lifts the lock.
+  await page.goto("/forgot-password");
+  await main(page).getByLabel("E-mail").fill(email);
+  await main(page).getByRole("button", { name: "Enviar código" }).click();
+  await main(page)
+    .getByLabel("Código")
+    .fill(await emailCode(page, email));
+  await main(page).getByLabel("Nova senha").fill("novasenha1");
+  await main(page).getByRole("button", { name: "Salvar nova senha" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await signIn(email, "novasenha1");
+  await expect(page).toHaveURL(/\/discover$/);
+});

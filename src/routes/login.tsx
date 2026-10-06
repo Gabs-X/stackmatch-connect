@@ -32,6 +32,8 @@ function LoginPage() {
   const router = useRouter();
   const { user, signIn, signOut } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  // Minutes left when too many wrong passwords locked the sign-in for a while.
+  const [lockedMinutes, setLockedMinutes] = useState(0);
   const ids = { email: useId(), password: useId() };
   const {
     register,
@@ -51,6 +53,11 @@ function LoginPage() {
       await router.navigate({ href: landingFor(signedIn, redirect) });
     } catch (caught) {
       setError(caught instanceof AuthError ? caught.code : "unknown");
+      setLockedMinutes(
+        caught instanceof AuthError && caught.code === "login-locked"
+          ? Math.ceil(caught.retryInSeconds / 60)
+          : 0,
+      );
     }
   });
 
@@ -90,7 +97,7 @@ function LoginPage() {
               className="flex items-center gap-2 rounded-md border border-destructive/30 bg-danger-soft px-3 py-2.5 text-sm text-destructive"
             >
               <AlertCircle className="size-4 shrink-0" />
-              {message(error)}
+              {lockedMinutes ? t.auth.loginLocked(lockedMinutes) : message(error)}
             </p>
           )}
           <div>

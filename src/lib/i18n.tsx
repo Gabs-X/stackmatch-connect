@@ -363,6 +363,8 @@ const pt = {
     loginSubmit: "Entrar",
     loggingIn: "Entrando...",
     forgot: "Esqueci minha senha",
+    loginLocked: (minutes: number) =>
+      `Muitas tentativas de login sem sucesso. Por segurança, tente de novo em ${minutes === 1 ? "1 minuto" : `${minutes} minutos`} ou redefina sua senha.`,
     noAccount: "Ainda não tem conta?",
     createAccount: "Criar conta",
     registerTitle: "Criar sua conta",
@@ -438,6 +440,7 @@ const pt = {
       terms: "Aceite os termos para continuar.",
       "email-taken": "Já existe uma conta com esse e-mail.",
       "invalid-credentials": "E-mail ou senha incorretos.",
+      "login-locked": "Muitas tentativas de login sem sucesso. Tente de novo mais tarde.",
       code: "Digite os 6 dígitos do código.",
       "invalid-code": "Código incorreto.",
       "expired-code": "Esse código expirou. Peça um novo.",
@@ -903,6 +906,8 @@ const en: Dict = {
     loginSubmit: "Sign in",
     loggingIn: "Signing in...",
     forgot: "Forgot my password",
+    loginLocked: (minutes: number) =>
+      `Too many failed sign-in attempts. For your security, try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`} or reset your password.`,
     noAccount: "Don't have an account?",
     createAccount: "Create account",
     registerTitle: "Create your account",
@@ -978,6 +983,7 @@ const en: Dict = {
       terms: "Accept the terms to continue.",
       "email-taken": "An account with this e-mail already exists.",
       "invalid-credentials": "Incorrect e-mail or password.",
+      "login-locked": "Too many failed sign-in attempts. Please try again later.",
       code: "Enter the 6 digits of the code.",
       "invalid-code": "Incorrect code.",
       "expired-code": "This code has expired. Ask for a new one.",
