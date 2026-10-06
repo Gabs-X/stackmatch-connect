@@ -88,7 +88,7 @@ export async function signInAs(page: Page, type: "developer" | "company") {
   const form = page.getByRole("main");
   await form
     .getByLabel("E-mail")
-    .fill(type === "developer" ? "teste.dev@stackmatch.app" : "teste.emp@stackmatch.app");
+    .fill(type === "developer" ? "teste.dev@example.com" : "teste.emp@example.com");
   await form.getByLabel("Senha", { exact: true }).fill("teste1234");
   await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(type === "developer" ? /\/create-profile$/ : /\/discover$/);

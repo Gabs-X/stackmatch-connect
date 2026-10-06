@@ -15,7 +15,7 @@ export const seedCompanyId = "demo-company";
 const seedAccounts = [
   {
     id: seedDeveloperId,
-    email: "teste.dev@stackmatch.app",
+    email: "teste.dev@example.com",
     accountType: "DEVELOPER" as const,
     name: "Gabriel Botelho",
     jobTitle: "Full Stack Developer",
@@ -24,7 +24,7 @@ const seedAccounts = [
   },
   {
     id: seedCompanyId,
-    email: "teste.emp@stackmatch.app",
+    email: "teste.emp@example.com",
     accountType: "COMPANY" as const,
     name: "Recrutadora Teste",
     jobTitle: "Tech Recruiter",

@@ -10,7 +10,7 @@ test("a company edits its contact details and developers see them", async ({ pag
   const registration = page.getByRole("region", { name: "Dados do cadastro" });
   await expect(registration).toContainText("Empresa Teste");
   await expect(registration).toContainText("11.222.333/0001-81");
-  await expect(registration).toContainText("teste.emp@stackmatch.app");
+  await expect(registration).toContainText("teste.emp@example.com");
   await expect(registration.getByRole("textbox")).toHaveCount(0);
 
   // Starts from the sign-up details; nothing to save until something changes.

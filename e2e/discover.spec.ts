@@ -47,9 +47,9 @@ test("marking interest saves the profile and moves to the next one", async ({ pa
   await expect(savedBadge(page)).toHaveText("1");
 
   // Gabriel gets an e-mail; replying reaches the company's contact.
-  const email = await lastEmail(page, "teste.dev@stackmatch.app");
+  const email = await lastEmail(page, "teste.dev@example.com");
   expect(email.subject).toBe("Empresa Teste tem interesse no seu perfil no StackMatch");
-  expect(email.replyTo).toBe("teste.emp@stackmatch.app");
+  expect(email.replyTo).toBe("teste.emp@example.com");
   expect(email.text).toContain("Recrutadora Teste, da Empresa Teste, marcou interesse");
 });
 

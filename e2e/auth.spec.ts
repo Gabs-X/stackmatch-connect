@@ -165,7 +165,7 @@ test("password recovery answers the same whether or not the account exists", asy
 });
 
 test("a forgotten password is reset with the e-mailed code", async ({ page }) => {
-  const email = "teste.emp@stackmatch.app";
+  const email = "teste.emp@example.com";
   await page.goto("/forgot-password");
   await main(page).getByLabel("E-mail").fill(email);
   await main(page).getByRole("button", { name: "Enviar código" }).click();

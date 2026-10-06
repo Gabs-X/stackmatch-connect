@@ -5,7 +5,7 @@ test("visitors are sent to the login before account-only pages", async ({ page }
   await expect(page).toHaveURL(/\/login\?redirect=%2Finterests$/);
 
   const form = page.getByRole("main");
-  await form.getByLabel("E-mail").fill("teste.dev@stackmatch.app");
+  await form.getByLabel("E-mail").fill("teste.dev@example.com");
   await form.getByLabel("Senha", { exact: true }).fill("teste1234");
   await form.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(page).toHaveURL(/\/interests$/);
@@ -50,7 +50,7 @@ test("a developer sees the companies interested in their profile", async ({ page
   await expect(company).toContainText("Marcou interesse");
   await expect(company.getByRole("link", { name: "Responder por e-mail" })).toHaveAttribute(
     "href",
-    /^mailto:teste\.emp@stackmatch\.app\?subject=/,
+    /^mailto:teste\.emp@example\.com\?subject=/,
   );
   // Plus the three companies of the test data.
   await expect(list.filter({ hasText: "VerdeTech" })).toContainText("Propôs uma conversa");

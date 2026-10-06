@@ -122,22 +122,22 @@ describe("seed accounts", () => {
   it("sign in by e-mail with the seed password, keeping their fixed ids", async () => {
     await seedDatabase(db);
     await seedDatabase(db);
-    expect(await authenticate(db, "teste.dev@stackmatch.app", seedPassword)).toMatchObject({
+    expect(await authenticate(db, "teste.dev@example.com", seedPassword)).toMatchObject({
       id: seedDeveloperId,
       accountType: "developer",
     });
-    expect(await authenticate(db, " TESTE.EMP@stackmatch.app", seedPassword)).toMatchObject({
+    expect(await authenticate(db, " TESTE.EMP@example.com", seedPassword)).toMatchObject({
       id: seedCompanyId,
       accountType: "company",
       company: "Empresa Teste",
     });
-    expect(await authenticate(db, "teste.dev@stackmatch.app", "1234")).toBeNull();
+    expect(await authenticate(db, "teste.dev@example.com", "1234")).toBeNull();
     // No usernames: only e-mails sign in.
     expect(await authenticate(db, "teste.dev", seedPassword)).toBeNull();
   });
 
   it("can't have their e-mails taken by a sign-up", async () => {
     await seedDatabase(db);
-    expect(await createAccount(db, { ...developer, email: "teste.dev@stackmatch.app" })).toBeNull();
+    expect(await createAccount(db, { ...developer, email: "teste.dev@example.com" })).toBeNull();
   });
 });

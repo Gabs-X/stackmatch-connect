@@ -54,7 +54,7 @@ O app não cria nenhum dado sozinho. Para ter as contas de teste no banco, rode 
 npm run db:seed
 ```
 
-Ele cria `teste.dev@stackmatch.app` (desenvolvedor, com o perfil do Gabriel Botelho) e `teste.emp@stackmatch.app` (empresa), com a senha `teste1234`, e termina com `Seed applied to <host>`. O que já existe no banco não é alterado, então rodar de novo não faz mal.
+Ele cria `teste.dev@example.com` (desenvolvedor, com o perfil do Gabriel Botelho) e `teste.emp@example.com` (empresa), com a senha `teste1234`, e termina com `Seed applied to <host>`. O que já existe no banco não é alterado, então rodar de novo não faz mal.
 
 A senha está no código público: qualquer pessoa pode entrar nessas contas e alterar os dados delas. Rode o seed só se elas forem úteis nesse banco, por exemplo para uma demonstração.
 
@@ -94,7 +94,7 @@ A integração não refaz o deploy sozinha. Em **Deployments**, abra o último d
 
 No site publicado:
 
-1. Se rodou o seed, entre com `teste.emp@stackmatch.app` / `teste1234`. O Discover deve mostrar o Gabriel Botelho.
+1. Se rodou o seed, entre com `teste.emp@example.com` / `teste1234`. O Discover deve mostrar o Gabriel Botelho.
 2. Crie uma conta nova com um e-mail seu: o código deve chegar, e a conta só entra no app depois de confirmá-lo. Saia e entre de novo.
 3. Em **Esqueci minha senha**, peça um código para essa conta e troque a senha.
 4. Como empresa, salve um talento e recarregue a página: ele continua em Talentos salvos.
