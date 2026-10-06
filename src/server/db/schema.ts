@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   date,
   doublePrecision,
   index,
@@ -191,6 +192,8 @@ export const skills = pgTable(
   {
     id: serial("id").primaryKey(),
     name: text("name").notNull().unique(),
+    /** In the reference catalog (drizzle/0010_skill_catalog.sql): suggested before anyone uses it. */
+    curated: boolean("curated").notNull().default(false),
   },
   // One spelling per skill: "React" and "react" are the same.
   (table) => [uniqueIndex("skills_name_lower_idx").on(sql`lower(${table.name})`)],

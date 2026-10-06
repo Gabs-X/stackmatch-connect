@@ -1,17 +1,28 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { listReceivedBy, listSentBy, sendMeetingRequest } from "@/server/meetings";
 import { database, requireAccount } from "@/server/session";
+import type { Lang } from "./i18n";
 import { meetingRequestInputSchema, type MeetingRequestInput } from "./meeting-requests";
 
 /**
- * Stands for `POST /meeting-requests`. Expected failures come back as a code: the time passed
- * while the dialog was open, or the profile doesn't exist.
+ * Stands for `POST /meeting-requests`: records the proposal and e-mails it to the developer, in
+ * the language of the company's screen. Expected failures come back as a code: the time passed
+ * while the dialog was open, the profile doesn't exist, or the e-mail couldn't be sent.
  */
 export const sendMeetingRequestFn = createServerFn({ method: "POST" })
-  .validator((input: MeetingRequestInput) => meetingRequestInputSchema.parse(input))
-  .handler(async ({ data }) =>
-    sendMeetingRequest(await database(), await requireAccount("company"), data),
+  .validator((input: MeetingRequestInput & { language?: Lang }) =>
+    meetingRequestInputSchema.extend({ language: z.enum(["pt", "en"]).default("pt") }).parse(input),
+  )
+  .handler(async ({ data: { language, ...input } }) =>
+    sendMeetingRequest(
+      await database(),
+      await requireAccount("company"),
+      input,
+      Date.now(),
+      language,
+    ),
   );
 
 /** Stands for `GET /me/meeting-requests` for companies: the proposals they sent. */

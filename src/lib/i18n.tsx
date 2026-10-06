@@ -309,8 +309,8 @@ const pt = {
     done: "Proposta enviada",
     doneDesc: (name: string, when: string) => `${name} vai receber sua proposta para ${when}.`,
     replyNote: "As respostas chegam em",
-    demoNote:
-      "Demonstração: nenhum e-mail foi enviado de verdade; a proposta ficou registrada no StackMatch.",
+    sentNote: (name: string) =>
+      `${name} recebeu a proposta por e-mail e pode responder direto para você.`,
     finish: "Concluir",
     dateFormat: "EEEE, d 'de' MMMM",
   },
@@ -534,6 +534,16 @@ const pt = {
     notFoundTitle: "Empresa não encontrada",
     notFoundSub:
       "Só aparecem aqui empresas que marcaram interesse no seu perfil ou propuseram uma conversa.",
+  },
+  // The e-mail a developer gets when a company marks interest in their profile.
+  interestEmail: {
+    subject: (company: string) => `${company} tem interesse no seu perfil no StackMatch`,
+    greeting: (name: string) => `Olá, ${name}!`,
+    intro: (contact: string, company: string) =>
+      `${contact}, da ${company}, marcou interesse no seu perfil no StackMatch.`,
+    action: "Ver empresas interessadas",
+    closing:
+      "Para conversar, responda este e-mail: a resposta vai direto para a empresa. Nenhum dado seu além do perfil público foi compartilhado.",
   },
 };
 
@@ -840,7 +850,7 @@ const en: Dict = {
     done: "Proposal sent",
     doneDesc: (name: string, when: string) => `${name} will receive your proposal for ${when}.`,
     replyNote: "Replies will arrive at",
-    demoNote: "Demo: no e-mail was actually sent; the proposal was recorded in StackMatch.",
+    sentNote: (name: string) => `${name} got the proposal by e-mail and can reply straight to you.`,
     finish: "Done",
     dateFormat: "EEEE, MMMM d",
   },
@@ -1064,7 +1074,19 @@ const en: Dict = {
     notFoundSub:
       "Only companies that marked your profile as interesting or proposed a call show up here.",
   },
+  interestEmail: {
+    subject: (company: string) => `${company} is interested in your StackMatch profile`,
+    greeting: (name: string) => `Hi, ${name}!`,
+    intro: (contact: string, company: string) =>
+      `${contact}, from ${company}, marked interest in your StackMatch profile.`,
+    action: "See interested companies",
+    closing:
+      "To talk, reply to this e-mail: your answer goes straight to the company. Nothing besides your public profile was shared.",
+  },
 };
+
+/** Both languages, for text built outside React, such as the e-mails the server sends. */
+export const dictionaries = { pt, en } satisfies Record<Lang, Dict>;
 
 // English for values stored in Portuguese: the profile options, the seed profile's texts and the
 // example card on the home page.

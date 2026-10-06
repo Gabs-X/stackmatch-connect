@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { confirmEmail, expect, seedSavedTalents, signInAs, test, uniqueEmail } from "./fixtures";
+import {
+  confirmEmail,
+  expect,
+  lastEmail,
+  seedSavedTalents,
+  signInAs,
+  test,
+  uniqueEmail,
+} from "./fixtures";
 
 const card = (page: Page) => page.locator("main section article").first();
 const counter = (page: Page) => page.getByText(/^\d+ de \d+ perf(il|is)$/);
@@ -37,6 +45,12 @@ test("marking interest saves the profile and moves to the next one", async ({ pa
   await expect(counter(page)).toHaveText("2 de 5 perfis");
   await expect(card(page)).toContainText("Marina Costa");
   await expect(savedBadge(page)).toHaveText("1");
+
+  // Gabriel gets an e-mail; replying reaches the company's contact.
+  const email = await lastEmail(page, "teste.dev@stackmatch.app");
+  expect(email.subject).toBe("Empresa Teste tem interesse no seu perfil no StackMatch");
+  expect(email.replyTo).toBe("teste.emp@stackmatch.app");
+  expect(email.text).toContain("Recrutadora Teste, da Empresa Teste, marcou interesse");
 });
 
 test("undo brings the card back and removes the save it created", async ({ page }) => {

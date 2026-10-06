@@ -1,10 +1,15 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { seedDatabase } from "../seed";
 import type { Db } from ".";
+import { skills } from "./schema";
 
-/** Empties every table and applies the seed again. For end-to-end tests only. */
+/**
+ * Empties what accounts created and applies the seed again, keeping the reference skill catalog
+ * the migrations added. For end-to-end tests only.
+ */
 export async function resetDatabase(db: Db) {
-  // Every other table references these two, so CASCADE empties them as well.
-  await db.execute(sql`TRUNCATE users, skills RESTART IDENTITY CASCADE`);
+  // Every account's data references users, so CASCADE empties it as well.
+  await db.execute(sql`TRUNCATE users CASCADE`);
+  await db.delete(skills).where(eq(skills.curated, false));
   await seedDatabase(db);
 }

@@ -247,10 +247,10 @@ test("skills suggest what others use, and a new one becomes a suggestion for eve
   await expect(page.getByRole("button", { name: "Angular", exact: true })).toBeVisible();
 
   // A skill nobody has yet can still be added.
-  await input.fill("Elixir");
-  await expect(options).toHaveText(["Adicionar “Elixir” como nova skill"]);
+  await input.fill("Zig");
+  await expect(options).toHaveText(["Adicionar “Zig” como nova skill"]);
   await options.first().click();
-  await expect(page.getByRole("button", { name: "Elixir" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Zig" })).toBeVisible();
   await page.getByRole("button", { name: "4 Links" }).click();
   await page.getByRole("button", { name: "Concluir perfil" }).click();
   await expect(page.getByText("Perfil salvo!").first()).toBeVisible();
@@ -275,6 +275,26 @@ test("skills suggest what others use, and a new one becomes a suggestion for eve
   await page.getByLabel("Disponibilidade").selectOption("Disponível agora");
   await page.getByLabel("Bio profissional").fill("Construo APIs.");
   await page.getByRole("button", { name: "2 Skills" }).click();
-  await page.getByRole("combobox", { name: "Tecnologias" }).fill("eli");
-  await expect(options.first()).toHaveText("Elixir");
+  await page.getByRole("combobox", { name: "Tecnologias" }).fill("zi");
+  await expect(options.first()).toHaveText("Zig");
+});
+
+test("skill suggestions include infrastructure and management, not only development", async ({
+  page,
+}) => {
+  await signInAs(page, "developer");
+  await page.getByRole("button", { name: "Voltar à edição" }).click();
+  await page.getByRole("button", { name: "2 Skills" }).click();
+  const input = page.getByRole("combobox", { name: "Tecnologias" });
+  const options = page.getByRole("listbox", { name: "Skills sugeridas" }).getByRole("option");
+
+  await input.fill("kube");
+  await expect(options.first()).toHaveText("Kubernetes");
+  await input.fill("gestão");
+  await expect(options.filter({ hasText: "Gestão de produto" })).toHaveCount(1);
+  await expect(options.filter({ hasText: "Gestão de pessoas" })).toHaveCount(1);
+  await input.fill("scrum");
+  await input.press("ArrowDown");
+  await input.press("Enter");
+  await expect(page.getByRole("button", { name: "Scrum", exact: true })).toBeVisible();
 });

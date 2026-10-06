@@ -36,9 +36,9 @@ describe("interest marks", () => {
   it("keep each company's marks, once per developer, and can be undone", async () => {
     const acme = await company("Acme", "bruno@acme.com");
     const other = await company("Other", "ana@other.com");
-    expect(await markInterest(db, acme.id, rafael)).toBe(true);
-    expect(await markInterest(db, acme.id, marina)).toBe(true);
-    expect(await markInterest(db, acme.id, rafael)).toBe(true);
+    expect(await markInterest(db, acme.id, rafael)).toBe("created");
+    expect(await markInterest(db, acme.id, marina)).toBe("created");
+    expect(await markInterest(db, acme.id, rafael)).toBe("existing");
     expect(await listInterestsBy(db, acme.id)).toEqual([rafael, marina]);
     expect(await listInterestsBy(db, other.id)).toEqual([]);
 
@@ -48,7 +48,7 @@ describe("interest marks", () => {
 
   it("only take profiles companies can find", async () => {
     const acme = await company("Acme", "bruno@acme.com");
-    expect(await markInterest(db, acme.id, "perfil-inexistente")).toBe(false);
+    expect(await markInterest(db, acme.id, "perfil-inexistente")).toBe("unknown");
     expect(await listInterestsBy(db, acme.id)).toEqual([]);
   });
 });

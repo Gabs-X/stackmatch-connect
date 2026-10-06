@@ -2,6 +2,7 @@ import type React from "react";
 import { useAuth } from "./auth-context";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { useI18n, type Lang } from "./i18n";
 import { fetchMyInterests, markInterestFn, removeInterestFn } from "./interests-api";
 import { fetchSavedTalents, removeSavedTalentFn, saveTalentFn } from "./saved-talents-api";
 
@@ -27,8 +28,18 @@ type ListName = "saved" | "interests";
 
 /** Each hiring account's shortlist and interest marks, kept on the server. */
 const lists = {
-  saved: { fetch: fetchSavedTalents, add: saveTalentFn, remove: removeSavedTalentFn },
-  interests: { fetch: fetchMyInterests, add: markInterestFn, remove: removeInterestFn },
+  saved: {
+    fetch: fetchSavedTalents,
+    add: ({ data }: { data: string; language: Lang }) => saveTalentFn({ data }),
+    remove: removeSavedTalentFn,
+  },
+  interests: {
+    fetch: fetchMyInterests,
+    // The developer gets an e-mail about the first mark, in this screen's language.
+    add: ({ data, language }: { data: string; language: Lang }) =>
+      markInterestFn({ data: { developerId: data, language } }),
+    remove: removeInterestFn,
+  },
 } satisfies Record<ListName, unknown>;
 
 /**
@@ -48,6 +59,7 @@ type AccountLists = { owner: string | null; saved: string[]; interests: string[]
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user, ready } = useAuth();
+  const { lang } = useI18n();
   // Only hiring accounts save talents and mark interest; other sessions get empty lists.
   // Only confirmed company accounts have lists; the server refuses anyone else.
   const owner = user?.accountType === "company" && user.emailVerified ? user.id : null;
@@ -99,7 +111,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateList(list, keep ? add(id) : remove(id));
     // One request at a time per list, so an undo right after an action reaches the server last.
     pending.current[list] = pending.current[list]
-      .then(() => (keep ? lists[list].add({ data: id }) : lists[list].remove({ data: id })))
+      .then(() =>
+        keep ? lists[list].add({ data: id, language: lang }) : lists[list].remove({ data: id }),
+      )
       .catch(async (error: unknown) => {
         console.error(error);
         const stored = await lists[list].fetch().catch(() => null);

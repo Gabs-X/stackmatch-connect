@@ -116,3 +116,17 @@ export async function confirmEmail(page: Page) {
   await page.getByRole("button", { name: "Confirmar e-mail" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/verify-email"));
 }
+
+/** The last e-mail the server "sent" to the address, waiting for it to arrive. */
+export async function lastEmail(page: Page, to: string) {
+  type Sent = { subject: string | null; text: string | null; replyTo: string | null };
+  let email: Sent = { subject: null, text: null, replyTo: null };
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/test-emails?to=${encodeURIComponent(to)}`);
+      email = (await response.json()) as Sent;
+      return email.subject;
+    })
+    .not.toBeNull();
+  return email;
+}

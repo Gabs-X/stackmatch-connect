@@ -55,6 +55,13 @@ const ana: LocalProfile = {
   ],
 };
 
+/** Skills added by profiles, outside the reference catalog, by name. */
+const addedSkills = async () =>
+  (await db.select().from(schema.skills))
+    .filter((skill) => !skill.curated)
+    .map((skill) => skill.name)
+    .sort();
+
 /** Project ids are generated on every save, so compare everything else. */
 const withoutProjectIds = (profile: LocalProfile | null) =>
   profile && { ...profile, projects: profile.projects.map(({ id: _id, ...project }) => project) };
@@ -86,8 +93,8 @@ describe("saveProfile and loadProfile", () => {
   it("share one skill catalog between developers and projects", async () => {
     await saveProfile(db, await developerAccount("ana@example.com"), ana);
     await saveProfile(db, await developerAccount("bia@example.com"), { ...ana, name: "Bia" });
-    const names = (await db.select().from(schema.skills)).map((skill) => skill.name).sort();
-    expect(names).toEqual(["React", "TypeScript", "Vue"]);
+    // React and TypeScript come from the catalog; only Vue was new, and it was added once.
+    expect(await addedSkills()).toEqual(["Vue"]);
   });
 
   it("keep answers left blank empty", async () => {
@@ -153,28 +160,37 @@ describe("skill catalog", () => {
     await saveProfile(db, anaId, { ...ana, skills: ["React"], projects: [] });
     await saveProfile(db, biaId, {
       ...ana,
-      skills: ["react", "REACT", "Elixir"],
-      projects: [newProject({ name: "Chat", tech: ["elixir", "React"] })],
+      skills: ["react", "REACT", "Zig"],
+      projects: [newProject({ name: "Chat", tech: ["zig", "React"] })],
     });
 
-    expect((await loadProfile(db, biaId))?.skills).toEqual(["React", "Elixir"]);
-    expect((await loadProfile(db, biaId))?.projects[0]?.tech).toEqual(["Elixir", "React"]);
-    expect((await db.select().from(schema.skills)).map((skill) => skill.name).sort()).toEqual([
-      "Elixir",
-      "React",
-    ]);
+    expect((await loadProfile(db, biaId))?.skills).toEqual(["React", "Zig"]);
+    expect((await loadProfile(db, biaId))?.projects[0]?.tech).toEqual(["Zig", "React"]);
+    // A new skill keeps the first spelling it was given.
+    expect(await addedSkills()).toEqual(["Zig"]);
   });
 
-  it("lists skills in use, most used first, and drops the ones nobody uses anymore", async () => {
+  it("starts with a reference catalog beyond development: infrastructure and management", async () => {
+    const catalog = await listSkillCatalog(db);
+    expect(catalog.length).toBeGreaterThan(200);
+    for (const skill of ["React", "Kubernetes", "Terraform", "Observabilidade", "Scrum", "OKRs"])
+      expect(catalog).toContain(skill);
+    // Nobody uses them yet, so by name.
+    expect(catalog.slice(0, 3)).toEqual([".NET", "Acessibilidade web", "Alta disponibilidade"]);
+  });
+
+  it("puts skills in use first, most used first, and drops typed ones nobody uses anymore", async () => {
     const anaId = await developerAccount("ana@example.com");
     const biaId = await developerAccount("bia@example.com");
     await saveProfile(db, anaId, { ...ana, skills: ["React", "Go"], projects: [] });
     await saveProfile(db, biaId, { ...ana, skills: ["React", "Typo"], projects: [] });
-    expect(await listSkillCatalog(db)).toEqual(["React", "Go", "Typo"]);
+    expect((await listSkillCatalog(db)).slice(0, 3)).toEqual(["React", "Go", "Typo"]);
 
     // Bia fixes the typo: it stays in the table but stops being suggested.
     await saveProfile(db, biaId, { ...ana, skills: ["React"], projects: [] });
-    expect(await listSkillCatalog(db)).toEqual(["React", "Go"]);
+    const catalog = await listSkillCatalog(db);
+    expect(catalog.slice(0, 2)).toEqual(["React", "Go"]);
+    expect(catalog).not.toContain("Typo");
   });
 });
 

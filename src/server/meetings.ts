@@ -5,9 +5,12 @@ import {
   type MeetingRequest,
   type MeetingRequestInput,
 } from "@/lib/meeting-requests";
+import type { Lang } from "@/lib/i18n";
 import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
 import { developerProfiles, interests, meetingRequests } from "./db/schema";
+import { sendEmail } from "./email";
+import { developerEmail, meetingEmail } from "./notifications";
 
 type MeetingRow = typeof meetingRequests.$inferSelect;
 
@@ -36,17 +39,19 @@ async function developerName(db: Db, developerId: string) {
 }
 
 export type SendResult =
-  { request: MeetingRequest } | { error: "time-passed" | "unknown-developer" };
+  { request: MeetingRequest } | { error: "time-passed" | "unknown-developer" | "not-sent" };
 
 /**
- * Records the proposal, signed with the company's current contact. The e-mail to the developer,
- * with Reply-To set to that contact, isn't sent yet: there is no e-mail service.
+ * Records the proposal, signed with the company's current contact, and e-mails it to the developer
+ * with Reply-To set to that contact. If the e-mail can't be sent, the proposal is dropped, so the
+ * company never counts on one the developer didn't get.
  */
 export async function sendMeetingRequest(
   db: Db,
   company: AuthUser,
   input: MeetingRequestInput,
   now = Date.now(),
+  language: Lang = "pt",
 ): Promise<SendResult> {
   if (!isProposedTimeValid(input.date, input.time, now)) return { error: "time-passed" };
   const name = await developerName(db, input.developerId);
@@ -68,7 +73,15 @@ export async function sendMeetingRequest(
     })
     .returning();
   if (!row) throw new Error("Meeting request not saved.");
-  return { request: toMeetingRequest(row) };
+  const request = toMeetingRequest(row);
+  try {
+    await sendEmail(meetingEmail(request, await developerEmail(db, input.developerId), language));
+  } catch (error) {
+    console.error("Meeting request not e-mailed:", error);
+    await db.delete(meetingRequests).where(eq(meetingRequests.id, row.id));
+    return { error: "not-sent" };
+  }
+  return { request };
 }
 
 /** Proposals the company sent, oldest first. */

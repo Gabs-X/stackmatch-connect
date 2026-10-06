@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { confirmEmail, expect, test, uniqueEmail } from "./fixtures";
+import { confirmEmail, expect, lastEmail, test, uniqueEmail } from "./fixtures";
 
 // Thursday noon in Brasília, so the next day (Friday) has every time open. The server checks the
 // proposed time against its own clock, so the browser's is set to a date still ahead.
@@ -53,7 +53,15 @@ test("a company proposes one time and sees the e-mail the developer will get", a
   await dialog.getByRole("button", { name: "Enviar proposta" }).click();
   await expect(dialog.getByRole("heading", { name: "Proposta enviada" })).toBeVisible();
   await expect(dialog).toContainText(`As respostas chegam em ${email}`);
+  await expect(dialog).toContainText("Marina Costa recebeu a proposta por e-mail");
   await dialog.getByRole("button", { name: "Concluir" }).click();
+
+  // The e-mail Marina gets says what the preview showed, and replies go to the company.
+  const sent = await lastEmail(page, "marina-costa@example.com");
+  expect(sent.subject).toBe("Acme quer conversar com você pelo StackMatch");
+  expect(sent.replyTo).toBe(email);
+  expect(sent.text).toContain("sexta-feira, 4 de outubro, às 10:30");
+  expect(sent.text).toContain("Projeto de dashboard em React.");
 
   // The proposal is remembered, but another one can still be sent.
   await page.getByRole("button", { name: "Propor reunião" }).click();

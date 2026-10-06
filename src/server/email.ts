@@ -3,7 +3,14 @@
  * each e-mail is written to the server log and kept in memory, where the end-to-end tests read
  * the codes; in production that is an error, since nobody would receive anything.
  */
-export type Email = { to: string; subject: string; text: string; html: string };
+export type Email = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  /** Where replies go instead of the sender: a company's contact, for messages it sends. */
+  replyTo?: string;
+};
 
 const store = globalThis as unknown as { __stackmatchOutbox?: Email[] };
 
@@ -32,6 +39,7 @@ export async function sendEmail(email: Email) {
       subject: email.subject,
       text: email.text,
       html: email.html,
+      ...(email.replyTo ? { reply_to: email.replyTo } : {}),
     }),
   });
   if (!response.ok)
@@ -90,5 +98,55 @@ export function codeEmail(
 <p>${escapeHtml(text.expires(minutes))}</p>
 <p style="color:#666">${escapeHtml(text.ignore)}</p>
 </div>`,
+  };
+}
+
+/**
+ * A message e-mail: paragraphs, then an optional quote (what someone wrote) and link button, then
+ * a closing line; the text and HTML versions say the same.
+ */
+export function messageEmail({
+  to,
+  subject,
+  paragraphs,
+  quote,
+  action,
+  closing,
+  replyTo,
+}: {
+  to: string;
+  subject: string;
+  paragraphs: string[];
+  quote?: string;
+  action?: { label: string; url: string };
+  closing: string;
+  replyTo?: string;
+}): Email {
+  const text = [
+    ...paragraphs,
+    ...(quote ? [quote.replace(/^/gm, "> ")] : []),
+    ...(action ? [`${action.label}: ${action.url}`] : []),
+    closing,
+  ].join("\n\n");
+  const blocks = [
+    ...paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`),
+    ...(quote
+      ? [
+          `<p style="white-space:pre-line;border-left:3px solid #ddd;padding-left:12px;color:#555">${escapeHtml(quote)}</p>`,
+        ]
+      : []),
+    ...(action
+      ? [
+          `<p style="margin:24px 0"><a href="${escapeHtml(action.url)}" style="background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">${escapeHtml(action.label)}</a></p>`,
+        ]
+      : []),
+    `<p style="color:#666">${escapeHtml(closing)}</p>`,
+  ];
+  return {
+    to,
+    subject,
+    text,
+    html: `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5;color:#111">\n${blocks.join("\n")}\n</div>`,
+    ...(replyTo ? { replyTo } : {}),
   };
 }

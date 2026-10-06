@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { asc, count, eq, gt, inArray, or, sql } from "drizzle-orm";
 import type { Developer } from "@/lib/developers";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
@@ -248,8 +248,9 @@ export async function loadPublishedProfile(db: Db, userId: string): Promise<Deve
 }
 
 /**
- * Skills in use on any profile or project, most used first, for suggestions in the form. A skill
- * someone typed shows up here once a profile with it is saved; one nobody uses anymore doesn't.
+ * Skills to suggest in the form: the reference catalog plus every skill in use on a profile or
+ * project, most used first, then by name. A skill someone typed shows up once a profile with it is
+ * saved; one outside the catalog that nobody uses anymore doesn't.
  */
 export async function listSkillCatalog(db: Db): Promise<string[]> {
   const uses = db
@@ -257,11 +258,14 @@ export async function listSkillCatalog(db: Db): Promise<string[]> {
     .from(developerSkills)
     .unionAll(db.select({ skillId: projectSkills.skillId }).from(projectSkills))
     .as("uses");
+  const useCount = count(uses.skillId);
   const rows = await db
-    .select({ name: skills.name, uses: count() })
+    .select({ name: skills.name, uses: useCount })
     .from(skills)
-    .innerJoin(uses, eq(uses.skillId, skills.id))
-    .groupBy(skills.id, skills.name)
-    .orderBy(desc(count()), asc(skills.name));
-  return rows.map((row) => row.name);
+    .leftJoin(uses, eq(uses.skillId, skills.id))
+    .groupBy(skills.id, skills.name, skills.curated)
+    .having(or(gt(useCount, 0), eq(skills.curated, true)));
+  // Sorted here: databases order names differently (case, accents); Portuguese rules everywhere.
+  const byName = new Intl.Collator("pt-BR", { sensitivity: "base" }).compare;
+  return rows.sort((a, b) => b.uses - a.uses || byName(a.name, b.name)).map((row) => row.name);
 }

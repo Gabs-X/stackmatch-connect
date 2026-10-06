@@ -16,11 +16,22 @@ export async function listInterestsBy(db: Db, companyId: string): Promise<string
   return rows.map((row) => row.developerId);
 }
 
-/** Marking twice keeps the first mark. False when there is no such profile. */
-export async function markInterest(db: Db, companyId: string, developerId: string) {
-  if (!(await developerExists(db, developerId))) return false;
-  await db.insert(interests).values({ companyId, developerId }).onConflictDoNothing();
-  return true;
+/**
+ * Marks interest: "created" the first time, "existing" when the company had already marked the
+ * profile (the first mark stays), "unknown" when there is no such profile.
+ */
+export async function markInterest(
+  db: Db,
+  companyId: string,
+  developerId: string,
+): Promise<"created" | "existing" | "unknown"> {
+  if (!(await developerExists(db, developerId))) return "unknown";
+  const created = await db
+    .insert(interests)
+    .values({ companyId, developerId })
+    .onConflictDoNothing()
+    .returning({ id: interests.id });
+  return created.length ? "created" : "existing";
 }
 
 export async function removeInterest(db: Db, companyId: string, developerId: string) {

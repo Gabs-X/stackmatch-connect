@@ -123,7 +123,14 @@ export function ScheduleDialog({
     try {
       // The server signs the proposal with the company's contact, as the preview shows.
       const result = await sendMeetingRequestFn({
-        data: { developerId, date: format(date, "yyyy-MM-dd"), time, message: message.trim() },
+        data: {
+          developerId,
+          date: format(date, "yyyy-MM-dd"),
+          time,
+          message: message.trim(),
+          // The e-mail goes out as the preview shows it, in this screen's language.
+          language: lang,
+        },
       });
       if ("error" in result) {
         if (result.error === "time-passed") {
@@ -371,7 +378,7 @@ export function ScheduleDialog({
               </span>
             </div>
             <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
-              {t.schedule.demoNote}
+              {t.schedule.sentNote(developerName)}
             </p>
             <Button className="mt-7" onClick={() => handleOpenChange(false)}>
               {t.schedule.finish}
