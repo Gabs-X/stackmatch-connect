@@ -15,7 +15,7 @@ A integração cria sozinha as variáveis de ambiente do projeto, entre elas a *
 
 ## 2. Criar as tabelas
 
-O deploy não cria nem altera tabelas. As migrações (pasta `drizzle/`) são aplicadas daqui, pelo `npm run db:migrate`, na primeira configuração e sempre que uma migração nova entrar no projeto.
+A cada deploy de produção, a Vercel aplica as migrações pendentes (pasta `drizzle/`) antes de montar o site, pelo script `vercel-build`: veja [Migrações no deploy](#migrações-no-deploy). Rodar daqui, pelo `npm run db:migrate`, serve para a primeira configuração (antes do primeiro deploy) e para conferir o banco.
 
 1. No Neon, abra o banco criado e clique em **Connect**.
 2. Copie a connection string com **Connection pooling desligado**: para migrações, a conexão direta é a mais segura. Ela começa com `postgresql://`, e o host não tem `-pooler`.
@@ -112,10 +112,20 @@ Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os m
 | `No Blob store connected`                                    | O Blob store não está conectado ao projeto. Confira o passo 4 e refaça o deploy.                   |
 | `Profile not saved:` seguido de um erro do Blob              | A `BLOB_READ_WRITE_TOKEN` do projeto não é a do store público. Copie a do store e refaça o deploy. |
 
+## Migrações no deploy
+
+Na Vercel, o build roda `npm run vercel-build` quando esse script existe no `package.json`. Ele aplica as migrações pendentes e só então monta o site:
+
+- **Só em produção** (`VERCEL_ENV=production`): deploys de preview, de outros branches, pulam as migrações e não mudam o banco de produção.
+- **Se uma migração falhar**, ou o banco não responder em 2 minutos, o build falha e o site continua na versão anterior. O motivo aparece no log do build, em `Migrations failed` ou `Migrations timed out`.
+- Confira em **Settings → Build and Deployment** que o **Build Command** está no padrão. Um comando personalizado faz a Vercel ignorar o `vercel-build`; nesse caso, use `npm run vercel-build`.
+
+As migrações são aplicadas antes de o código novo entrar no ar, então por alguns minutos o código antigo roda sobre o banco já migrado. Por isso, uma migração precisa funcionar com o código anterior: criar tabelas e colunas (com valor padrão ou aceitando nulo) pode ir num deploy só; apagar ou renomear uma coluna vai em dois, primeiro o código que para de usá-la e depois a migração.
+
 ## Depois de mudar o schema
 
 1. Altere `src/server/db/schema.ts`.
 2. Gere a migração com `npm run db:generate` e faça commit da pasta `drizzle/`.
-3. Antes do deploy, rode `npm run db:migrate` (passo 2) para aplicá-la no Neon. Uma migração que cria uma coluna ou tabela que o código novo usa precisa estar no banco antes de o código chegar à produção.
+3. No push, o deploy de produção aplica a migração antes de publicar o código (veja acima).
 
 O PGlite local aplica as migrações sozinho ao iniciar.

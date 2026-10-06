@@ -14,9 +14,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "images:migrate": "tsx scripts/migrate-images.ts"
+    "images:migrate": "tsx scripts/migrate-images.ts",
+    "vercel-build": "tsx scripts/migrate.ts --production-only && npm run build"
   },
   "overrides": {
     "rolldown": "1.2.1"

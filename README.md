@@ -71,7 +71,7 @@ Acesse o endereço informado pelo Vite no terminal. Sem configuração, o servid
 ### Banco de dados
 
 - `DATABASE_URL` define o banco: uma URL `postgres://…` (Neon em produção), `memory://` para um banco descartável ou o caminho de uma pasta do PGlite. Em produção ela é obrigatória.
-- O schema fica em `src/server/db/schema.ts`. Depois de alterá-lo, gere a migração com `npm run db:generate`; para aplicar as migrações num Postgres, rode `npm run db:migrate` com `DATABASE_URL` definida, de preferência no `.env.migrate.local` (veja `.env.example`). Não coloque a `DATABASE_URL` no `.env` nem no `.env.local`: o servidor de desenvolvimento carrega esses arquivos e deixaria de usar o PGlite.
+- O schema fica em `src/server/db/schema.ts`. Depois de alterá-lo, gere a migração com `npm run db:generate` e faça commit da pasta `drizzle/`. No deploy de produção, a Vercel aplica as migrações pendentes antes de montar o site (`npm run vercel-build`, que pula previews); se uma falhar, o deploy falha e o site fica na versão anterior. `npm run db:migrate` aplica as migrações à mão, com a `DATABASE_URL` do ambiente ou do `.env.migrate.local` (veja `.env.example`). Não coloque a `DATABASE_URL` no `.env` nem no `.env.local`: o servidor de desenvolvimento carrega esses arquivos e deixaria de usar o PGlite.
 - `npm run db:seed` adiciona as contas de teste e o perfil do Gabriel ao banco da `DATABASE_URL` (lida do `.env.migrate.local`, como no `db:migrate`) ou ao PGlite local. O que já existe não é alterado.
 - Configuração do Neon na Vercel, passo a passo: [docs/deploy-neon.md](docs/deploy-neon.md).
 
