@@ -85,6 +85,8 @@ npm run test:e2e
 npm run build
 ```
 
+O GitHub Actions roda essas verificações a cada push no `main` e a cada pull request (`.github/workflows/ci.yml`): um job com lint, tipos, testes unitários e build, e outro com os testes de interface. Nenhum segredo é necessário. Quando um teste de interface falha, o trace dele fica como artefato da execução por 7 dias.
+
 Os testes de interface (Playwright) sobem o servidor de desenvolvimento sozinhos, com banco em memória, e rodam um de cada vez: antes de cada teste, o banco volta ao seed pela rota `/api/test-reset` e recebe os dados de teste de `e2e/test-data.ts` (quatro desenvolvedores e três empresas que contataram o Gabriel) pela `/api/test-seed`; as duas só existem com `E2E=1`. Se já houver um servidor na porta 5299, ele é reaproveitado e o reset falha; encerre-o antes. Os testes usam o Google Chrome instalado na máquina. Onde ele não existir, rode `npx playwright install chrome` antes. Eles cobrem cadastro com confirmação de e-mail, login e recuperação de senha (lendo os códigos pela rota `/api/test-emails`, que também só existe com `E2E=1`); acesso por tipo de conta; Discover (ações, desfazer, filtros e shortlist separada por empresa); perfil (links, avatar do GitHub e fallback); criação de perfil com campos obrigatórios e sem projetos; Empresas interessadas e detalhes da empresa; idioma e tema; assistente; proposta de reunião; e o layout em celular.
 
 Para rodar o build de produção localmente, use o servidor gerado pelo Nitro (o `npm run preview` procura o build em `dist/` e não funciona com essa configuração):
@@ -206,7 +208,6 @@ Sem essa variável, o componente não é incluído no build.
 
 1. Validar com contratantes e desenvolvedores se os dados dos cards são suficientes para a triagem inicial.
 2. Definir uma regra de compatibilidade entre vaga e perfil, para que o "match" do produto seja calculado.
-3. Rodar as suítes automaticamente a cada push (CI).
-4. Mostrar o status das propostas de reunião para os dois lados (enviada, vista, respondida).
-5. Deixar o desenvolvedor desligar os avisos por e-mail.
-6. Integrar o GitHub (importar projetos) depois de definir permissões e privacidade.
+3. Mostrar o status das propostas de reunião para os dois lados (enviada, vista, respondida).
+4. Deixar o desenvolvedor desligar os avisos por e-mail.
+5. Integrar o GitHub (importar projetos) depois de definir permissões e privacidade.
