@@ -9,12 +9,16 @@ import {
   MapPin,
   Wallet,
 } from "lucide-react";
-import { useId } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useId, useState } from "react";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperPhoto } from "@/components/developer-photo";
 import { ProjectCover } from "@/components/project-cover";
+import { TranslationNote } from "@/components/translation-note";
 import { useI18n } from "@/lib/i18n";
 import { localProfileToDeveloper, profileLink, type LocalProfile } from "@/lib/local-profile";
+import { myTranslationsQuery } from "@/lib/profile-api";
+import { isTranslated, type Translations } from "@/lib/translations";
 
 /** Frame and photo shared by the full profile and the Discover card, so one morphs into the other. */
 const layoutId = "own-profile";
@@ -43,10 +47,32 @@ export function ProfilePreview({
   showCard: boolean;
 }) {
   const { t } = useI18n();
+  // Translations made when the profile was last saved: texts typed since then show as written.
+  const { data: saved = {} } = useQuery(myTranslationsQuery(accountId));
+  const texts = [
+    profile.role,
+    profile.bio,
+    ...profile.projects.map((project) => project.description),
+  ];
+  const translations: Translations = Object.fromEntries(
+    texts.flatMap((text) => {
+      const entry = saved[text.trim()];
+      return entry
+        ? [
+            [text, entry],
+            [text.trim(), entry],
+          ]
+        : [];
+    }),
+  );
+  // Only worth saying once translation is working for this profile.
+  const pending =
+    Object.keys(saved).length > 0 && texts.some((text) => text.trim() && !saved[text.trim()]);
   const developer = {
     ...localProfileToDeveloper(profile, accountId),
     name: profile.name.trim() || t.create.yourName,
     role: profile.role.trim() || t.create.yourRole,
+    translations,
   };
 
   return (
@@ -55,14 +81,14 @@ export function ProfilePreview({
         {showCard ? (
           <CardView developer={developer} />
         ) : (
-          <FullProfile profile={profile} developer={developer} />
+          <FullProfile profile={profile} developer={developer} pending={pending} />
         )}
       </LayoutGroup>
     </MotionConfig>
   );
 }
 
-type PreviewDeveloper = ReturnType<typeof localProfileToDeveloper>;
+type PreviewDeveloper = ReturnType<typeof localProfileToDeveloper> & { translations: Translations };
 
 function CardView({ developer }: { developer: PreviewDeveloper }) {
   const { t } = useI18n();
@@ -88,11 +114,16 @@ function CardView({ developer }: { developer: PreviewDeveloper }) {
 function FullProfile({
   profile,
   developer,
+  pending,
 }: {
   profile: LocalProfile;
   developer: PreviewDeveloper;
+  /** Some text changed since the last save, so it has no translation yet. */
+  pending: boolean;
 }) {
-  const { t, tv, formatCurrency } = useI18n();
+  const { t, tv, lang, formatCurrency } = useI18n();
+  const [original, setOriginal] = useState(false);
+  const text = (value: string) => (original ? value : tv(value, developer.translations));
   const hasRate = Number.isFinite(developer.rate);
   const links = [
     { label: "GitHub", value: profile.github, icon: Github },
@@ -139,7 +170,7 @@ function FullProfile({
                 {developer.name}
               </motion.h1>
               <motion.p {...reveal(0.1)} className="mt-1.5 font-semibold text-primary">
-                {developer.role}
+                {text(developer.role)}
               </motion.p>
             </div>
             {developer.seniority && (
@@ -179,8 +210,14 @@ function FullProfile({
               </div>
             )}
             <p className="mt-6 max-w-2xl whitespace-pre-wrap leading-7 text-muted-foreground">
-              {profile.bio.trim() || t.create.yourBio}
+              {profile.bio.trim() ? text(profile.bio.trim()) : t.create.yourBio}
             </p>
+            {isTranslated(developer.translations, lang) && (
+              <TranslationNote original={original} onToggle={() => setOriginal(!original)} />
+            )}
+            {pending && (
+              <p className="mt-1 text-xs text-muted-foreground">{t.translation.pending}</p>
+            )}
           </motion.div>
 
           <motion.div {...reveal(0.26)} className="mt-8 grid gap-8 lg:grid-cols-2">
@@ -253,7 +290,7 @@ function FullProfile({
                     <h3 className="font-bold">{project.name}</h3>
                     {project.description && (
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {project.description}
+                        {text(project.description)}
                       </p>
                     )}
                     {project.tech.length > 0 && (

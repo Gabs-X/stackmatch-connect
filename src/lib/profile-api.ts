@@ -10,7 +10,7 @@ import {
   saveProfile,
   searchProfiles,
 } from "@/server/profiles";
-import { updateTranslations } from "@/server/translations";
+import { loadTranslations, updateTranslations } from "@/server/translations";
 import { currentUser, database, requireAccount } from "@/server/session";
 import { filtersSchema, type Filters } from "./filters";
 import { profileInputSchema, type LocalProfile } from "./local-profile";
@@ -21,6 +21,18 @@ export const fetchMyProfile = createServerFn({ method: "GET" }).handler(async ()
   return user?.accountType === "developer" && user.emailVerified
     ? loadProfile(await database(), user.id)
     : null;
+});
+
+/**
+ * Stands for `GET /me/profile/translations`: the stored translations of the signed-in developer's
+ * texts, for the preview in the profile form. Reads the database only; translating is the save's job.
+ */
+export const fetchMyTranslations = createServerFn({ method: "GET" }).handler(async () => {
+  const user = await currentUser();
+  if (user?.accountType !== "developer" || !user.emailVerified) return {};
+  const db = await database();
+  const profile = await loadProfile(db, user.id);
+  return profile ? loadTranslations(db, [user.id], profileTexts(profile)) : {};
 });
 
 /** Stands for `PUT /me/profile`. Only developer accounts have a profile. */
@@ -89,6 +101,12 @@ export const skillCatalogQuery = queryOptions({
 
 export const myProfileQuery = (accountId: string) =>
   queryOptions({ queryKey: ["my-profile", accountId], queryFn: () => fetchMyProfile() });
+
+export const myTranslationsQuery = (accountId: string) =>
+  queryOptions({
+    queryKey: ["my-translations", accountId],
+    queryFn: () => fetchMyTranslations(),
+  });
 
 /** Every query on published profiles starts with this key, to refresh them all after a save. */
 export const profilesQueryKey = ["profiles"];

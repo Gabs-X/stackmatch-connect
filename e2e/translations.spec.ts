@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, signInAs, test } from "./fixtures";
 
 const bio = "Marina Costa trabalha com React e TypeScript.";
 const project = "Projeto de Marina Costa.";
@@ -55,4 +55,33 @@ test("profiles without translations show as written, without the note", async ({
   const main = page.getByRole("main");
   await expect(main.getByText(bio)).toBeVisible();
   await expect(main.getByText("Automatically translated with AI.")).toBeHidden();
+});
+
+test("the developer's own preview shows the saved translations", async ({ page }) => {
+  // As if the model had translated Gabriel's role when he saved his profile.
+  const response = await page.request.post("/api/test-seed", {
+    data: {
+      translations: [
+        {
+          ownerId: "demo-developer",
+          text: "Full Stack Developer",
+          pt: "Desenvolvedor Full Stack",
+          en: "Full Stack Developer",
+        },
+      ],
+    },
+  });
+  expect(response.ok()).toBe(true);
+
+  await signInAs(page, "developer");
+  const main = page.getByRole("main");
+  await expect(main.getByText("Desenvolvedor Full Stack").first()).toBeVisible();
+  await expect(main.getByText("Traduzido automaticamente com IA.")).toBeVisible();
+  await main.getByRole("button", { name: "Ver original" }).click();
+  await expect(main.getByText("Full Stack Developer").first()).toBeVisible();
+  await expect(main.getByText("Mostrando o texto original.")).toBeVisible();
+
+  // The Discover card in the preview uses them too.
+  await main.getByRole("button", { name: "Ver como card" }).click();
+  await expect(main.getByText("Desenvolvedor Full Stack").first()).toBeVisible();
 });
