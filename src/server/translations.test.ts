@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyProfile } from "@/lib/local-profile";
 import { loadCompanyProfile, saveCompanySettings } from "./companies";
 import type { Db } from "./db";
@@ -9,18 +9,21 @@ import { loadPublishedProfile, profileTexts, saveProfile } from "./profiles";
 import { createAccount } from "./auth";
 import { createDeveloper, createTestDb } from "./test-db";
 import {
+  DeepLError,
+  deeplTranslator,
+  defaultTranslator,
   loadTranslations,
   requestTranslations,
   updateTranslations,
-  type Translate,
+  withBackup,
+  type Translator,
 } from "./translations";
 
 let db: Db;
 let ana: string;
-const client = {} as Anthropic;
 
 /** A stand-in for the model: English gets a "(pt)" marker in Portuguese, and the reverse. */
-const fakeTranslate = vi.fn<Translate>(async (_client, texts) =>
+const fakeTranslate = vi.fn<Translator>(async (texts) =>
   texts.map((text) =>
     /[ãçéêíõ]|Desenvolvo/.test(text)
       ? { pt: text, en: `EN: ${text}` }
@@ -37,11 +40,9 @@ beforeEach(async () => {
 describe("updateTranslations", () => {
   it("stores both languages and translates only what's missing", async () => {
     await updateTranslations(db, ana, ["Desenvolvo interfaces.", "Frontend Developer", ""], {
-      client,
-      translate: fakeTranslate,
+      translator: fakeTranslate,
     });
     expect(fakeTranslate).toHaveBeenCalledWith(
-      client,
       ["Desenvolvo interfaces.", "Frontend Developer"],
       expect.anything(),
     );
@@ -54,44 +55,31 @@ describe("updateTranslations", () => {
 
     // Saving again with one new text only translates that one.
     await updateTranslations(db, ana, ["Desenvolvo interfaces.", "Novo cargo em ação"], {
-      client,
-      translate: fakeTranslate,
+      translator: fakeTranslate,
     });
-    expect(fakeTranslate).toHaveBeenLastCalledWith(
-      client,
-      ["Novo cargo em ação"],
-      expect.anything(),
-    );
+    expect(fakeTranslate).toHaveBeenLastCalledWith(["Novo cargo em ação"], expect.anything());
   });
 
   it("drops translations of texts the account no longer has", async () => {
     await updateTranslations(db, ana, ["Texto antigo em ação", "Texto mantido em ação"], {
-      client,
-      translate: fakeTranslate,
+      translator: fakeTranslate,
     });
-    await updateTranslations(db, ana, ["Texto mantido em ação"], {
-      client,
-      translate: fakeTranslate,
-    });
+    await updateTranslations(db, ana, ["Texto mantido em ação"], { translator: fakeTranslate });
     const rows = await db.select().from(textTranslations);
     expect(rows).toHaveLength(2);
     expect(await loadTranslations(db, [ana], ["Texto antigo em ação"])).toEqual({});
   });
 
-  it("only prunes without a client, and never throws", async () => {
-    await updateTranslations(db, ana, ["Texto em ação"], { client, translate: fakeTranslate });
-    await updateTranslations(db, ana, ["Texto em ação"], {
-      client: null,
-      translate: fakeTranslate,
-    });
+  it("only prunes without a translator, and never throws", async () => {
+    await updateTranslations(db, ana, ["Texto em ação"], { translator: fakeTranslate });
+    await updateTranslations(db, ana, ["Texto em ação"], { translator: null });
     expect(fakeTranslate).toHaveBeenCalledTimes(1);
     expect(await db.select().from(textTranslations)).toHaveLength(2);
 
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(
       updateTranslations(db, ana, ["Outro texto em ação"], {
-        client,
-        translate: async () => {
+        translator: async () => {
           throw new Error("API down");
         },
       }),
@@ -103,8 +91,7 @@ describe("updateTranslations", () => {
   it("skips texts the model left out", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await updateTranslations(db, ana, ["Um em ação", "Dois em ação"], {
-      client,
-      translate: async () => [
+      translator: async () => [
         { pt: "Um em ação", en: "One" },
         { pt: "", en: "" },
       ],
@@ -112,13 +99,15 @@ describe("updateTranslations", () => {
     expect(Object.keys(await loadTranslations(db, [ana], ["Um em ação", "Dois em ação"]))).toEqual([
       "Um em ação",
     ]);
-    await updateTranslations(db, ana, ["Três em ação"], { client, translate: async () => null });
+    await updateTranslations(db, ana, ["Três em ação"], {
+      translator: async () => null,
+    });
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
 
   it("goes away with the account", async () => {
-    await updateTranslations(db, ana, ["Texto em ação"], { client, translate: fakeTranslate });
+    await updateTranslations(db, ana, ["Texto em ação"], { translator: fakeTranslate });
     await db.delete(users).where(eq(users.id, ana));
     expect(await db.select().from(textTranslations)).toHaveLength(0);
   });
@@ -149,7 +138,7 @@ describe("profiles with translations", () => {
       ],
     };
     await saveProfile(db, ana, profile);
-    await updateTranslations(db, ana, profileTexts(profile), { client, translate: fakeTranslate });
+    await updateTranslations(db, ana, profileTexts(profile), { translator: fakeTranslate });
 
     const developer = await loadPublishedProfile(db, ana);
     expect(developer?.translations).toEqual({
@@ -192,8 +181,7 @@ describe("profiles with translations", () => {
     };
     await saveCompanySettings(db, company.id, settings);
     await updateTranslations(db, company.id, [settings.about, settings.contactRole], {
-      client,
-      translate: fakeTranslate,
+      translator: fakeTranslate,
     });
     expect((await loadCompanyProfile(db, company.id))?.translations).toEqual({
       "Fazemos software de logística.": {
@@ -235,5 +223,126 @@ describe("requestTranslations", () => {
     expect(await requestTranslations(fakeClient, ["Bio"])).toBeNull();
     parse.mockResolvedValueOnce({ stop_reason: "max_tokens", parsed_output: null });
     expect(await requestTranslations(fakeClient, ["Bio"])).toBeNull();
+  });
+});
+
+describe("deeplTranslator", () => {
+  const signal = new AbortController().signal;
+  /** Answers like DeepL: Portuguese texts come back as English and the reverse. */
+  const deepl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as { text: string[]; target_lang: string };
+    return Response.json({
+      translations: body.text.map((text) => {
+        const portuguese = /[ãçéêíõ]/.test(text);
+        return {
+          detected_source_language: portuguese ? "PT" : "EN",
+          text: body.target_lang === "EN-US" ? `EN: ${text}` : `PT: ${text}`,
+        };
+      }),
+    });
+  });
+
+  beforeEach(() => {
+    deepl.mockClear();
+  });
+
+  it("keeps each text as written in its own language and translates it into the other", async () => {
+    const translate = deeplTranslator("free-key:fx", deepl as unknown as typeof fetch);
+    expect(
+      await translate(["Desenvolvo interfaces acessíveis.", "Frontend Developer"], signal),
+    ).toEqual([
+      { pt: "Desenvolvo interfaces acessíveis.", en: "EN: Desenvolvo interfaces acessíveis." },
+      { pt: "PT: Frontend Developer", en: "Frontend Developer" },
+    ]);
+
+    expect(deepl).toHaveBeenCalledTimes(2);
+    const [url, init] = deepl.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api-free.deepl.com/v2/translate");
+    expect(init.headers).toMatchObject({ Authorization: "DeepL-Auth-Key free-key:fx" });
+    expect(
+      deepl.mock.calls.map(([, call]) => JSON.parse(String(call?.body)).target_lang).sort(),
+    ).toEqual(["EN-US", "PT-BR"]);
+  });
+
+  it("uses the Pro API for Pro keys", async () => {
+    await deeplTranslator("pro-key", deepl as unknown as typeof fetch)(["Oi, ação"], signal);
+    expect(deepl.mock.calls[0]?.[0]).toBe("https://api.deepl.com/v2/translate");
+  });
+
+  it("fails with DeepL's status, such as 456 when the quota ran out", async () => {
+    const quota = vi.fn(async () => new Response("Quota exceeded", { status: 456 }));
+    const failure = deeplTranslator("key:fx", quota as unknown as typeof fetch)(["Oi"], signal);
+    await expect(failure).rejects.toBeInstanceOf(DeepLError);
+    await expect(failure).rejects.toMatchObject({ status: 456 });
+  });
+});
+
+describe("withBackup", () => {
+  const signal = new AbortController().signal;
+  const backup = vi.fn<Translator>(async (texts) => texts.map((text) => ({ pt: text, en: text })));
+
+  beforeEach(() => {
+    backup.mockClear();
+  });
+
+  it("uses the backup only when the primary fails or gives nothing", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const primary = vi.fn<Translator>(async () => [{ pt: "um", en: "one" }]);
+    expect(await withBackup(primary, backup)(["um"], signal)).toEqual([{ pt: "um", en: "one" }]);
+    expect(backup).not.toHaveBeenCalled();
+
+    primary.mockRejectedValueOnce(new DeepLError(456));
+    expect(await withBackup(primary, backup)(["um"], signal)).toEqual([{ pt: "um", en: "um" }]);
+    primary.mockResolvedValueOnce(null);
+    await withBackup(primary, backup)(["um"], signal);
+    expect(backup).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it("doesn't fall back once the time is up", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const primary = vi.fn<Translator>(async () => {
+      throw new Error("aborted");
+    });
+    await expect(withBackup(primary, backup)(["um"], controller.signal)).rejects.toThrow("aborted");
+    expect(backup).not.toHaveBeenCalled();
+  });
+});
+
+describe("defaultTranslator", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("is null without any key, and set up with either", () => {
+    vi.stubEnv("DEEPL_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    expect(defaultTranslator()).toBeNull();
+    vi.stubEnv("DEEPL_API_KEY", "key:fx");
+    expect(defaultTranslator()).toBeTypeOf("function");
+    vi.stubEnv("DEEPL_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    expect(defaultTranslator()).toBeTypeOf("function");
+  });
+
+  it("tries DeepL first and Claude when DeepL is out of quota", async () => {
+    vi.stubEnv("DEEPL_API_KEY", "key:fx");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        calls.push(String(url));
+        return String(url).includes("deepl")
+          ? new Response("Quota exceeded", { status: 456 })
+          : Response.json({ error: { type: "authentication_error" } }, { status: 401 });
+      }),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const translate = defaultTranslator();
+    await expect(translate?.(["Oi"], new AbortController().signal)).rejects.toBeDefined();
+    expect(calls.some((url) => url.includes("api-free.deepl.com"))).toBe(true);
+    expect(calls.some((url) => url.includes("api.anthropic.com"))).toBe(true);
+    warn.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

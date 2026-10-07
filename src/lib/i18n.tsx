@@ -669,7 +669,8 @@ const pt = {
     showingOriginal: "Mostrando o texto original.",
     showOriginal: "Ver original",
     showTranslation: "Ver tradução",
-    pending: "Textos novos ou alterados são traduzidos para o outro idioma quando você salva o perfil.",
+    pending:
+      "Textos novos ou alterados são traduzidos para o outro idioma quando você salva o perfil.",
   },
   admin: {
     kicker: "Administração",
@@ -1368,7 +1369,8 @@ const en: Dict = {
     showingOriginal: "Showing the original text.",
     showOriginal: "See original",
     showTranslation: "See translation",
-    pending: "New or changed texts are translated into the other language when you save the profile.",
+    pending:
+      "New or changed texts are translated into the other language when you save the profile.",
   },
   admin: {
     kicker: "Admin",

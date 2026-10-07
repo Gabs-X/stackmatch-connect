@@ -10,9 +10,10 @@ import { textTranslations } from "./db/schema";
 
 /**
  * Translates the free text people write (bio, role, project descriptions, a company's description)
- * between Brazilian Portuguese and English with Claude, when a profile is saved, and keeps the
- * result per account. Whatever language a text was written in, it gets the other one. Without
- * ANTHROPIC_API_KEY, or when the call fails, texts simply show as written.
+ * between Brazilian Portuguese and English when a profile is saved, and keeps the result per
+ * account. Whatever language a text was written in, it gets the other one. DeepL translates first
+ * (DEEPL_API_KEY); Claude (ANTHROPIC_API_KEY) steps in when DeepL fails or its monthly quota ran
+ * out, or alone when there's no DeepL key. With neither, or when both fail, texts show as written.
  */
 
 export const hashText = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -73,12 +74,72 @@ For each text, return it in Brazilian Portuguese (pt) and in English (en):
 
 Return one entry per text, with the same index it was given.`;
 
+/** Each text in both languages, in the order given; "" for one that couldn't be translated. */
+export type TranslationResult = { pt: string; en: string }[];
+
+/** A translation provider; null when it gave nothing usable. Throws when the request fails. */
+export type Translator = (
+  texts: string[],
+  signal: AbortSignal,
+) => Promise<TranslationResult | null>;
+
+/** A refusal from DeepL, such as 456 when the month's quota ran out. */
+export class DeepLError extends Error {
+  constructor(readonly status: number) {
+    super(`DeepL request failed: ${status}`);
+    this.name = "DeepLError";
+  }
+}
+
+const deeplTargets = { pt: "PT-BR", en: "EN-US" } as const;
+
+/**
+ * DeepL, one request per language with every text. A text already in a language keeps its
+ * original wording there, as DeepL detected it. Free keys (ending in ":fx") use the Free API.
+ */
+export function deeplTranslator(apiKey: string, fetcher: typeof fetch = fetch): Translator {
+  const host = apiKey.endsWith(":fx") ? "api-free.deepl.com" : "api.deepl.com";
+  const translateTo = async (texts: string[], target: string, signal: AbortSignal) => {
+    const response = await fetcher(`https://${host}/v2/translate`, {
+      method: "POST",
+      headers: {
+        Authorization: `DeepL-Auth-Key ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: texts, target_lang: target, preserve_formatting: true }),
+      signal,
+    });
+    if (!response.ok) throw new DeepLError(response.status);
+    const data = (await response.json()) as {
+      translations?: { detected_source_language?: string; text?: string }[];
+    };
+    return data.translations ?? [];
+  };
+  return async (texts, signal) => {
+    const [pt, en] = await Promise.all([
+      translateTo(texts, deeplTargets.pt, signal),
+      translateTo(texts, deeplTargets.en, signal),
+    ]);
+    return texts.map((source, index) => {
+      const toPt = pt[index];
+      const toEn = en[index];
+      const detected = (toEn?.detected_source_language ?? toPt?.detected_source_language ?? "")
+        .slice(0, 2)
+        .toUpperCase();
+      return {
+        pt: detected === "PT" ? source : (toPt?.text?.trim() ?? ""),
+        en: detected === "EN" ? source : (toEn?.text?.trim() ?? ""),
+      };
+    });
+  };
+}
+
 /** One request to Claude for every text given; null when the model gives nothing usable. */
 export async function requestTranslations(
   client: Anthropic,
   texts: string[],
   signal?: AbortSignal,
-): Promise<{ pt: string; en: string }[] | null> {
+): Promise<TranslationResult | null> {
   const response = await client.beta.messages.parse(
     {
       model: assistantModel,
@@ -113,7 +174,35 @@ export async function requestTranslations(
   });
 }
 
-export type Translate = typeof requestTranslations;
+export const claudeTranslator =
+  (client: Anthropic): Translator =>
+  (texts, signal) =>
+    requestTranslations(client, texts, signal);
+
+/** The primary translator, and the backup whenever the primary fails or gives nothing. */
+export function withBackup(primary: Translator, backup: Translator): Translator {
+  return async (texts, signal) => {
+    try {
+      const result = await primary(texts, signal);
+      if (result) return result;
+      console.warn("Primary translator gave nothing usable; using the backup.");
+    } catch (error) {
+      if (signal.aborted) throw error;
+      console.warn("Primary translator failed; using the backup:", error);
+    }
+    return backup(texts, signal);
+  };
+}
+
+/** DeepL with Claude as backup, whichever of them is configured; null when neither is. */
+export function defaultTranslator(): Translator | null {
+  const deeplKey = process.env["DEEPL_API_KEY"]?.trim();
+  const deepl = deeplKey ? deeplTranslator(deeplKey) : null;
+  const client = assistantClient();
+  const claude = client ? claudeTranslator(client) : null;
+  if (deepl && claude) return withBackup(deepl, claude);
+  return deepl ?? claude;
+}
 
 /**
  * Makes sure every text the account shows has both languages: translates only the ones without a
@@ -125,10 +214,9 @@ export async function updateTranslations(
   ownerId: string,
   texts: string[],
   {
-    client = assistantClient(),
-    translate = requestTranslations,
+    translator = defaultTranslator(),
     signal = AbortSignal.timeout(30_000),
-  }: { client?: Anthropic | null; translate?: Translate; signal?: AbortSignal } = {},
+  }: { translator?: Translator | null; signal?: AbortSignal } = {},
 ) {
   const current = unique(texts);
   const hashes = current.map(hashText);
@@ -141,14 +229,14 @@ export async function updateTranslations(
           hashes.length ? notInArray(textTranslations.hash, hashes) : undefined,
         ),
       );
-    if (!client || !current.length) return;
+    if (!translator || !current.length) return;
     const stored = await loadTranslations(db, [ownerId], current);
     const missing = current.filter((text) => !stored[text]);
     if (!missing.length) return;
 
-    const results = await translate(client, missing, signal);
+    const results = await translator(missing, signal);
     if (!results) {
-      console.warn(`Translations for ${ownerId}: the model returned nothing usable.`);
+      console.warn(`Translations for ${ownerId}: the translator returned nothing usable.`);
       return;
     }
     const rows = missing.flatMap((text, index) => {
