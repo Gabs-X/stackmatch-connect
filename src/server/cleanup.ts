@@ -1,7 +1,9 @@
 import { and, eq, lte, notExists } from "drizzle-orm";
 import { outreachLimits } from "@/lib/outreach";
+import { assistantWindowMinutes } from "./assistant-throttle";
 import type { Db } from "./db";
 import {
+  assistantRequests,
   developerSkills,
   emailCodes,
   emailSends,
@@ -15,8 +17,8 @@ import { emailWindowMinutes } from "./email-throttle";
 import { loginWindowMinutes } from "./login-throttle";
 
 /**
- * Deletes what no longer matters: expired sessions and e-mail codes, sign-in failures and e-mail
- * sends outside their limits' windows, interest marks older than the longest limit that reads them, and typed skills
+ * Deletes what no longer matters: expired sessions and e-mail codes, sign-in failures, e-mail
+ * sends and assistant questions outside their limits' windows, interest marks older than the longest limit that reads them, and typed skills
  * nobody uses (the reference catalog stays). Run daily by Vercel Cron (/api/cron/cleanup).
  */
 export async function cleanup(db: Db, now = Date.now()) {
@@ -49,6 +51,12 @@ export async function cleanup(db: Db, now = Date.now()) {
         .delete(emailSends)
         .where(lte(emailSends.createdAt, before(emailWindowMinutes * 60_000)))
         .returning({ id: emailSends.id })
+    ).length,
+    assistantRequests: (
+      await db
+        .delete(assistantRequests)
+        .where(lte(assistantRequests.createdAt, before(assistantWindowMinutes * 60_000)))
+        .returning({ id: assistantRequests.id })
     ).length,
     interestEvents: (
       await db

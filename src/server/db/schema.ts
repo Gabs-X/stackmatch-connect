@@ -48,6 +48,17 @@ export const emailSends = pgTable(
   (table) => [index("email_sends_ip_created_at_idx").on(table.ip, table.createdAt)],
 );
 
+/** Assistant questions per client IP, for the limit in src/server/assistant-throttle.ts. */
+export const assistantRequests = pgTable(
+  "assistant_requests",
+  {
+    id: serial("id").primaryKey(),
+    ip: text("ip").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("assistant_requests_ip_created_at_idx").on(table.ip, table.createdAt)],
+);
+
 export const sessions = pgTable(
   "sessions",
   {

@@ -20,6 +20,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as ApiAssistantRouteImport } from './routes/api.assistant'
 import { Route as ApiTestEmailsRouteImport } from './routes/api.test-emails'
 import { Route as ApiTestResetRouteImport } from './routes/api.test-reset'
 import { Route as ApiTestSeedRouteImport } from './routes/api.test-seed'
@@ -83,6 +84,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAssistantRoute = ApiAssistantRouteImport.update({
+  id: '/api/assistant',
+  path: '/api/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTestEmailsRoute = ApiTestEmailsRouteImport.update({
   id: '/api/test-emails',
   path: '/api/test-emails',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
   '/api/test-seed': typeof ApiTestSeedRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
   '/api/test-seed': typeof ApiTestSeedRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
   '/api/test-seed': typeof ApiTestSeedRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/saved'
     | '/verify-email'
+    | '/api/assistant'
     | '/api/test-emails'
     | '/api/test-reset'
     | '/api/test-seed'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/saved'
     | '/verify-email'
+    | '/api/assistant'
     | '/api/test-emails'
     | '/api/test-reset'
     | '/api/test-seed'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/saved'
     | '/verify-email'
+    | '/api/assistant'
     | '/api/test-emails'
     | '/api/test-reset'
     | '/api/test-seed'
@@ -255,6 +267,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  ApiAssistantRoute: typeof ApiAssistantRoute
   ApiTestEmailsRoute: typeof ApiTestEmailsRoute
   ApiTestResetRoute: typeof ApiTestResetRoute
   ApiTestSeedRoute: typeof ApiTestSeedRoute
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/assistant': {
+      id: '/api/assistant'
+      path: '/api/assistant'
+      fullPath: '/api/assistant'
+      preLoaderRoute: typeof ApiAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/test-emails': {
       id: '/api/test-emails'
       path: '/api/test-emails'
@@ -407,6 +427,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  ApiAssistantRoute: ApiAssistantRoute,
   ApiTestEmailsRoute: ApiTestEmailsRoute,
   ApiTestResetRoute: ApiTestResetRoute,
   ApiTestSeedRoute: ApiTestSeedRoute,

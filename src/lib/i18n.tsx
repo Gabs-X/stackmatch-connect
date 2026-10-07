@@ -323,6 +323,7 @@ const pt = {
     close: "Fechar assistente",
     title: "Assistente StackMatch",
     status: "Prévia · IA em breve",
+    statusLive: "Online · respostas com IA",
     badge: "Beta",
     greetingTitle: "Olá! Como posso ajudar?",
     greetingSub:
@@ -341,7 +342,11 @@ const pt = {
     typing: "Assistente digitando",
     you: "Você",
     disclaimer: "Prévia: a IA ainda não está conectada e as respostas são simuladas.",
+    disclaimerLive:
+      "Respostas geradas por IA podem conter erros. Não compartilhe senhas ou códigos.",
     error: "Não foi possível obter uma resposta. Tente novamente.",
+    limited: (minutes: number) =>
+      `Você fez muitas perguntas em pouco tempo. Tente de novo em ${minutes === 1 ? "1 minuto" : `${minutes} minutos`}.`,
     retry: "Tentar novamente",
     previewReply:
       "Obrigado pela mensagem! Ainda estou em modo de prévia: a integração com IA será conectada junto com o backend do StackMatch. Em breve vou poder tirar dúvidas sobre o Discover, filtros, perfis e propostas de reunião.",
@@ -917,6 +922,7 @@ const en: Dict = {
     close: "Close assistant",
     title: "StackMatch Assistant",
     status: "Preview · AI coming soon",
+    statusLive: "Online · AI answers",
     badge: "Beta",
     greetingTitle: "Hi! How can I help?",
     greetingSub:
@@ -935,7 +941,10 @@ const en: Dict = {
     typing: "Assistant is typing",
     you: "You",
     disclaimer: "Preview: the AI isn't connected yet, so replies are simulated.",
+    disclaimerLive: "AI-generated answers may contain mistakes. Don't share passwords or codes.",
     error: "Couldn't get a reply. Please try again.",
+    limited: (minutes: number) =>
+      `You've asked a lot of questions in a short time. Try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`}.`,
     retry: "Try again",
     previewReply:
       "Thanks for your message! I'm still in preview mode: the AI integration will be connected together with the StackMatch backend. Soon I'll be able to answer questions about Discover, filters, profiles and meeting proposals.",

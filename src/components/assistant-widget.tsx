@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { Button } from "@/components/ui/button";
 import { useScrollingDown } from "@/hooks/use-scrolling-down";
 import {
+  AssistantHttpError,
   assistantApiUrl,
   createHttpTransport,
   createMockTransport,
@@ -27,7 +28,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Swap the mock for the HTTP transport by setting VITE_ASSISTANT_API_URL.
+  // Swap the mock for the HTTP transport by setting VITE_ASSISTANT_API_URL (/api/assistant).
   const transport = useMemo(
     () =>
       assistantApiUrl
@@ -39,6 +40,10 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
     locale: lang === "pt" ? "pt-BR" : "en",
     context: { pathname },
   }));
+  const errorText = (error: unknown) =>
+    error instanceof AssistantHttpError && error.status === 429
+      ? t.assistant.limited(Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)))
+      : t.assistant.error;
   const streaming = status === "streaming";
   const last = messages.at(-1);
   // The reply placeholder exists from the start of a request; show dots until text arrives.
@@ -66,7 +71,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
 
   const submit = (text = draft) => {
     if (!text.trim() || streaming) return;
-    send(text, t.assistant.error);
+    send(text, errorText);
     setDraft("");
     inputRef.current?.focus();
   };
@@ -105,8 +110,14 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                   {t.assistant.title}
                 </h2>
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                  {t.assistant.status}
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      assistantApiUrl ? "bg-emerald-500" : "bg-amber-500",
+                    )}
+                    aria-hidden="true"
+                  />
+                  {assistantApiUrl ? t.assistant.statusLive : t.assistant.status}
                   <span className="level-badge px-1.5 py-0 text-[0.6rem]">{t.assistant.badge}</span>
                 </p>
               </div>
@@ -197,7 +208,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                             variant="link"
                             size="sm"
                             className="h-auto px-1 py-1 text-xs"
-                            onClick={() => retry(t.assistant.error)}
+                            onClick={() => retry(errorText)}
                           >
                             <RotateCcw />
                             {t.assistant.retry}
@@ -278,11 +289,9 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                   </Button>
                 )}
               </div>
-              {!assistantApiUrl && (
-                <p className="mt-2 px-1 text-center text-[0.7rem] text-muted-foreground">
-                  {t.assistant.disclaimer}
-                </p>
-              )}
+              <p className="mt-2 px-1 text-center text-[0.7rem] text-muted-foreground">
+                {assistantApiUrl ? t.assistant.disclaimerLive : t.assistant.disclaimer}
+              </p>
             </form>
           </motion.section>
         )}

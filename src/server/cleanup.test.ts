@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { emptyProfile } from "@/lib/local-profile";
+import { recordAssistantRequest } from "./assistant-throttle";
 import { createAccount, createSession, sessionDurationMs } from "./auth";
 import { cleanup } from "./cleanup";
 import type { Db } from "./db";
@@ -46,6 +47,9 @@ describe("cleanup", () => {
     // An e-mail send from two hours ago and one from now.
     await recordEmailSend(db, "203.0.113.7", now - 2 * 3_600_000);
     await recordEmailSend(db, "198.51.100.1", now);
+    // An assistant question from two hours ago and one from now.
+    await recordAssistantRequest(db, "203.0.113.7", now - 2 * 3_600_000);
+    await recordAssistantRequest(db, "198.51.100.1", now);
     // An interest mark older than the 30-day limits and a recent one.
     await db.insert(interestEvents).values([
       {
@@ -76,6 +80,7 @@ describe("cleanup", () => {
       emailCodes: 1,
       loginFailures: 1,
       emailSends: 1,
+      assistantRequests: 1,
       interestEvents: 1,
       unusedSkills: 1,
     });

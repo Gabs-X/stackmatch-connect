@@ -27,6 +27,20 @@ export type AssistantTransport = (
 
 export type ChatStatus = "idle" | "streaming";
 
+/** A reply the backend refused, with its HTTP status and, on 429, the seconds to wait. */
+export class AssistantHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly retryAfter: number | null = null,
+  ) {
+    super(`Assistant request failed: ${status}`);
+    this.name = "AssistantHttpError";
+  }
+}
+
+/** The text shown in place of a failed reply: fixed, or chosen from the error. */
+export type ErrorText = string | ((error: unknown) => string);
+
 const wait = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     // An abort that happened between waits fires no event, so check before listening.
@@ -68,7 +82,13 @@ export function createHttpTransport(url: string): AssistantTransport {
       body: JSON.stringify(request),
       signal,
     });
-    if (!response.ok) throw new Error(`Assistant request failed: ${response.status}`);
+    if (!response.ok) {
+      const retryAfter = Number(response.headers.get("retry-after"));
+      throw new AssistantHttpError(
+        response.status,
+        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+      );
+    }
     if (response.headers.get("content-type")?.includes("application/json")) {
       const data: unknown = await response.json();
       const reply =
@@ -112,7 +132,7 @@ export function useAssistantChat(
   const patchMessage = (id: string, patch: (message: ChatMessage) => ChatMessage) =>
     update((current) => current.map((message) => (message.id === id ? patch(message) : message)));
 
-  const run = async (history: ChatMessage[], errorText: string) => {
+  const run = async (history: ChatMessage[], errorText: ErrorText) => {
     const controller = new AbortController();
     controllerRef.current = controller;
     const replyId = newId();
@@ -128,9 +148,11 @@ export function useAssistantChat(
       for await (const chunk of transport(request, controller.signal)) {
         patchMessage(replyId, (message) => ({ ...message, content: message.content + chunk }));
       }
-    } catch {
-      if (!controller.signal.aborted)
-        patchMessage(replyId, (message) => ({ ...message, content: errorText, error: true }));
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        const content = typeof errorText === "string" ? errorText : errorText(error);
+        patchMessage(replyId, (message) => ({ ...message, content, error: true }));
+      }
     } finally {
       // Drop empty replies (e.g. stopped before the first chunk) so the thread stays clean.
       update((current) =>
@@ -143,7 +165,7 @@ export function useAssistantChat(
     }
   };
 
-  const send = (text: string, errorText: string) => {
+  const send = (text: string, errorText: ErrorText) => {
     const content = text.trim();
     if (!content || controllerRef.current) return;
     update((current) => [...current, { id: newId(), role: "user", content }]);
@@ -151,7 +173,7 @@ export function useAssistantChat(
   };
 
   /** Re-asks the last user message after a failed reply. */
-  const retry = (errorText: string) => {
+  const retry = (errorText: ErrorText) => {
     if (controllerRef.current) return;
     update((current) => current.filter((message) => !message.error));
     void run(messagesRef.current, errorText);

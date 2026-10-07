@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código, a não ser o card de exemplo da home, que ilustra o produto com uma pessoa fictícia; um banco novo começa com o seed (`npm run db:seed`). Os e-mails saem pelo Resend; o assistente de IA ainda é simulado.
+**Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código, a não ser o card de exemplo da home, que ilustra o produto com uma pessoa fictícia; um banco novo começa com o seed (`npm run db:seed`). Os e-mails saem pelo Resend; o assistente de suporte responde com o Claude, da Anthropic, quando a chave da API está configurada.
 
 ## Problema e proposta
 
@@ -39,7 +39,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - **Campos obrigatórios do perfil:** nome, cargo, localização, senioridade, modelo de trabalho, disponibilidade, bio e pelo menos uma skill, marcados com `*`. Com algum em branco, o formulário não avança de etapa nem conclui: mostra a mensagem em cada campo e leva o foco ao primeiro. A regra fica em `missingProfileFields` (`src/lib/local-profile.ts`).
 - **Perfil sem projetos:** a etapa Projetos é opcional, com a opção "Continuar sem projetos". Na página do perfil, um desenvolvedor sem projetos mostra um aviso no lugar da seção vazia.
 - **Proposta de reunião:** uma conta de empresa sugere um horário (data e hora, em GMT−3) e escreve uma mensagem opcional. O profissional recebe a proposta por e-mail, com o mesmo texto da prévia que o diálogo mostra, e responde direto para a empresa (`Reply-To` com o contato dela): o StackMatch não gerencia a reunião nem bloqueia horários. Se o e-mail não puder ser enviado, a proposta não é registrada e a empresa vê o erro. O diálogo avisa quando já houve proposta para o mesmo profissional. Visitantes são levados ao login; contas de desenvolvedor não enviam propostas.
-- **Assistente (prévia):** chat flutuante com sugestões, digitação em streaming e opção de parar a resposta, pronto para conectar a um backend de IA.
+- **Assistente de suporte:** chat flutuante com sugestões, resposta em streaming e opção de parar, que tira dúvidas sobre o uso do StackMatch com o Claude (detalhes em [Assistente de suporte com IA](#assistente-de-suporte-com-ia)).
 - **PT-BR e EN**, interface responsiva e ajustes de acessibilidade, incluindo labels, estados de seleção e respeito à preferência por movimento reduzido nos cards.
 
 ## Stack utilizada
@@ -51,6 +51,7 @@ A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplica
 - Framer Motion para animações e arraste dos cards.
 - Lucide para ícones e Sonner para notificações.
 - date-fns e React DayPicker para datas e calendário.
+- SDK da Anthropic (`@anthropic-ai/sdk`) para o assistente de suporte.
 - Drizzle ORM com Postgres (Neon em produção, PGlite no desenvolvimento e nos testes) e server functions do TanStack Start para o backend.
 - Zod e React Hook Form para validação dos formulários e da estrutura dos dados locais.
 - TanStack Query para as consultas às server functions, com estados de carregamento e erro.
@@ -144,7 +145,7 @@ As opções do perfil (senioridade, modelo de trabalho, disponibilidade e contra
 - **Dados da empresa:** um registro por conta de empresa (`company_profiles`), lido e salvo só pela própria conta. Até a empresa salvar, valem o nome, o cargo e o e-mail do cadastro. O desenvolvedor só vê os dados de empresas que o contataram, por interesse ou proposta.
 - **Talentos salvos, interesses e propostas:** ficam em `saved_talents`, `interests` e `meeting_requests`, ligados às contas da empresa e do desenvolvedor; apagar uma conta apaga esses registros. Só perfis publicados podem ser salvos, marcados ou receber proposta. O interesse aparece para o desenvolvedor com o contato atual da empresa; desfazer no Discover apaga o interesse, mas o e-mail do aviso já terá saído.
 - **Limites de contato por empresa** (`src/lib/outreach.ts`): até 50 marcações de interesse e 20 propostas de reunião a cada 24 horas, e até 3 propostas para o mesmo desenvolvedor a cada 7 dias. Ao atingir um limite, a ação é recusada antes de qualquer e-mail, e a tela diz quanto tempo falta. Desfazer um interesse não devolve a marcação: cada uma fica em `interest_events`.
-- **Limpeza diária** (`src/server/cleanup.ts`): um Cron da Vercel, agendado no `vite.config.ts`, chama `/api/cron/cleanup` às 03:00 de Brasília para apagar sessões vencidas, códigos expirados, falhas de login e envios de e-mail antigos, marcações de interesse com mais de 30 dias e skills digitadas sem uso. A rota só aceita o segredo `CRON_SECRET`.
+- **Limpeza diária** (`src/server/cleanup.ts`): um Cron da Vercel, agendado no `vite.config.ts`, chama `/api/cron/cleanup` às 03:00 de Brasília para apagar sessões vencidas, códigos expirados, falhas de login, envios de e-mail e perguntas ao assistente antigos, marcações de interesse com mais de 30 dias e skills digitadas sem uso. A rota só aceita o segredo `CRON_SECRET`.
 - **Avisos por e-mail ao desenvolvedor** (`src/server/notifications.ts`): a marcação de interesse de uma empresa (no máximo um aviso da mesma empresa a cada 30 dias) e cada proposta de reunião. Saem no idioma da tela da empresa (o app não guarda o idioma preferido do desenvolvedor), com `Reply-To` para o contato dela; o de interesse leva um link para Empresas interessadas. Uma falha no aviso de interesse vai para o log e não desfaz a marcação.
 - O resumo do profissional exibe seus dados; não existe percentual calculado de matching.
 
@@ -153,17 +154,25 @@ As opções do perfil (senioridade, modelo de trabalho, disponibilidade e contra
 - O assistente responde com uma mensagem simulada enquanto `VITE_ASSISTANT_API_URL` não estiver definida.
 - Dados salvos no navegador por versões anteriores (perfis, shortlist, interesses, propostas e dados da empresa) não são migrados.
 
-## Assistente com IA (preparado para backend)
+## Assistente de suporte com IA
 
-O botão no canto inferior direito abre o chat do assistente. Sem backend, ele usa respostas simuladas e avisa que a IA ainda não está conectada.
+O botão no canto inferior direito abre o chat do assistente, que responde dúvidas sobre o uso do StackMatch (contas, perfil, Discover, propostas, limites) com o modelo `claude-opus-5-5` da Anthropic.
 
-Para conectar, defina a URL do serviço em um arquivo `.env.local`:
+- **Backend:** a rota `POST /api/assistant` (`src/routes/api.assistant.ts`) recebe a conversa, confere o formato e o tamanho (até 30 mensagens, 4.000 caracteres cada e 30.000 no total, começando e terminando com uma mensagem da pessoa) e devolve a resposta em streaming como `text/plain`. Se a API da Anthropic falhar antes do primeiro trecho, a rota responde 502 e o chat oferece tentar de novo; fechar o chat ou parar a resposta cancela a chamada.
+- **Conhecimento:** o guia do produto e as regras ficam no prompt de sistema em `src/server/assistant.ts` (`assistantGuide`). Ao mudar uma regra do app, atualize o guia também. O assistente sabe só a página aberta, o idioma da tela e o tipo de conta conectada; não lê dados da conta nem executa ações. O guia fica em cache na API, então só a parte de cada conversa é cobrada inteira.
+- **Custo e abuso:** cada IP pode fazer até 30 perguntas por hora (`src/server/assistant-throttle.ts`, tabela `assistant_requests`, limpa pela limpeza diária). Passando disso, a rota responde 429 e o chat diz quantos minutos faltam. O esforço do modelo fica em `low`, suficiente para respostas curtas.
+- **Recusas:** a chamada usa o fallback do lado do servidor (`fallbacks: "default"`): se um classificador de segurança recusar, a API tenta outro modelo na mesma chamada. Se mesmo assim não vier texto, o chat mostra uma resposta padrão.
+
+Para ativar, defina na Vercel (ou no `.env.local`, no desenvolvimento):
 
 ```sh
-VITE_ASSISTANT_API_URL=https://api.exemplo.com/assistant
+ANTHROPIC_API_KEY=sk-ant-...
+VITE_ASSISTANT_API_URL=/api/assistant
 ```
 
-O front envia um `POST` com JSON:
+`VITE_ASSISTANT_API_URL` entra no build do front, então mudar o valor pede um novo deploy. Sem ela, o chat usa as respostas simuladas e avisa que a IA não está conectada; com ela e sem a chave, a rota responde 503 e o chat mostra erro.
+
+A URL também pode apontar para outro serviço com o mesmo contrato. O front envia um `POST` com JSON:
 
 ```json
 {
@@ -173,7 +182,7 @@ O front envia um `POST` com JSON:
 }
 ```
 
-A resposta pode ser texto em streaming (`text/plain`, exibido conforme chega) ou JSON no formato `{ "reply": "..." }`. O botão de parar cancela a requisição via `AbortSignal`. O contrato e os transports ficam em `src/lib/assistant.ts`; a interface, em `src/components/assistant-widget.tsx`.
+A resposta pode ser texto em streaming (`text/plain`, exibido conforme chega) ou JSON no formato `{ "reply": "..." }`; um 429 com `Retry-After` vira o aviso de limite. O contrato e os transports ficam em `src/lib/assistant.ts`; a interface, em `src/components/assistant-widget.tsx`.
 
 ## Analytics de visitas (Vercel)
 

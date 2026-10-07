@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AssistantHttpError,
   createHttpTransport,
   createMockTransport,
   type AssistantRequest,
@@ -64,6 +65,18 @@ describe("createHttpTransport", () => {
       vi.fn(async () => Response.json({ answer: "wrong key" })),
     );
     await expect(collect(createHttpTransport("https://api.test/assistant"))).rejects.toThrow();
+  });
+
+  it("reports the wait the backend asks for when the limit is reached", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () => new Response("slow down", { status: 429, headers: { "Retry-After": "90" } }),
+      ),
+    );
+    const failure = collect(createHttpTransport("https://api.test/assistant"));
+    await expect(failure).rejects.toBeInstanceOf(AssistantHttpError);
+    await expect(failure).rejects.toMatchObject({ status: 429, retryAfter: 90 });
   });
 });
 
