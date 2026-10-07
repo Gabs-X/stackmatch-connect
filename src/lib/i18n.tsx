@@ -690,6 +690,10 @@ const pt = {
     reopen: "Reabrir",
     closedBy: (who: string, date: string) => `Resolvido por ${who} em ${date}`,
     closedToast: (id: number) => `Ticket #${id} resolvido.`,
+    closedNotified: (id: number, email: string) =>
+      `Ticket #${id} resolvido. Avisamos ${email} por e-mail.`,
+    closedNotifyFailed: (id: number) =>
+      `Ticket #${id} resolvido, mas o aviso por e-mail não pôde ser enviado. Avise a pessoa respondendo pelo seu e-mail.`,
     reopenedToast: (id: number) => `Ticket #${id} reaberto.`,
     error: "Não foi possível atualizar o ticket. Tente novamente.",
     loadError: "Não foi possível carregar os tickets.",
@@ -1378,6 +1382,10 @@ const en: Dict = {
     reopen: "Reopen",
     closedBy: (who: string, date: string) => `Resolved by ${who} on ${date}`,
     closedToast: (id: number) => `Ticket #${id} resolved.`,
+    closedNotified: (id: number, email: string) =>
+      `Ticket #${id} resolved. We let ${email} know by e-mail.`,
+    closedNotifyFailed: (id: number) =>
+      `Ticket #${id} resolved, but the e-mail notice couldn't be sent. Let them know by replying from your e-mail.`,
     reopenedToast: (id: number) => `Ticket #${id} reopened.`,
     error: "Couldn't update the ticket. Please try again.",
     loadError: "Couldn't load the tickets.",

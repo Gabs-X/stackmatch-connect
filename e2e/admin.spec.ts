@@ -1,4 +1,4 @@
-import { expect, signInAs, test } from "./fixtures";
+import { expect, lastEmail, signInAs, test } from "./fixtures";
 
 test("only admins reach the ticket admin page", async ({ page }) => {
   await signInAs(page, "developer");
@@ -51,7 +51,11 @@ test("an admin resolves and reopens a ticket", async ({ page }) => {
   );
 
   await ticket.getByRole("button", { name: "Marcar como resolvido" }).click();
-  await expect(page.getByText(`Ticket #${id} resolvido.`)).toBeVisible();
+  await expect(
+    page.getByText(`Ticket #${id} resolvido. Avisamos bruna@example.com por e-mail.`),
+  ).toBeVisible();
+  const notice = await lastEmail(page, "bruna@example.com");
+  expect(notice.subject).toBe(`Seu ticket #${id} foi resolvido`);
   await expect(ticket).toBeHidden();
   await expect(page.getByText("Nenhum ticket aberto. Tudo em dia!")).toBeVisible();
 

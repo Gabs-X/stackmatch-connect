@@ -6,6 +6,7 @@ import { saveConversation } from "./assistant-conversations";
 import { createAccount } from "./auth";
 import type { Db } from "./db";
 import { supportTickets, users } from "./db/schema";
+import * as email from "./email";
 import { outbox } from "./email";
 import {
   createTicket,
@@ -162,6 +163,8 @@ describe("createTicket", () => {
   });
 });
 
+const appUrl = "https://stackmatch.test";
+
 describe("admin tickets", () => {
   it("lists tickets by status with counts and the author's account type", async () => {
     const first = await createTicket(db, input, null, null);
@@ -176,9 +179,9 @@ describe("admin tickets", () => {
     ]);
 
     const now = Date.now();
-    expect(await setTicketStatus(db, first.ticket.id, "closed", "equipe@stackmatch.dev", now)).toBe(
-      true,
-    );
+    expect(
+      await setTicketStatus(db, first.ticket.id, "closed", "equipe@stackmatch.dev", appUrl, now),
+    ).toEqual({ found: true, notified: "sent" });
     const closed = await listAdminTickets(db, "closed");
     expect(closed.counts).toEqual({ open: 1, closed: 1 });
     expect(closed.tickets).toHaveLength(1);
@@ -192,7 +195,9 @@ describe("admin tickets", () => {
     // The author sees the new status in their own list.
     expect((await listTickets(db, ana.id))[0]?.status).toBe("open");
 
-    await setTicketStatus(db, first.ticket.id, "open", "equipe@stackmatch.dev");
+    expect(
+      await setTicketStatus(db, first.ticket.id, "open", "equipe@stackmatch.dev", appUrl),
+    ).toEqual({ found: true, notified: "none" });
     const reopened = await listAdminTickets(db, "open");
     expect(reopened.counts).toEqual({ open: 2, closed: 0 });
     expect(reopened.tickets.find((ticket) => ticket.id === first.ticket.id)).toMatchObject({
@@ -202,6 +207,55 @@ describe("admin tickets", () => {
   });
 
   it("reports an unknown ticket", async () => {
-    expect(await setTicketStatus(db, 9999, "closed", "equipe@stackmatch.dev")).toBe(false);
+    expect(await setTicketStatus(db, 9999, "closed", "equipe@stackmatch.dev", appUrl)).toEqual({
+      found: false,
+    });
+    expect(await setTicketStatus(db, 9999, "open", "equipe@stackmatch.dev", appUrl)).toEqual({
+      found: false,
+    });
+  });
+
+  it("tells the author once, in their language, with a link for accounts", async () => {
+    const visitor = await createTicket(db, { ...input, language: "en" }, null, null);
+    const member = await createTicket(db, { ...input, subject: "Foto" }, ana, null);
+    if (!("ticket" in visitor) || !("ticket" in member)) throw new Error("ticket refused");
+    outbox().length = 0;
+
+    await setTicketStatus(db, visitor.ticket.id, "closed", "equipe@stackmatch.dev", appUrl);
+    await setTicketStatus(db, member.ticket.id, "closed", "equipe@stackmatch.dev", appUrl);
+    expect(outbox().map((email) => [email.to, email.subject])).toEqual([
+      ["visitante@example.com", `Your ticket #${visitor.ticket.id} was resolved`],
+      ["ana@example.com", `Seu ticket #${member.ticket.id} foi resolvido`],
+    ]);
+    expect(outbox()[0]).toMatchObject({ replyTo: "suporte@stackmatch.test" });
+    // Visitors have no ticket list to go back to; accounts get the link.
+    expect(outbox()[0]?.text).not.toContain("/support");
+    expect(outbox()[1]?.text).toContain("Ver meus tickets: https://stackmatch.test/support");
+
+    // Resolving again, or reopening, sends nothing more.
+    expect(
+      await setTicketStatus(db, member.ticket.id, "closed", "outra@stackmatch.dev", appUrl),
+    ).toEqual({ found: true, notified: "none" });
+    await setTicketStatus(db, member.ticket.id, "open", "equipe@stackmatch.dev", appUrl);
+    expect(outbox()).toHaveLength(2);
+    const [row] = await db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.id, member.ticket.id));
+    expect(row?.status).toBe("open");
+  });
+
+  it("resolves the ticket even when the notice can't be sent", async () => {
+    const result = await createTicket(db, input, null, null);
+    if (!("ticket" in result)) throw new Error("ticket refused");
+    const failing = vi.spyOn(email, "sendEmail").mockRejectedValueOnce(new Error("Resend down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(
+      await setTicketStatus(db, result.ticket.id, "closed", "equipe@stackmatch.dev", appUrl),
+    ).toEqual({ found: true, notified: "failed" });
+    expect((await listAdminTickets(db, "closed")).tickets).toHaveLength(1);
+    failing.mockRestore();
+    error.mockRestore();
   });
 });

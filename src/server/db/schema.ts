@@ -340,6 +340,8 @@ export const supportTickets = pgTable(
     message: text("message").notNull(),
     /** The chat with Ada when the author chose to attach it. */
     conversation: jsonb("conversation").$type<{ role: "user" | "assistant"; content: string }[]>(),
+    /** The screen's language when the ticket was opened, for the e-mails about it. */
+    language: text("language").$type<"pt" | "en">().notNull().default("pt"),
     status: text("status").$type<TicketStatus>().notNull().default("open"),
     /** When and by which admin (e-mail) the ticket was resolved; null while open. */
     closedAt: timestamp("closed_at", { withTimezone: true }),

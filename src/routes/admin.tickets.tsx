@@ -128,10 +128,13 @@ function TicketCard({ ticket }: { ticket: AdminTicket }) {
   const update = useMutation({
     mutationFn: (status: "open" | "closed") =>
       setTicketStatusFn({ data: { id: ticket.id, status } }),
-    onSuccess: (_, status) => {
-      toast.success(
-        status === "closed" ? t.admin.closedToast(ticket.id) : t.admin.reopenedToast(ticket.id),
-      );
+    onSuccess: (notified, status) => {
+      if (notified === "failed") toast.warning(t.admin.closedNotifyFailed(ticket.id));
+      else if (notified === "sent") toast.success(t.admin.closedNotified(ticket.id, ticket.email));
+      else
+        toast.success(
+          status === "closed" ? t.admin.closedToast(ticket.id) : t.admin.reopenedToast(ticket.id),
+        );
       void queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
     },
     onError: () => toast.error(t.admin.error),

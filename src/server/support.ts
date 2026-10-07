@@ -140,6 +140,7 @@ export async function createTicket(
       category: input.category,
       subject: input.subject,
       message: input.message,
+      language: input.language,
       conversation: conversation.length ? conversation : null,
       ip,
       createdAt: new Date(now),
@@ -211,22 +212,94 @@ export async function listAdminTickets(db: Db, filter: TicketFilter): Promise<Ad
   };
 }
 
-/** Resolves or reopens a ticket, recording who resolved it. False when there's no such ticket. */
+const resolvedCopy = {
+  pt: {
+    subject: (id: number) => `Seu ticket #${id} foi resolvido`,
+    body: (id: number, subject: string) =>
+      `A equipe do StackMatch marcou seu ticket #${id} ("${subject}") como resolvido.`,
+    again:
+      "Se o problema continuar ou ficou alguma dúvida, responda este e-mail ou abra um novo ticket na página Suporte.",
+    action: "Ver meus tickets",
+    closing: "Obrigado por nos ajudar a melhorar o StackMatch.",
+  },
+  en: {
+    subject: (id: number) => `Your ticket #${id} was resolved`,
+    body: (id: number, subject: string) =>
+      `The StackMatch team marked your ticket #${id} ("${subject}") as resolved.`,
+    again:
+      "If the problem continues or you still have questions, reply to this e-mail or open a new ticket on the Support page.",
+    action: "See my tickets",
+    closing: "Thank you for helping us improve StackMatch.",
+  },
+};
+
+/**
+ * Tells the author their ticket was resolved, in the language they wrote it in. Accounts get a link
+ * to their ticket list; visitors have none. Replies go to SUPPORT_EMAIL when it's set.
+ */
+export function ticketResolvedEmail(
+  ticket: typeof supportTickets.$inferSelect,
+  appUrl: string,
+): Email {
+  const copy = resolvedCopy[ticket.language];
+  const team = process.env["SUPPORT_EMAIL"]?.trim();
+  return messageEmail({
+    to: ticket.email,
+    subject: copy.subject(ticket.id),
+    paragraphs: [copy.body(ticket.id, ticket.subject), copy.again],
+    ...(ticket.userId
+      ? { action: { label: copy.action, url: new URL("/support", appUrl).href } }
+      : {}),
+    closing: copy.closing,
+    ...(team ? { replyTo: team } : {}),
+  });
+}
+
+/**
+ * Whether the author heard about the resolution: "sent", "failed" (the ticket is resolved all the
+ * same; the error goes to the log) or "none" (reopened, or it was already resolved).
+ */
+export type TicketStatusResult =
+  { found: false } | { found: true; notified: "sent" | "failed" | "none" };
+
+/**
+ * Resolves or reopens a ticket, recording who resolved it. Resolving an open ticket e-mails its
+ * author once: the update only matches open tickets, so two admins clicking together send one.
+ */
 export async function setTicketStatus(
   db: Db,
   id: number,
   status: TicketStatus,
   adminEmail: string,
+  appUrl: string,
   now = Date.now(),
-) {
-  const updated = await db
+): Promise<TicketStatusResult> {
+  if (status === "open") {
+    const reopened = await db
+      .update(supportTickets)
+      .set({ status, closedAt: null, closedBy: null })
+      .where(eq(supportTickets.id, id))
+      .returning({ id: supportTickets.id });
+    return reopened.length ? { found: true, notified: "none" } : { found: false };
+  }
+
+  const [resolved] = await db
     .update(supportTickets)
-    .set(
-      status === "closed"
-        ? { status, closedAt: new Date(now), closedBy: adminEmail }
-        : { status, closedAt: null, closedBy: null },
-    )
-    .where(eq(supportTickets.id, id))
-    .returning({ id: supportTickets.id });
-  return updated.length > 0;
+    .set({ status, closedAt: new Date(now), closedBy: adminEmail })
+    .where(and(eq(supportTickets.id, id), eq(supportTickets.status, "open")))
+    .returning();
+  if (!resolved) {
+    const [existing] = await db
+      .select({ id: supportTickets.id })
+      .from(supportTickets)
+      .where(eq(supportTickets.id, id));
+    return existing ? { found: true, notified: "none" } : { found: false };
+  }
+  try {
+    await sendEmail(ticketResolvedEmail(resolved, appUrl));
+    return { found: true, notified: "sent" };
+  } catch (error) {
+    console.error(`Ticket #${id} resolved, but the e-mail to its author failed:`, error);
+    return { found: true, notified: "failed" };
+  }
 }

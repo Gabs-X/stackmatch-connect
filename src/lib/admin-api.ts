@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestUrl } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { ticketFilters, ticketStatuses } from "@/lib/support";
 import { isAdmin } from "@/server/admin";
@@ -24,11 +25,18 @@ export const fetchAdminTickets = createServerFn({ method: "GET" })
     return listAdminTickets(await database(), data);
   });
 
-/** Stands for `PATCH /admin/tickets/:id`: resolve or reopen. */
+/** Stands for `PATCH /admin/tickets/:id`: resolve or reopen; says whether the author was told. */
 export const setTicketStatusFn = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int().positive(), status: z.enum(ticketStatuses) }))
   .handler(async ({ data }) => {
     const admin = await requireAdmin();
-    if (!(await setTicketStatus(await database(), data.id, data.status, admin.email)))
-      throw new Error("Unknown ticket.");
+    const result = await setTicketStatus(
+      await database(),
+      data.id,
+      data.status,
+      admin.email,
+      getRequestUrl().origin,
+    );
+    if (!result.found) throw new Error("Unknown ticket.");
+    return result.notified;
   });
