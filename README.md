@@ -2,7 +2,7 @@
 
 Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
 
-**Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código, a não ser o card de exemplo da home, que ilustra o produto com uma pessoa fictícia; um banco novo começa com o seed (`npm run db:seed`). O envio de e-mails e o assistente de IA ainda são simulados.
+**Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código, a não ser o card de exemplo da home, que ilustra o produto com uma pessoa fictícia; um banco novo começa com o seed (`npm run db:seed`). Os e-mails saem pelo Resend; o assistente de IA ainda é simulado.
 
 ## Problema e proposta
 
@@ -195,7 +195,7 @@ Sem essa variável, o componente não é incluído no build.
 - **Filtros determinísticos:** opções do mesmo grupo usam OU; grupos diferentes usam E. O filtro de disponibilidade corresponde ao status selecionado. O valor máximo no limite (R$ 300) não restringe nada; abaixo dele, ficam de fora os perfis acima do valor ou sem valor informado. A consulta fica em `searchProfiles` (`src/server/profiles.ts`).
 - **Ações separadas:** shortlist e interesse têm registros distintos, evitando confundir organização de candidatos com intenção de contato.
 - **Componentes compartilhados:** cards, controles e diálogos mantêm padrões de interação entre telas.
-- **Escopo explícito:** integrações ausentes (e-mail, IA) são apresentadas como simulações.
+- **Escopo explícito:** a integração ausente (o assistente de IA) é apresentada como simulação.
 
 ## Limitações conhecidas
 
