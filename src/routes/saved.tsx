@@ -7,7 +7,7 @@ import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/app-context";
-import { useDevelopers } from "@/lib/use-developers";
+import { useSavedDevelopers } from "@/lib/use-saved-developers";
 export const Route = createFileRoute("/saved")({
   head: () => ({
     meta: [
@@ -29,8 +29,8 @@ function SavedPage() {
   const { t } = useI18n();
   useLocalizedMeta(t.saved.title + " — Stack Match", t.saved.sub);
   const { hydrated, saved, toggleSaved } = useApp();
-  const { developers, isPending, isError, refetch } = useDevelopers();
-  const items = developers?.filter((d) => saved.includes(d.id)) ?? [];
+  const { developers, isPending, isError, refetch } = useSavedDevelopers();
+  const items = developers ?? [];
   // Before storage is read the count is unknown, so show one row; after, match the saved count.
   const loading = !hydrated || (saved.length > 0 && isPending && !isError);
   const skeletonCount = hydrated ? Math.min(saved.length, 8) : 4;

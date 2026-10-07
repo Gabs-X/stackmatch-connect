@@ -78,6 +78,9 @@ async function seed(page: Page, data: object) {
   if (!response.ok()) throw new Error(`Seeding failed: ${response.status()}`);
 }
 
+/** Publishes more developer profiles (made with developer() from test-data.ts). */
+export const seedDevelopers = (page: Page, developers: object[]) => seed(page, { developers });
+
 /** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
 export const seedSavedTalents = (page: Page, developerIds: string[]) =>
   seed(page, { savedTalents: { companyId: "demo-company", developerIds } });

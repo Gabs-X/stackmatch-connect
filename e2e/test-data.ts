@@ -4,7 +4,7 @@
  * fixtures put it back before every test, through /api/test-seed.
  */
 
-const developer = (fields: {
+export const developer = (fields: {
   id: string;
   name: string;
   role: string;

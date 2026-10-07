@@ -8,6 +8,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
@@ -24,15 +25,9 @@ import {
   type DiscoverAction,
   type HistoryEntry,
 } from "@/lib/discover-history";
-import {
-  defaultFilters,
-  matchesFilters,
-  maxRate,
-  type FilterGroup,
-  type Filters,
-} from "@/lib/filters";
+import { defaultFilters, maxRate, type FilterGroup, type Filters } from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
-import { useDevelopers } from "@/lib/use-developers";
+import { discoverQuery } from "@/lib/profile-api";
 
 export const Route = createFileRoute("/discover")({
   head: () => ({
@@ -62,7 +57,6 @@ function DiscoverPage() {
   const { t, tv, formatCurrency } = useI18n();
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
-  const { developers = noDevelopers, isPending, isError, refetch } = useDevelopers();
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [index, setIndex] = useState(0);
   const { hydrated, saved, interests, addSaved, registerInterest, removeSaved, removeInterest } =
@@ -88,17 +82,25 @@ function DiscoverPage() {
   useEffect(() => {
     if (hydrated) setHiddenIds((current) => current ?? saved);
   }, [hydrated, saved]);
-  const loading = (isPending && !isError) || hiddenIds === null;
-  const matching = useMemo(
-    () => developers.filter((developer) => matchesFilters(developer, filters)),
-    [filters, developers],
+  // The server filters and sends the profiles a page at a time, leaving out the hidden ones.
+  const { data, isPending, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useInfiniteQuery({
+      ...discoverQuery(filters, hiddenIds ?? noIds),
+      enabled: hiddenIds !== null,
+    });
+  const loaded = useMemo(
+    () => data?.pages.flatMap((page) => page.developers) ?? noDevelopers,
+    [data],
   );
-  const filtered = useMemo(
-    () => matching.filter((developer) => !hiddenIds?.includes(developer.id)),
-    [matching, hiddenIds],
-  );
-  const hiddenCount = matching.length - filtered.length;
-  const current = filtered[index];
+  const total = data?.pages.at(-1)?.total ?? 0;
+  const hiddenCount = data?.pages.at(-1)?.hidden ?? 0;
+  // Ask for the next page a few profiles before the loaded ones run out.
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && index >= loaded.length - 5) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, index, loaded.length, fetchNextPage]);
+  const current = loaded[index];
+  const loading =
+    (isPending && !isError) || hiddenIds === null || (!current && index < total && !isError);
   const startRound = () => {
     setHiddenIds(saved);
     setIndex(0);
@@ -116,8 +118,8 @@ function DiscoverPage() {
     ["skills", "seniority", "mode", "hiring", "availability"] as FilterGroup[]
   ).flatMap((group) => filters[group].map((value) => ({ group, value })));
   const rateActive = filters.rate[0] !== defaultFilters.rate[0];
-  const finished = filtered.length > 0 && index >= filtered.length;
-  const progress = filtered.length ? Math.min(index / filtered.length, 1) * 100 : 0;
+  const finished = total > 0 && index >= total;
+  const progress = total ? Math.min(index / total, 1) * 100 : 0;
   const undo = (entry = historyRef.current.at(-1)) => {
     if (!entry || !canUndo(entry, historyRef.current)) return;
     if (entry.addedSaved) removeSaved(entry.id);
@@ -212,13 +214,13 @@ function DiscoverPage() {
                 <span>
                   {loading ? (
                     <Skeleton className="h-4 w-24" />
-                  ) : filtered.length ? (
-                    `${Math.min(index + 1, filtered.length)} ${t.discover.of} ${filtered.length} ${t.discover.profiles(filtered.length)}`
+                  ) : total ? (
+                    `${Math.min(index + 1, total)} ${t.discover.of} ${total} ${t.discover.profiles(total)}`
                   ) : (
                     t.discover.none
                   )}
                 </span>
-                {!loading && hiddenCount > 0 && filtered.length > 0 && (
+                {!loading && hiddenCount > 0 && total > 0 && (
                   <Link to="/saved" className="font-normal underline-offset-4 hover:underline">
                     {t.discover.hiddenSaved(hiddenCount)}
                   </Link>
@@ -421,6 +423,7 @@ function DiscoverPage() {
   );
 }
 const noDevelopers: Developer[] = [];
+const noIds: string[] = [];
 
 function SearchOff() {
   return (

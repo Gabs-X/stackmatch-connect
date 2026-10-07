@@ -3,11 +3,13 @@ import {
   confirmEmail,
   expect,
   lastEmail,
+  seedDevelopers,
   seedSavedTalents,
   signInAs,
   test,
   uniqueEmail,
 } from "./fixtures";
+import { developer } from "./test-data";
 
 const card = (page: Page) => page.locator("main section article").first();
 const counter = (page: Page) => page.getByText(/^\d+ de \d+ perf(il|is)$/);
@@ -155,4 +157,37 @@ test("each company keeps its own shortlist in a shared browser", async ({ page }
   // Company A still finds its shortlist.
   await signInAs(page, "company");
   await expect(savedBadge(page)).toHaveText("1");
+});
+
+test("the list arrives a page at a time as the company goes through it", async ({ page }) => {
+  // 5 profiles from the test data plus 22 more: past the first page of 20.
+  await seedDevelopers(
+    page,
+    Array.from({ length: 22 }, (_, i) =>
+      developer({
+        id: `extra-${i + 1}`,
+        name: `Pessoa Extra ${i + 1}`,
+        role: "Backend Developer",
+        location: "Recife, PE",
+        seniority: "Pleno",
+        workMode: "Remoto",
+        availability: "Disponível agora",
+        skills: ["Go"],
+        hiringTypes: ["PJ"],
+        experienceYears: 3,
+        rate: 100,
+        project: "API",
+      }),
+    ),
+  );
+  await page.reload();
+  await expect(counter(page)).toHaveText("1 de 27 perfis");
+  for (let position = 1; position <= 21; position++) {
+    await expect(counter(page)).toHaveText(`${position} de 27 perfis`);
+    await page.getByRole("button", { name: "Passar" }).click();
+  }
+  await expect(counter(page)).toHaveText("22 de 27 perfis");
+  await expect(card(page)).toContainText("Pessoa Extra 17");
+  await page.getByRole("button", { name: "Passar" }).click();
+  await expect(card(page)).toContainText("Pessoa Extra 18");
 });

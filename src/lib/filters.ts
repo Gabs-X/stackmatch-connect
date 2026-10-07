@@ -1,4 +1,4 @@
-import type { Developer } from "./developers";
+import { z } from "zod";
 
 export type Filters = {
   skills: string[];
@@ -21,19 +21,14 @@ export const defaultFilters: Filters = {
   rate: [maxRate],
 };
 
-/**
- * Options inside a group combine with OR; groups combine with AND. Profiles without a rate
- * (developers who left it blank) only pass while the rate filter is untouched.
- */
-export function matchesFilters(developer: Developer, filters: Filters): boolean {
-  const limit = filters.rate[0] ?? maxRate;
-  return (
-    (!filters.skills.length || filters.skills.some((skill) => developer.skills.includes(skill))) &&
-    (!filters.seniority.length || filters.seniority.includes(developer.seniority)) &&
-    (!filters.mode.length || filters.mode.includes(developer.workMode)) &&
-    (!filters.hiring.length ||
-      filters.hiring.some((type) => developer.hiringTypes.includes(type))) &&
-    (!filters.availability.length || filters.availability.includes(developer.availability)) &&
-    (Number.isFinite(developer.rate) ? developer.rate <= limit : limit === maxRate)
-  );
-}
+const options = z.array(z.string().max(100)).max(100);
+
+/** Filters as the server receives them: see searchProfiles (src/server/profiles.ts). */
+export const filtersSchema = z.object({
+  skills: options,
+  seniority: options,
+  mode: options,
+  hiring: options,
+  availability: options,
+  rate: z.array(z.number().min(0).max(maxRate)).max(1),
+});

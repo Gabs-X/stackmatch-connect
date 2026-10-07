@@ -40,7 +40,7 @@ import {
 } from "@/lib/local-profile";
 import {
   myProfileQuery,
-  publishedProfilesQuery,
+  profilesQueryKey,
   saveMyProfile,
   skillCatalogQuery,
 } from "@/lib/profile-api";
@@ -160,7 +160,7 @@ function CreateProfile() {
       const saved = await saveMyProfile({ data: profile });
       if (!saved) throw new Error("Profile not saved");
       queryClient.setQueryData(myProfileQuery(accountId).queryKey, saved);
-      void queryClient.invalidateQueries({ queryKey: publishedProfilesQuery.queryKey });
+      void queryClient.invalidateQueries({ queryKey: profilesQueryKey });
       // New skills from this profile become suggestions for everyone.
       void queryClient.invalidateQueries({ queryKey: skillCatalogQuery.queryKey });
       setProfile(saved);

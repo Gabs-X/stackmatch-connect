@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
@@ -7,8 +7,10 @@ import {
   loadPublishedProfile,
   loadPublishedProfiles,
   saveProfile,
+  searchProfiles,
 } from "@/server/profiles";
 import { currentUser, database, requireAccount } from "@/server/session";
+import { filtersSchema, type Filters } from "./filters";
 import { profileInputSchema, type LocalProfile } from "./local-profile";
 
 /** Stands for `GET /me/profile`: the signed-in developer's profile, or null before the first save. */
@@ -36,10 +38,33 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     return loadProfile(db, user.id);
   });
 
-/** Stands for `GET /profiles`: every published developer profile, as catalog entries. */
-export const fetchPublishedProfiles = createServerFn({ method: "GET" }).handler(async () =>
-  loadPublishedProfiles(await database()),
-);
+const ids = z.array(z.string().max(100)).max(2000);
+
+/**
+ * Stands for `POST /profiles/search`: a page of the profiles matching the Discover filters. POST
+ * because the profiles to leave out can be a long list. Companies only.
+ */
+export const searchProfilesFn = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      filters: filtersSchema,
+      exclude: ids,
+      offset: z.number().int().min(0),
+      limit: z.number().int().min(1).max(50),
+    }),
+  )
+  .handler(async ({ data }) => {
+    await requireAccount("company");
+    return searchProfiles(await database(), data);
+  });
+
+/** Stands for `POST /profiles/by-id`: the named profiles that still exist. Companies only. */
+export const fetchProfilesById = createServerFn({ method: "POST" })
+  .validator(ids)
+  .handler(async ({ data }) => {
+    await requireAccount("company");
+    return loadPublishedProfiles(await database(), data);
+  });
 
 /** Stands for `GET /profiles/:id`. Profile pages stay open to visitors, for shared links. */
 export const fetchPublishedProfile = createServerFn({ method: "GET" })
@@ -60,10 +85,35 @@ export const skillCatalogQuery = queryOptions({
 export const myProfileQuery = (accountId: string) =>
   queryOptions({ queryKey: ["my-profile", accountId], queryFn: () => fetchMyProfile() });
 
-export const publishedProfilesQuery = queryOptions({
-  queryKey: ["profiles"],
-  queryFn: () => fetchPublishedProfiles(),
-});
+/** Every query on published profiles starts with this key, to refresh them all after a save. */
+export const profilesQueryKey = ["profiles"];
+
+export const discoverPageSize = 20;
+
+/** Discover's profiles, a page at a time: see searchProfiles. */
+export const discoverQuery = (filters: Filters, exclude: readonly string[]) =>
+  infiniteQueryOptions({
+    queryKey: [...profilesQueryKey, "search", filters, exclude],
+    queryFn: ({ pageParam }) =>
+      searchProfilesFn({
+        data: { filters, exclude: [...exclude], offset: pageParam, limit: discoverPageSize },
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((sum, page) => sum + page.developers.length, 0);
+      return last.developers.length && loaded < last.total ? loaded : undefined;
+    },
+  });
+
+/** The named profiles that still exist, with the ids asked for, to tell missing ones apart. */
+export const profilesByIdQuery = (ids: readonly string[]) =>
+  queryOptions({
+    queryKey: [...profilesQueryKey, "by-id", ids],
+    queryFn: async () => ({
+      ids,
+      developers: ids.length ? await fetchProfilesById({ data: [...ids] }) : [],
+    }),
+  });
 
 export const publishedProfileQuery = (id: string) =>
   queryOptions({

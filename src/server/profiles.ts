@@ -1,5 +1,6 @@
-import { asc, count, eq, gt, inArray, or, sql } from "drizzle-orm";
+import { and, arrayOverlaps, asc, count, eq, gt, inArray, lte, not, or, sql } from "drizzle-orm";
 import type { Developer } from "@/lib/developers";
+import { maxRate, type Filters } from "@/lib/filters";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
 import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
@@ -245,9 +246,81 @@ export async function loadProfile(db: Db, userId: string): Promise<LocalProfile 
 }
 
 /** Every developer profile companies can find, as catalog entries. */
-export async function loadPublishedProfiles(db: Db): Promise<Developer[]> {
-  const profiles = await loadProfiles(db);
+export async function loadPublishedProfiles(db: Db, userIds?: string[]): Promise<Developer[]> {
+  const profiles = await loadProfiles(db, userIds);
   return [...profiles].map(([userId, profile]) => localProfileToDeveloper(profile, userId));
+}
+
+/**
+ * The Discover filters as a condition on developer_profiles. Options inside a group combine with
+ * OR; groups combine with AND. The rate filter at its maximum means no limit; below it, profiles
+ * without a rate (developers who left it blank) are left out instead of guessed.
+ */
+function matchingFilters(db: Db, filters: Filters) {
+  const rate = filters.rate[0] ?? maxRate;
+  return and(
+    filters.skills.length
+      ? inArray(
+          developerProfiles.userId,
+          db
+            .select({ id: developerSkills.developerId })
+            .from(developerSkills)
+            .innerJoin(skills, eq(developerSkills.skillId, skills.id))
+            .where(inArray(skills.name, filters.skills)),
+        )
+      : undefined,
+    filters.seniority.length ? inArray(developerProfiles.seniority, filters.seniority) : undefined,
+    filters.mode.length ? inArray(developerProfiles.workMode, filters.mode) : undefined,
+    filters.hiring.length
+      ? arrayOverlaps(developerProfiles.hiringTypes, filters.hiring)
+      : undefined,
+    filters.availability.length
+      ? inArray(developerProfiles.availability, filters.availability)
+      : undefined,
+    rate < maxRate ? lte(developerProfiles.hourlyRate, rate) : undefined,
+  );
+}
+
+export type ProfileSearch = {
+  filters: Filters;
+  /** Profiles to leave out: the ones the company had saved when the Discover round began. */
+  exclude: string[];
+  offset: number;
+  limit: number;
+};
+
+/**
+ * A page of the profiles that match the Discover filters, in the order they were first published.
+ * `total` counts every match outside `exclude`; `hidden`, the matches `exclude` left out.
+ */
+export async function searchProfiles(db: Db, { filters, exclude, offset, limit }: ProfileSearch) {
+  const matching = matchingFilters(db, filters);
+  const excluded = exclude.length ? inArray(developerProfiles.userId, exclude) : sql`false`;
+  const [counts] = await db
+    .select({
+      matching: count(),
+      hidden: sql<number>`count(*) filter (where ${excluded})`.mapWith(Number),
+    })
+    .from(developerProfiles)
+    .where(matching);
+  const page = await db
+    .select({ id: developerProfiles.userId })
+    .from(developerProfiles)
+    .where(and(matching, not(excluded)))
+    .orderBy(asc(developerProfiles.createdAt), asc(developerProfiles.userId))
+    .offset(offset)
+    .limit(limit);
+  const hidden = counts?.hidden ?? 0;
+  return {
+    developers: page.length
+      ? await loadPublishedProfiles(
+          db,
+          page.map((row) => row.id),
+        )
+      : [],
+    total: (counts?.matching ?? 0) - hidden,
+    hidden,
+  };
 }
 
 export async function loadPublishedProfile(db: Db, userId: string): Promise<Developer | null> {

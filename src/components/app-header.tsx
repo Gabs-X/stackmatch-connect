@@ -14,25 +14,20 @@ import { useState } from "react";
 import { AccountMenu } from "@/components/account-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, type Lang } from "@/lib/i18n";
-import { useDevelopers } from "@/lib/use-developers";
+import { useSavedDevelopers } from "@/lib/use-saved-developers";
 import { cn } from "@/lib/utils";
 
 export function AppHeader() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const { saved } = useApp();
   const { user, ready } = useAuth();
   // Count only saved ids that still match a profile, as the list does: older versions may have
   // left ids of profiles that no longer exist.
-  const { developers } = useDevelopers({
+  const { count: savedCount } = useSavedDevelopers({
     enabled: user?.accountType === "company" && user.emailVerified,
   });
-  const savedCount = developers
-    ? saved.filter((id) => developers.some((developer) => developer.id === id)).length
-    : 0;
   // The app areas need an account, so visitors only get the sign-in buttons; each account type
   // sees just its own areas.
   const links = !user
