@@ -22,6 +22,7 @@ import { Route as SavedRouteImport } from './routes/saved'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as AdminTicketsRouteImport } from './routes/admin.tickets'
 import { Route as ApiAssistantRouteImport } from './routes/api.assistant'
 import { Route as ApiTestEmailsRouteImport } from './routes/api.test-emails'
 import { Route as ApiTestResetRouteImport } from './routes/api.test-reset'
@@ -96,6 +97,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminTicketsRoute = AdminTicketsRouteImport.update({
+  id: '/admin/tickets',
+  path: '/admin/tickets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
   id: '/api/assistant',
   path: '/api/assistant',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/tickets': typeof AdminTicketsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/tickets': typeof AdminTicketsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/tickets': typeof AdminTicketsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/api/test-reset': typeof ApiTestResetRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/verify-email'
+    | '/admin/tickets'
     | '/api/assistant'
     | '/api/test-emails'
     | '/api/test-reset'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/verify-email'
+    | '/admin/tickets'
     | '/api/assistant'
     | '/api/test-emails'
     | '/api/test-reset'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/verify-email'
+    | '/admin/tickets'
     | '/api/assistant'
     | '/api/test-emails'
     | '/api/test-reset'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  AdminTicketsRoute: typeof AdminTicketsRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
   ApiTestEmailsRoute: typeof ApiTestEmailsRoute
   ApiTestResetRoute: typeof ApiTestResetRoute
@@ -396,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/tickets': {
+      id: '/admin/tickets'
+      path: '/admin/tickets'
+      fullPath: '/admin/tickets'
+      preLoaderRoute: typeof AdminTicketsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/assistant': {
       id: '/api/assistant'
       path: '/api/assistant'
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  AdminTicketsRoute: AdminTicketsRoute,
   ApiAssistantRoute: ApiAssistantRoute,
   ApiTestEmailsRoute: ApiTestEmailsRoute,
   ApiTestResetRoute: ApiTestResetRoute,

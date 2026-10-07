@@ -7,7 +7,14 @@ import { createAccount } from "./auth";
 import type { Db } from "./db";
 import { supportTickets, users } from "./db/schema";
 import { outbox } from "./email";
-import { createTicket, listTickets, maxTicketsPerWindow, ticketWindowMinutes } from "./support";
+import {
+  createTicket,
+  listAdminTickets,
+  listTickets,
+  maxTicketsPerWindow,
+  setTicketStatus,
+  ticketWindowMinutes,
+} from "./support";
 import { createTestDb } from "./test-db";
 
 let db: Db;
@@ -152,5 +159,49 @@ describe("createTicket", () => {
     await db.delete(users).where(eq(users.id, ana.id));
     const [row] = await db.select().from(supportTickets);
     expect(row?.userId).toBeNull();
+  });
+});
+
+describe("admin tickets", () => {
+  it("lists tickets by status with counts and the author's account type", async () => {
+    const first = await createTicket(db, input, null, null);
+    const second = await createTicket(db, { ...input, subject: "Conta travada" }, ana, null);
+    if (!("ticket" in first) || !("ticket" in second)) throw new Error("ticket refused");
+
+    const open = await listAdminTickets(db, "open");
+    expect(open.counts).toEqual({ open: 2, closed: 0 });
+    expect(open.tickets.map((ticket) => [ticket.subject, ticket.accountType])).toEqual([
+      ["Conta travada", "developer"],
+      ["O código não chega", null],
+    ]);
+
+    const now = Date.now();
+    expect(await setTicketStatus(db, first.ticket.id, "closed", "equipe@stackmatch.dev", now)).toBe(
+      true,
+    );
+    const closed = await listAdminTickets(db, "closed");
+    expect(closed.counts).toEqual({ open: 1, closed: 1 });
+    expect(closed.tickets).toHaveLength(1);
+    expect(closed.tickets[0]).toMatchObject({
+      id: first.ticket.id,
+      status: "closed",
+      closedBy: "equipe@stackmatch.dev",
+      closedAt: new Date(now).toISOString(),
+    });
+    expect((await listAdminTickets(db, "all")).tickets).toHaveLength(2);
+    // The author sees the new status in their own list.
+    expect((await listTickets(db, ana.id))[0]?.status).toBe("open");
+
+    await setTicketStatus(db, first.ticket.id, "open", "equipe@stackmatch.dev");
+    const reopened = await listAdminTickets(db, "open");
+    expect(reopened.counts).toEqual({ open: 2, closed: 0 });
+    expect(reopened.tickets.find((ticket) => ticket.id === first.ticket.id)).toMatchObject({
+      closedAt: null,
+      closedBy: null,
+    });
+  });
+
+  it("reports an unknown ticket", async () => {
+    expect(await setTicketStatus(db, 9999, "closed", "equipe@stackmatch.dev")).toBe(false);
   });
 });

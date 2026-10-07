@@ -341,11 +341,15 @@ export const supportTickets = pgTable(
     /** The chat with Ada when the author chose to attach it. */
     conversation: jsonb("conversation").$type<{ role: "user" | "assistant"; content: string }[]>(),
     status: text("status").$type<TicketStatus>().notNull().default("open"),
+    /** When and by which admin (e-mail) the ticket was resolved; null while open. */
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedBy: text("closed_by"),
     ip: text("ip"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("support_tickets_user_id_idx").on(table.userId),
     index("support_tickets_ip_created_at_idx").on(table.ip, table.createdAt),
+    index("support_tickets_status_created_at_idx").on(table.status, table.createdAt),
   ],
 );

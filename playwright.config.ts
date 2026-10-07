@@ -44,6 +44,8 @@ export default defineConfig({
       E2E: "1",
       // Lets e2e/cron.spec.ts call the daily cleanup like Vercel Cron does.
       CRON_SECRET: "e2e-cron-secret",
+      // The seed's company account doubles as the admin in e2e/admin.spec.ts.
+      ADMIN_EMAILS: "teste.emp@example.com",
     },
     reuseExistingServer: !isCI,
     timeout: 120_000,

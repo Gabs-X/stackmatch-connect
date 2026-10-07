@@ -476,6 +476,7 @@ const pt = {
       interests: "Empresas interessadas",
       signOut: "Sair",
       support: "Suporte",
+      admin: "Tickets (admin)",
     },
   },
   account: {
@@ -661,6 +662,38 @@ const pt = {
     } as Record<string, string>,
     limited: (minutes: number) =>
       `Você abriu muitos tickets em pouco tempo. Tente de novo em ${minutes === 1 ? "1 minuto" : `${minutes} minutos`}.`,
+  },
+  admin: {
+    kicker: "Administração",
+    title: "Tickets de suporte",
+    sub: "Leia os pedidos de ajuda, responda por e-mail e marque como resolvidos.",
+    deniedTitle: "Área restrita",
+    deniedSub: "Esta página é só para a equipe do StackMatch.",
+    filtersLabel: "Filtrar tickets",
+    filters: { open: "Abertos", closed: "Resolvidos", all: "Todos" } as Record<string, string>,
+    empty: {
+      open: "Nenhum ticket aberto. Tudo em dia!",
+      closed: "Nenhum ticket resolvido ainda.",
+      all: "Nenhum ticket ainda.",
+    } as Record<string, string>,
+    visitor: "Visitante sem login",
+    accountTypes: {
+      developer: "Conta de desenvolvedor",
+      company: "Conta de empresa",
+    } as Record<string, string>,
+    details: "Ver detalhes",
+    conversation: (count: number) =>
+      `Conversa com a Ada (${count === 1 ? "1 mensagem" : `${count} mensagens`})`,
+    person: "Pessoa",
+    reply: "Responder por e-mail",
+    close: "Marcar como resolvido",
+    reopen: "Reabrir",
+    closedBy: (who: string, date: string) => `Resolvido por ${who} em ${date}`,
+    closedToast: (id: number) => `Ticket #${id} resolvido.`,
+    reopenedToast: (id: number) => `Ticket #${id} reaberto.`,
+    error: "Não foi possível atualizar o ticket. Tente novamente.",
+    loadError: "Não foi possível carregar os tickets.",
+    limit: (count: number) => `Mostrando os ${count} mais recentes.`,
   },
   footer: {
     support: "Suporte",
@@ -1134,6 +1167,7 @@ const en: Dict = {
       interests: "Interested companies",
       signOut: "Sign out",
       support: "Support",
+      admin: "Tickets (admin)",
     },
   },
   account: {
@@ -1316,6 +1350,38 @@ const en: Dict = {
     } as Record<string, string>,
     limited: (minutes: number) =>
       `You've opened many tickets in a short time. Try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`}.`,
+  },
+  admin: {
+    kicker: "Admin",
+    title: "Support tickets",
+    sub: "Read the help requests, reply by e-mail and mark them as resolved.",
+    deniedTitle: "Restricted area",
+    deniedSub: "This page is only for the StackMatch team.",
+    filtersLabel: "Filter tickets",
+    filters: { open: "Open", closed: "Resolved", all: "All" } as Record<string, string>,
+    empty: {
+      open: "No open tickets. All caught up!",
+      closed: "No resolved tickets yet.",
+      all: "No tickets yet.",
+    } as Record<string, string>,
+    visitor: "Visitor, not signed in",
+    accountTypes: {
+      developer: "Developer account",
+      company: "Company account",
+    } as Record<string, string>,
+    details: "See details",
+    conversation: (count: number) =>
+      `Conversation with Ada (${count === 1 ? "1 message" : `${count} messages`})`,
+    person: "Person",
+    reply: "Reply by e-mail",
+    close: "Mark as resolved",
+    reopen: "Reopen",
+    closedBy: (who: string, date: string) => `Resolved by ${who} on ${date}`,
+    closedToast: (id: number) => `Ticket #${id} resolved.`,
+    reopenedToast: (id: number) => `Ticket #${id} reopened.`,
+    error: "Couldn't update the ticket. Please try again.",
+    loadError: "Couldn't load the tickets.",
+    limit: (count: number) => `Showing the ${count} most recent.`,
   },
   footer: {
     support: "Support",

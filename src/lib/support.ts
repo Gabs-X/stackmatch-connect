@@ -33,5 +33,25 @@ export type TicketSummary = {
   createdAt: string;
 };
 
+/** Everything the team sees about a ticket on the admin page. */
+export type AdminTicket = TicketSummary & {
+  name: string;
+  email: string;
+  message: string;
+  /** The author's account type, or null for visitors and deleted accounts. */
+  accountType: "developer" | "company" | null;
+  conversation: { role: "user" | "assistant"; content: string }[] | null;
+  closedAt: string | null;
+  closedBy: string | null;
+};
+
+export const ticketFilters = ["open", "closed", "all"] as const;
+export type TicketFilter = (typeof ticketFilters)[number];
+
+export type AdminTicketList = {
+  tickets: AdminTicket[];
+  counts: Record<TicketStatus, number>;
+};
+
 export type CreateTicketResult =
   { ticket: TicketSummary } | { error: "rate-limited"; retryInSeconds: number };

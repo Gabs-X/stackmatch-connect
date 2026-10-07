@@ -1,9 +1,18 @@
-import { and, desc, eq, gt, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, or } from "drizzle-orm";
 import type { AuthUser } from "@/lib/auth";
-import type { CreateTicketResult, TicketCategory, TicketInput, TicketSummary } from "@/lib/support";
+import type {
+  AdminTicket,
+  AdminTicketList,
+  CreateTicketResult,
+  TicketCategory,
+  TicketFilter,
+  TicketInput,
+  TicketStatus,
+  TicketSummary,
+} from "@/lib/support";
 import { loadConversation } from "./assistant-conversations";
 import type { Db } from "./db";
-import { supportTickets } from "./db/schema";
+import { supportTickets, users } from "./db/schema";
 import { messageEmail, sendEmail, type Email } from "./email";
 
 /**
@@ -166,4 +175,58 @@ export async function createTicket(
     }
   }
   return { ticket: summary(row) };
+}
+
+/** The most tickets the admin page loads at once, newest first. */
+export const adminTicketLimit = 200;
+
+/** Tickets for the admin page, with how many are open and closed. */
+export async function listAdminTickets(db: Db, filter: TicketFilter): Promise<AdminTicketList> {
+  const rows = await db
+    .select({ ticket: supportTickets, accountType: users.accountType })
+    .from(supportTickets)
+    .leftJoin(users, eq(users.id, supportTickets.userId))
+    .where(filter === "all" ? undefined : eq(supportTickets.status, filter))
+    .orderBy(desc(supportTickets.createdAt), desc(supportTickets.id))
+    .limit(adminTicketLimit);
+  const totals = await db
+    .select({ status: supportTickets.status, total: count() })
+    .from(supportTickets)
+    .groupBy(supportTickets.status);
+  const counts: Record<TicketStatus, number> = { open: 0, closed: 0 };
+  for (const { status, total } of totals) counts[status] = total;
+  return {
+    counts,
+    tickets: rows.map(({ ticket, accountType }): AdminTicket => ({
+      ...summary(ticket),
+      name: ticket.name,
+      email: ticket.email,
+      message: ticket.message,
+      accountType:
+        accountType === "DEVELOPER" ? "developer" : accountType === "COMPANY" ? "company" : null,
+      conversation: ticket.conversation,
+      closedAt: ticket.closedAt?.toISOString() ?? null,
+      closedBy: ticket.closedBy,
+    })),
+  };
+}
+
+/** Resolves or reopens a ticket, recording who resolved it. False when there's no such ticket. */
+export async function setTicketStatus(
+  db: Db,
+  id: number,
+  status: TicketStatus,
+  adminEmail: string,
+  now = Date.now(),
+) {
+  const updated = await db
+    .update(supportTickets)
+    .set(
+      status === "closed"
+        ? { status, closedAt: new Date(now), closedBy: adminEmail }
+        : { status, closedAt: null, closedBy: null },
+    )
+    .where(eq(supportTickets.id, id))
+    .returning({ id: supportTickets.id });
+  return updated.length > 0;
 }

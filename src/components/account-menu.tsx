@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   Bookmark,
@@ -6,6 +7,7 @@ import {
   LifeBuoy,
   LogOut,
   Search,
+  ShieldCheck,
   UserCog,
   UserRound,
 } from "lucide-react";
@@ -19,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { fetchIsAdmin } from "@/lib/admin-api";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 
@@ -33,6 +36,12 @@ const initials = (name: string) => {
 export function AccountMenu() {
   const { t } = useI18n();
   const { user, ready, signOut } = useAuth();
+  // Only the server knows the admin list (ADMIN_EMAILS); it answers false for everyone else.
+  const admin = useQuery({
+    queryKey: ["is-admin", user?.id],
+    queryFn: () => fetchIsAdmin(),
+    enabled: Boolean(user?.emailVerified),
+  });
 
   // Same footprint as the avatar while the stored session loads, so the header doesn't jump.
   if (!ready) return <span className="hidden size-9 md:block" aria-hidden="true" />;
@@ -124,6 +133,14 @@ export function AccountMenu() {
             {t.auth.menu.support}
           </Link>
         </DropdownMenuItem>
+        {admin.data && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin/tickets">
+              <ShieldCheck />
+              {t.auth.menu.admin}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => {
