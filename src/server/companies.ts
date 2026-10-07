@@ -7,6 +7,7 @@ import {
 } from "@/lib/company-settings";
 import type { Db } from "./db";
 import { companyProfiles } from "./db/schema";
+import { loadTranslations } from "./translations";
 
 async function savedSettings(db: Db, userId: string): Promise<CompanySettings | null> {
   const [row] = await db
@@ -33,6 +34,12 @@ export async function saveCompanySettings(db: Db, userId: string, settings: Comp
     .onConflictDoUpdate({ target: companyProfiles.userId, set: fields });
 }
 
+/** The free text of a company's details, the part that gets machine-translated. */
+export const companyTexts = (settings: Pick<CompanySettings, "about" | "contactRole">) => [
+  settings.about,
+  settings.contactRole,
+];
+
 /**
  * What developers see about a company, besides the contact it signed with. Null while the company
  * never saved its details.
@@ -44,5 +51,13 @@ export async function loadCompanyProfile(
   const settings = await savedSettings(db, companyId);
   if (!settings) return null;
   const { about, website, location, contactRole, phone } = settings;
-  return { about, website, location, contactRole, phone };
+  const translations = await loadTranslations(db, [companyId], companyTexts(settings));
+  return {
+    about,
+    website,
+    location,
+    contactRole,
+    phone,
+    ...(Object.keys(translations).length ? { translations } : {}),
+  };
 }

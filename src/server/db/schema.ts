@@ -355,3 +355,23 @@ export const supportTickets = pgTable(
     index("support_tickets_status_created_at_idx").on(table.status, table.createdAt),
   ],
 );
+
+/**
+ * Machine translations of the free text an account wrote (bio, role, project descriptions, the
+ * company's description), keyed by a hash of the original, one row per language. Tied to the
+ * account, so they go away with it, and pruned when the text they translate is gone.
+ */
+export const textTranslations = pgTable(
+  "text_translations",
+  {
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** SHA-256 of the original text. */
+    hash: text("hash").notNull(),
+    language: text("language").$type<"pt" | "en">().notNull(),
+    text: text("text").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.ownerId, table.hash, table.language] })],
+);

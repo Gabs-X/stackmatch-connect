@@ -4,6 +4,7 @@ import { maxRate, type Filters } from "@/lib/filters";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
 import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
+import { loadTranslations } from "./translations";
 import { developerProfiles, developerSkills, projectSkills, projects, skills } from "./db/schema";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -245,10 +246,31 @@ export async function loadProfile(db: Db, userId: string): Promise<LocalProfile 
   return (await loadProfiles(db, [userId])).get(userId) ?? null;
 }
 
-/** Every developer profile companies can find, as catalog entries. */
+/** The free text of a profile, the part that gets machine-translated (see ./translations). */
+export const profileTexts = (profile: Pick<LocalProfile, "role" | "bio" | "projects">) => [
+  profile.role,
+  profile.bio,
+  ...profile.projects.map((project) => project.description),
+];
+
+/** Every developer profile companies can find, as catalog entries, with their translations. */
 export async function loadPublishedProfiles(db: Db, userIds?: string[]): Promise<Developer[]> {
   const profiles = await loadProfiles(db, userIds);
-  return [...profiles].map(([userId, profile]) => localProfileToDeveloper(profile, userId));
+  const translations = await loadTranslations(
+    db,
+    [...profiles.keys()],
+    [...profiles.values()].flatMap(profileTexts),
+  );
+  return [...profiles].map(([userId, profile]) => {
+    const own = Object.fromEntries(
+      profileTexts(profile).flatMap((text) => {
+        const translated = translations[text.trim()];
+        return translated ? [[text, translated]] : [];
+      }),
+    );
+    const developer = localProfileToDeveloper(profile, userId);
+    return Object.keys(own).length ? { ...developer, translations: own } : developer;
+  });
 }
 
 /**
@@ -324,8 +346,7 @@ export async function searchProfiles(db: Db, { filters, exclude, offset, limit }
 }
 
 export async function loadPublishedProfile(db: Db, userId: string): Promise<Developer | null> {
-  const profile = await loadProfile(db, userId);
-  return profile && localProfileToDeveloper(profile, userId);
+  return (await loadPublishedProfiles(db, [userId]))[0] ?? null;
 }
 
 /**

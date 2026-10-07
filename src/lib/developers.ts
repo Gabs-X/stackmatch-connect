@@ -1,3 +1,4 @@
+import type { Translations } from "./translations";
 // Option values double as filter keys and are stored as is; tv() translates them for display.
 export const seniorityOptions = ["Júnior", "Pleno", "Sênior"] as const;
 export const workModeOptions = ["Remoto", "Híbrido", "Presencial"] as const;
@@ -32,6 +33,8 @@ export type Developer = {
   rate: number;
   projects: Project[];
   links: ProfessionalLinks;
+  /** Role, bio and project descriptions in both languages, when they were translated. */
+  translations?: Translations;
 };
 
 /**

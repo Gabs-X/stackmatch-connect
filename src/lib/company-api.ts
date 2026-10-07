@@ -1,9 +1,15 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { loadCompanyProfile, loadCompanySettings, saveCompanySettings } from "@/server/companies";
+import {
+  companyTexts,
+  loadCompanyProfile,
+  loadCompanySettings,
+  saveCompanySettings,
+} from "@/server/companies";
 import { companyReachedDeveloper } from "@/server/meetings";
 import { database, requireAccount } from "@/server/session";
+import { updateTranslations } from "@/server/translations";
 import { companySettingsSchema, type CompanySettingsInput } from "./company-settings";
 
 /** Stands for `GET /company/settings`: what the signed-in company shows developers. */
@@ -16,7 +22,9 @@ export const saveMyCompanySettings = createServerFn({ method: "POST" })
   .validator((input: CompanySettingsInput) => companySettingsSchema.parse(input))
   .handler(async ({ data }) => {
     const user = await requireAccount("company");
-    await saveCompanySettings(await database(), user.id, data);
+    const db = await database();
+    await saveCompanySettings(db, user.id, data);
+    await updateTranslations(db, user.id, companyTexts(data));
     return data;
   });
 

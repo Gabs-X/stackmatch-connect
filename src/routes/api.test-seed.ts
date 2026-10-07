@@ -3,10 +3,17 @@ import { z } from "zod";
 import { companySettingsSchema } from "@/lib/company-settings";
 import { profileInputSchema } from "@/lib/local-profile";
 import { saveCompanySettings } from "@/server/companies";
-import { interests, meetingRequests, savedTalents, users } from "@/server/db/schema";
+import {
+  interests,
+  meetingRequests,
+  savedTalents,
+  textTranslations,
+  users,
+} from "@/server/db/schema";
 import { loadProfile, saveProfile } from "@/server/profiles";
 import { maxEmailsPerIp, recordEmailSend } from "@/server/email-throttle";
 import { clientIp, database } from "@/server/session";
+import { hashText } from "@/server/translations";
 
 /**
  * Lets the end-to-end tests put their own data in the database (see e2e/test-data.ts). The
@@ -39,6 +46,10 @@ const seedSchema = z.object({
     )
     .default([]),
   savedTalents: z.object({ companyId: z.string(), developerIds: z.array(z.string()) }).optional(),
+  /** Stored translations, as if the model had translated these texts of the account. */
+  translations: z
+    .array(z.object({ ownerId: z.string(), text: z.string(), pt: z.string(), en: z.string() }))
+    .default([]),
   /** Uses up the e-mails this client's IP address may cause, as if it had sent them just now. */
   emailLimitReached: z.boolean().default(false),
 });
@@ -97,6 +108,14 @@ export const Route = createFileRoute("/api/test-seed")({
           await db
             .insert(savedTalents)
             .values({ companyId: seed.savedTalents?.companyId ?? "", developerId });
+
+        for (const { ownerId, text, pt, en } of seed.translations) {
+          const hash = hashText(text.trim());
+          await db.insert(textTranslations).values([
+            { ownerId, hash, language: "pt", text: pt },
+            { ownerId, hash, language: "en", text: en },
+          ]);
+        }
 
         if (seed.emailLimitReached)
           for (let sent = 0; sent < maxEmailsPerIp; sent++) await recordEmailSend(db, clientIp());

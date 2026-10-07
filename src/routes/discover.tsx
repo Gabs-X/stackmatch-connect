@@ -405,7 +405,7 @@ function DiscoverPage() {
                   <div className="mt-5 space-y-3">
                     {[current.seniority, current.workMode, current.availability]
                       .filter(Boolean)
-                      .map(tv)
+                      .map((value) => tv(value))
                       .map((x) => (
                         <p className="flex items-center gap-2 text-sm" key={x}>
                           <Check className="size-4 text-positive" />

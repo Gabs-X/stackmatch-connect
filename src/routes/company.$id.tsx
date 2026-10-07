@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format } from "date-fns";
+import { useState } from "react";
 import { ptBR, enUS } from "react-day-picker/locale";
 import {
   ArrowLeft,
@@ -17,6 +18,8 @@ import {
 import { ProfileLink } from "@/components/profile-link";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
+import { TranslationNote } from "@/components/translation-note";
+import { isTranslated } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { companyProfileQuery } from "@/lib/company-api";
@@ -55,9 +58,12 @@ function CompanyDetails({ user }: { user: AuthUser }) {
   const { companies, loading, isError, refetch } = useInterestedCompanies(user);
   const company = companies.find((item) => item.companyId === id);
   const profile = useQuery({ ...companyProfileQuery(id), enabled: company !== undefined });
+  // What the company wrote, machine-translated into the screen's language unless asked not to.
+  const [original, setOriginal] = useState(false);
+  const text = (value: string) => (original ? value : tv(value, profile.data?.translations));
   useLocalizedMeta(
     `${company?.company ?? t.company.kicker} — Stack Match`,
-    profile.data?.about ? tv(profile.data.about) : t.interests.sub,
+    profile.data?.about ? tv(profile.data.about, profile.data.translations) : t.interests.sub,
   );
 
   const back = (
@@ -147,8 +153,11 @@ function CompanyDetails({ user }: { user: AuthUser }) {
           <section>
             <h2 className="text-xl font-bold">{t.company.about}</h2>
             <p className="mt-3 whitespace-pre-line leading-7 text-muted-foreground">
-              {details?.about ? tv(details.about) : t.company.noAbout}
+              {details?.about ? text(details.about) : t.company.noAbout}
             </p>
+            {isTranslated(details?.translations, lang) && (
+              <TranslationNote original={original} onToggle={() => setOriginal(!original)} />
+            )}
           </section>
           <section>
             <h2 className="text-xl font-bold">{t.company.activity}</h2>
@@ -180,7 +189,7 @@ function CompanyDetails({ user }: { user: AuthUser }) {
                 <span className="min-w-0 break-words">
                   <span className="font-semibold">{company.contactName}</span>
                   {details?.contactRole && (
-                    <span className="block text-muted-foreground">{tv(details.contactRole)}</span>
+                    <span className="block text-muted-foreground">{text(details.contactRole)}</span>
                   )}
                 </span>
               </li>

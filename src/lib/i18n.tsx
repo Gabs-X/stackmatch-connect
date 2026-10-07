@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Translations } from "./translations";
 
 export type Lang = "pt" | "en";
 
@@ -662,6 +663,12 @@ const pt = {
     } as Record<string, string>,
     limited: (minutes: number) =>
       `Você abriu muitos tickets em pouco tempo. Tente de novo em ${minutes === 1 ? "1 minuto" : `${minutes} minutos`}.`,
+  },
+  translation: {
+    machine: "Traduzido automaticamente com IA.",
+    showingOriginal: "Mostrando o texto original.",
+    showOriginal: "Ver original",
+    showTranslation: "Ver tradução",
   },
   admin: {
     kicker: "Administração",
@@ -1355,6 +1362,12 @@ const en: Dict = {
     limited: (minutes: number) =>
       `You've opened many tickets in a short time. Try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`}.`,
   },
+  translation: {
+    machine: "Automatically translated with AI.",
+    showingOriginal: "Showing the original text.",
+    showOriginal: "See original",
+    showTranslation: "See translation",
+  },
   admin: {
     kicker: "Admin",
     title: "Support tickets",
@@ -1429,7 +1442,11 @@ type I18nState = {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: Dict;
-  tv: (value: string) => string;
+  /**
+   * A value in the screen's language: a machine translation of what someone wrote when given, else
+   * the English of a stored option ("Pleno") or seed text, else the value as written.
+   */
+  tv: (value: string, translations?: Translations) => string;
   formatCurrency: (value: number) => string;
 };
 const store = globalThis as unknown as { __stackmatchI18n?: React.Context<I18nState | null> };
@@ -1462,7 +1479,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       currency: "BRL",
       maximumFractionDigits: 0,
     }).format(value);
-  const tv = (value: string) => {
+  const tv = (value: string, translations?: Translations) => {
+    const translated = translations?.[value]?.[lang];
+    if (translated) return translated;
     if (lang === "pt") return value;
     const years = value.match(/^(\d+) anos?$/);
     if (years) return years[1] === "1" ? "1 year" : `${years[1]} years`;

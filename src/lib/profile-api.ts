@@ -6,9 +6,11 @@ import {
   loadProfile,
   loadPublishedProfile,
   loadPublishedProfiles,
+  profileTexts,
   saveProfile,
   searchProfiles,
 } from "@/server/profiles";
+import { updateTranslations } from "@/server/translations";
 import { currentUser, database, requireAccount } from "@/server/session";
 import { filtersSchema, type Filters } from "./filters";
 import { profileInputSchema, type LocalProfile } from "./local-profile";
@@ -35,6 +37,9 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       console.error("Profile not saved:", error);
       throw error;
     }
+    // Waits for the translation so the profile shows in both languages right away; a failure only
+    // leaves the texts as written.
+    await updateTranslations(db, user.id, profileTexts(data));
     return loadProfile(db, user.id);
   });
 

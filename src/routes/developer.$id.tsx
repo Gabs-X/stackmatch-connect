@@ -1,7 +1,9 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
+import { TranslationNote } from "@/components/translation-note";
+import { isTranslated } from "@/lib/translations";
 import { toast } from "sonner";
 import { ProfileLink } from "@/components/profile-link";
 import { DeveloperPhoto } from "@/components/developer-photo";
@@ -42,8 +44,11 @@ function DeveloperPage() {
 }
 
 function DeveloperProfile({ d }: { d: Developer }) {
-  const { t, tv, formatCurrency } = useI18n();
-  useLocalizedMeta(d.name + " — Stack Match", tv(d.bio));
+  const { t, tv, lang, formatCurrency } = useI18n();
+  // What the developer wrote, machine-translated into the screen's language unless asked not to.
+  const [original, setOriginal] = useState(false);
+  const text = (value: string) => (original ? value : tv(value, d.translations));
+  useLocalizedMeta(d.name + " — Stack Match", tv(d.bio, d.translations));
   const { saved, toggleSaved } = useApp();
   const isSaved = saved.includes(d.id);
   // Rate and experience are optional in the profile form.
@@ -72,7 +77,7 @@ function DeveloperProfile({ d }: { d: Developer }) {
                 <h1 className="font-display text-4xl font-extrabold">{d.name}</h1>
                 {d.seniority && <span className="level-badge">{tv(d.seniority)}</span>}
               </div>
-              <p className="mt-2 text-lg font-semibold text-primary">{d.role}</p>
+              <p className="mt-2 text-lg font-semibold text-primary">{text(d.role)}</p>
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
                 {place && (
                   <span className="flex items-center gap-1.5">
@@ -108,7 +113,10 @@ function DeveloperProfile({ d }: { d: Developer }) {
         <div className="space-y-12">
           <section>
             <h2 className="text-xl font-bold">{t.profile.about}</h2>
-            <p className="mt-4 max-w-3xl leading-7 text-muted-foreground">{tv(d.bio)}</p>
+            <p className="mt-4 max-w-3xl leading-7 text-muted-foreground">{text(d.bio)}</p>
+            {isTranslated(d.translations, lang) && (
+              <TranslationNote original={original} onToggle={() => setOriginal(!original)} />
+            )}
           </section>
           <section>
             <h2 className="text-xl font-bold">{t.profile.skills}</h2>
@@ -124,7 +132,9 @@ function DeveloperProfile({ d }: { d: Developer }) {
             <section>
               <h2 className="text-xl font-bold">{t.profile.experience}</h2>
               <div className="mt-5 border-l-2 border-primary pl-5">
-                <p className="font-bold">{[d.role, tv(d.seniority)].filter(Boolean).join(" · ")}</p>
+                <p className="font-bold">
+                  {[text(d.role), tv(d.seniority)].filter(Boolean).join(" · ")}
+                </p>
                 <p className="text-sm text-primary">{tv(d.experience)}</p>
               </div>
             </section>
@@ -162,7 +172,7 @@ function DeveloperProfile({ d }: { d: Developer }) {
                   <div className="p-5">
                     <h3 className="font-bold">{p.name}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {tv(p.description)}
+                      {text(p.description)}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       {p.tech.map((t) => (

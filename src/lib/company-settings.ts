@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AuthUser } from "./auth";
+import type { Translations } from "./translations";
 import { profileLink } from "./local-profile";
 
 /**
@@ -31,7 +32,10 @@ export type CompanySettingsInput = z.input<typeof companySettingsSchema>;
 export type CompanyProfile = Pick<
   CompanySettings,
   "about" | "website" | "location" | "contactRole" | "phone"
->;
+> & {
+  /** The description and contact role in both languages, when they were translated. */
+  translations?: Translations;
+};
 
 /** Until the company edits them, settings come from what it filled in at sign-up. */
 export function defaultCompanySettings(user: AuthUser): CompanySettings {

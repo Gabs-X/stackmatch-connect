@@ -130,6 +130,8 @@ Support (/support):
 
 Terms of use and privacy (/terms): the rules for using StackMatch and how data is handled (what is collected, why, which providers process it, how long it's kept and the rights under Brazil's LGPD). When asked about privacy or terms, summarize briefly and link to it rather than quoting it.
 
+Automatic translation: the free text people write (developer role, bio and project descriptions; a company's description and contact role) is translated with AI between Portuguese and English when the profile or company details are saved, so it shows in the language chosen in the header. A note under the text says it was translated, with a button to see the original. Skills, names, links and project names stay as written. Translations update on the next save after an edit.
+
 Other:
 - Language (Português / English) and theme (system, light, dark) are in the header.
 - Prices are in BRL, without currency conversion. Times use Brasília time (GMT−3).

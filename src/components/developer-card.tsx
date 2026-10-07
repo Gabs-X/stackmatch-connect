@@ -83,7 +83,9 @@ export function DeveloperCard({
             <h2 className={compact ? "text-lg font-bold" : "text-2xl font-bold"}>
               {developer.name}
             </h2>
-            <p className="mt-0.5 text-sm font-medium text-primary">{developer.role}</p>
+            <p className="mt-0.5 text-sm font-medium text-primary">
+              {tv(developer.role, developer.translations)}
+            </p>
           </div>
           {!compact && developer.seniority && (
             <span className="level-badge shrink-0">{tv(developer.seniority)}</span>
@@ -129,7 +131,7 @@ export function DeveloperCard({
         )}
         {!compact && developer.bio && (
           <p className="mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">
-            {tv(developer.bio)}
+            {tv(developer.bio, developer.translations)}
           </p>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
