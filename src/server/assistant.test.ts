@@ -6,6 +6,7 @@ import {
   assistantLimits,
   assistantModel,
   assistantReply,
+  firstNameOf,
   parseAssistantRequest,
 } from "./assistant";
 import {
@@ -87,6 +88,21 @@ const collect = async (reply: AsyncGenerator<string>) => {
   return text;
 };
 
+describe("firstNameOf", () => {
+  it("keeps the first word of the name, without markup", () => {
+    expect(firstNameOf("  Gabriel Botelho ")).toBe("Gabriel");
+    expect(firstNameOf("<b>Ana</b> Souza")).toBe("bAna/b");
+    expect(firstNameOf("**[Bia](/x)**")).toBe("Bia/x");
+    expect(firstNameOf("")).toBe("");
+  });
+});
+
+describe("assistantGuide", () => {
+  it("lists every screen the chat can link to", () => {
+    expect(assistantGuide).toContain("/discover, /saved, /create-profile");
+  });
+});
+
 describe("assistantReply", () => {
   it("streams the text deltas and sends the guide, the context and the conversation", async () => {
     const { client, stream } = fakeClient([
@@ -99,7 +115,12 @@ describe("assistantReply", () => {
     const signal = new AbortController().signal;
 
     const text = await collect(
-      assistantReply(client, request, { accountType: "company", emailVerified: true }, signal),
+      assistantReply(
+        client,
+        request,
+        { accountType: "company", emailVerified: true, firstName: "Gabriel" },
+        signal,
+      ),
     );
 
     expect(text).toBe("O Discover mostra perfis.");
@@ -113,6 +134,7 @@ describe("assistantReply", () => {
     expect(system[0]).toMatchObject({ text: assistantGuide, cache_control: { type: "ephemeral" } });
     expect(system[1]?.text).toContain("Current page: /discover");
     expect(system[1]?.text).toContain("signed in with a company account");
+    expect(system[1]?.text).toContain("First name: Gabriel");
     expect(options.signal).toBe(signal);
   });
 
@@ -120,13 +142,18 @@ describe("assistantReply", () => {
     const { client, stream } = fakeClient([]);
     await collect(assistantReply(client, request, null));
     await collect(
-      assistantReply(client, request, { accountType: "developer", emailVerified: false }),
+      assistantReply(client, request, {
+        accountType: "developer",
+        emailVerified: false,
+        firstName: "",
+      }),
     );
     const contexts = stream.mock.calls.map(
       ([params]) => (params as { system: { text: string }[] }).system[1]?.text,
     );
     expect(contexts[0]).toContain("a visitor who is not signed in");
     expect(contexts[1]).toContain("developer account whose e-mail is not confirmed yet");
+    expect(contexts.join()).not.toContain("First name");
   });
 
   it("answers something when the model returns no text", async () => {

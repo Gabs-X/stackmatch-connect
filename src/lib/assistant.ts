@@ -116,9 +116,30 @@ const newId = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+/** The latest messages kept per account on the server. */
+export const maxStoredMessages = 100;
+
+/** The latest messages sent to the AI; older ones stay on screen but leave the request. */
+export const maxSentMessages = 20;
+
+/** The messages worth sending or keeping: no failed replies, no empty placeholders. */
+export const settledMessages = (messages: ChatMessage[]) =>
+  messages
+    .filter((message) => !message.error && message.content)
+    .map(({ role, content }) => ({ role, content }));
+
+/** The last messages of the conversation, starting at one of the person's. */
+export function requestMessages(messages: ChatMessage[]) {
+  const recent = settledMessages(messages).slice(-maxSentMessages);
+  const start = recent.findIndex((message) => message.role === "user");
+  return start === -1 ? [] : recent.slice(start);
+}
+
 export function useAssistantChat(
   transport: AssistantTransport,
   getRequestMeta: () => Omit<AssistantRequest, "messages">,
+  /** Called with the conversation each time a reply ends, also when stopped or failed. */
+  onReplyEnd?: (messages: ChatMessage[]) => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<ChatStatus>("idle");
@@ -141,9 +162,7 @@ export function useAssistantChat(
     try {
       const request: AssistantRequest = {
         ...getRequestMeta(),
-        messages: history
-          .filter((message) => !message.error && message.content)
-          .map(({ role, content }) => ({ role, content })),
+        messages: requestMessages(history),
       };
       for await (const chunk of transport(request, controller.signal)) {
         patchMessage(replyId, (message) => ({ ...message, content: message.content + chunk }));
@@ -161,6 +180,7 @@ export function useAssistantChat(
       if (controllerRef.current === controller) {
         controllerRef.current = null;
         setStatus("idle");
+        onReplyEnd?.(messagesRef.current);
       }
     }
   };
@@ -186,5 +206,15 @@ export function useAssistantChat(
     update(() => []);
   };
 
-  return { messages, status, send, retry, stop, reset };
+  /** Shows a saved conversation in place of the current one. */
+  const replace = (saved: { role: ChatRole; content: string }[]) => {
+    // Forget the running reply first, so its end doesn't report this conversation as its own.
+    const running = controllerRef.current;
+    controllerRef.current = null;
+    running?.abort();
+    update(() => saved.map((message) => ({ ...message, id: newId() })));
+    setStatus("idle");
+  };
+
+  return { messages, status, send, retry, stop, reset, replace };
 }

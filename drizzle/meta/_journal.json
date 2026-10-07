@@ -113,6 +113,13 @@
       "when": 1791398544579,
       "tag": "0015_assistant_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791403504736,
+      "tag": "0016_assistant_conversations",
+      "breakpoints": true
     }
   ]
 }

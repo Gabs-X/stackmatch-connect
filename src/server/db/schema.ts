@@ -5,6 +5,7 @@ import {
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -58,6 +59,15 @@ export const assistantRequests = pgTable(
   },
   (table) => [index("assistant_requests_ip_created_at_idx").on(table.ip, table.createdAt)],
 );
+
+/** The assistant chat of each account, so it follows the account and leaves with it on sign-out. */
+export const assistantConversations = pgTable("assistant_conversations", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  messages: jsonb("messages").$type<{ role: "user" | "assistant"; content: string }[]>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const sessions = pgTable(
   "sessions",

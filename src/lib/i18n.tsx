@@ -326,6 +326,7 @@ const pt = {
     statusLive: "Online · respostas com IA",
     badge: "Beta",
     greetingTitle: "Olá! Como posso ajudar?",
+    greetingNamed: (name: string) => `Olá, ${name}! Como posso ajudar?`,
     greetingSub:
       "Tire dúvidas sobre como encontrar talentos, montar seu perfil de desenvolvedor ou propor uma reunião.",
     suggestionsLabel: "Sugestões",
@@ -925,6 +926,7 @@ const en: Dict = {
     statusLive: "Online · AI answers",
     badge: "Beta",
     greetingTitle: "Hi! How can I help?",
+    greetingNamed: (name: string) => `Hi, ${name}! How can I help?`,
     greetingSub:
       "Ask about finding talent, building your developer profile or proposing a meeting.",
     suggestionsLabel: "Suggestions",

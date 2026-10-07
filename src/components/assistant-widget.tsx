@@ -1,7 +1,8 @@
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp, MessageCircle, RotateCcw, Sparkles, Square, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { AssistantMessage } from "@/components/assistant-message";
 import { Button } from "@/components/ui/button";
 import { useScrollingDown } from "@/hooks/use-scrolling-down";
 import {
@@ -9,8 +10,14 @@ import {
   assistantApiUrl,
   createHttpTransport,
   createMockTransport,
+  maxStoredMessages,
+  settledMessages,
   useAssistantChat,
+  type ChatMessage,
 } from "@/lib/assistant";
+import { fetchAssistantConversation, saveAssistantConversationFn } from "@/lib/assistant-api";
+import type { AssistantPath } from "@/lib/assistant-markdown";
+import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +25,15 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
   const { t, lang } = useI18n();
   const reduceMotion = useReducedMotion();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  const { user, ready } = useAuth();
+  // The account whose chat is shown: null for visitors, undefined until the session is known.
+  const owner = ready ? (user?.id ?? null) : undefined;
+  const ownerRef = useRef(owner);
+  ownerRef.current = owner;
+  const [loadedFor, setLoadedFor] = useState<string | null | undefined>(undefined);
+  const syncing = owner !== loadedFor;
+  const firstName = user?.name.trim().split(/\s+/)[0];
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   // Get out of the way of what's being read; never while the chat is open or the button focused.
@@ -36,10 +52,56 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
         : createMockTransport(t.assistant.previewReply),
     [t],
   );
-  const { messages, status, send, retry, stop, reset } = useAssistantChat(transport, () => ({
-    locale: lang === "pt" ? "pt-BR" : "en",
-    context: { pathname },
-  }));
+  // Signed-in chats are kept on the server, per account; visitors' chats live only on this page.
+  const persist = (conversation: ChatMessage[]) => {
+    if (!ownerRef.current) return;
+    const data = settledMessages(conversation)
+      .slice(-maxStoredMessages)
+      .map((message) => ({ ...message, content: message.content.slice(0, 20_000) }));
+    void saveAssistantConversationFn({ data }).catch(() => {
+      /* The chat goes on; the next reply saves it again. */
+    });
+  };
+  const { messages, status, send, retry, stop, reset, replace } = useAssistantChat(
+    transport,
+    () => ({ locale: lang === "pt" ? "pt-BR" : "en", context: { pathname } }),
+    persist,
+  );
+  // On sign-in, sign-out or a switch of account, show that account's chat (or a blank one).
+  useEffect(() => {
+    if (owner === undefined) return;
+    replace([]);
+    setDraft("");
+    if (!owner) {
+      setLoadedFor(null);
+      return;
+    }
+    let current = true;
+    fetchAssistantConversation()
+      .then((saved) => {
+        if (current) replace(saved);
+      })
+      .catch(() => {
+        /* Start blank; the next reply saves over it. */
+      })
+      .finally(() => {
+        if (current) setLoadedFor(owner);
+      });
+    return () => {
+      current = false;
+    };
+    // Runs only when the account changes; replace works on refs, so any render's copy will do.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owner]);
+  const startOver = () => {
+    reset();
+    persist([]);
+  };
+  const goTo = (to: AssistantPath) => {
+    void navigate({ to });
+    // On phones the chat covers the page; close it so the screen shows.
+    if (!window.matchMedia("(min-width: 640px)").matches) setOpen(false);
+  };
   const errorText = (error: unknown) =>
     error instanceof AssistantHttpError && error.status === 429
       ? t.assistant.limited(Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)))
@@ -70,7 +132,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
   }, [messages, waitingFirstChunk, reduceMotion]);
 
   const submit = (text = draft) => {
-    if (!text.trim() || streaming) return;
+    if (!text.trim() || streaming || syncing) return;
     send(text, errorText);
     setDraft("");
     inputRef.current?.focus();
@@ -128,7 +190,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                   className="size-9"
                   aria-label={t.assistant.reset}
                   title={t.assistant.reset}
-                  onClick={reset}
+                  onClick={startOver}
                 >
                   <RotateCcw />
                 </Button>
@@ -156,7 +218,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                     <Sparkles className="size-6" />
                   </span>
                   <h3 className="mt-4 font-display text-xl font-bold">
-                    {t.assistant.greetingTitle}
+                    {firstName ? t.assistant.greetingNamed(firstName) : t.assistant.greetingTitle}
                   </h3>
                   <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
                     {t.assistant.greetingSub}
@@ -192,17 +254,21 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                         <Sparkles className="size-3.5" />
                       </span>
                       <div className="max-w-[85%]">
-                        <p
+                        <div
                           className={cn(
-                            "whitespace-pre-wrap break-words rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-6",
+                            "break-words rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-6",
                             message.error
-                              ? "border border-destructive/30 bg-danger-soft text-destructive"
+                              ? "whitespace-pre-wrap border border-destructive/30 bg-danger-soft text-destructive"
                               : "bg-muted text-foreground",
                           )}
                         >
                           <span className="sr-only">{t.assistant.title}: </span>
-                          {message.content}
-                        </p>
+                          {message.error ? (
+                            message.content
+                          ) : (
+                            <AssistantMessage content={message.content} onNavigate={goTo} />
+                          )}
+                        </div>
                         {message.error && message.id === last?.id && (
                           <Button
                             variant="link"

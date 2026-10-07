@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { assistantClient, assistantReply, parseAssistantRequest } from "@/server/assistant";
+import {
+  assistantClient,
+  assistantReply,
+  firstNameOf,
+  parseAssistantRequest,
+} from "@/server/assistant";
 import { assistantLimitFor, recordAssistantRequest } from "@/server/assistant-throttle";
 import { clientIp, currentUser, database } from "@/server/session";
 
@@ -54,7 +59,11 @@ export const Route = createFileRoute("/api/assistant")({
 
         const user = await currentUser();
         const account = user
-          ? { accountType: user.accountType, emailVerified: user.emailVerified }
+          ? {
+              accountType: user.accountType,
+              emailVerified: user.emailVerified,
+              firstName: firstNameOf(user.name),
+            }
           : null;
         const reply = assistantReply(client, body, account, request.signal);
         let first: IteratorResult<string>;

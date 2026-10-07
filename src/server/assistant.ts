@@ -2,11 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { AccountType } from "@/lib/auth";
 import type { AssistantRequest } from "@/lib/assistant";
+import { assistantPaths } from "@/lib/assistant-markdown";
 
 /**
  * The support assistant: answers questions about StackMatch with Claude, streaming the reply. It
  * has no tools and reads no account data; it only knows the product guide below plus the page the
- * person is on and the kind of account they use.
+ * person is on, the kind of account they use and their first name.
  */
 
 export const assistantModel = "claude-opus-5-5";
@@ -58,6 +59,8 @@ export const assistantGuide = `You are the support assistant of StackMatch, a we
 - Reply in the language given in the request context (pt-BR → Brazilian Portuguese, en → English), unless the person clearly writes in the other one; then follow them.
 - Be brief and practical: a short answer, with numbered steps when the person needs to do something. Use plain text with simple Markdown at most (lists, **bold**); no headings or tables, since the chat window is narrow.
 - Use the screen names the person sees, in their language (both are listed below).
+- If the context gives the person's first name, greet them by it in your first reply and use it sparingly afterwards. Never ask for or mention other personal data.
+- When the answer points to a screen the person can open, add a Markdown link to it, such as [Abrir o Discover](/discover). The chat turns each link into a button that takes the person to that screen. Use only these exact paths: ${assistantPaths.join(", ")}. Give at most two links per reply, each with a short label in the person's language, usually on its own line at the end. Link only to screens their account can use; for visitors, that means signing in or creating an account first. Never write other links or raw URLs.
 - Only state what the guide below says. If something isn't covered, say you don't know rather than guessing, and never invent features, prices, deadlines or policies.
 - StackMatch does not evaluate developers, compute match percentages, schedule meetings, process payments or sign contracts. Say so when asked.
 - You can't see or change the person's account, profile or data, and you can't act for them. Explain where in the app they can do it themselves.
@@ -116,17 +119,26 @@ Other:
 - This assistant can make mistakes; important details are on the screens themselves.
 </product_guide>`;
 
-export type AssistantAccount = { accountType: AccountType; emailVerified: boolean } | null;
+export type AssistantAccount = {
+  accountType: AccountType;
+  emailVerified: boolean;
+  firstName: string;
+} | null;
+
+/** The first word of the account's name, kept short and without markup, for the greeting. */
+export const firstNameOf = (name: string) =>
+  (name.trim().split(/\s+/)[0] ?? "").replace(/[<>[\]()*`]/g, "").slice(0, 40);
 
 /** Per-request facts, kept after the cached guide. */
 export function assistantContext(request: AssistantRequest, account: AssistantAccount) {
   const who = !account
     ? "a visitor who is not signed in"
     : `signed in with a ${account.accountType} account${account.emailVerified ? "" : " whose e-mail is not confirmed yet"}`;
+  const name = account?.firstName ? `\nFirst name: ${account.firstName}` : "";
   return `<context>
 Language: ${request.locale}
 Current page: ${request.context.pathname}
-The person is ${who}.
+The person is ${who}.${name}
 </context>`;
 }
 
