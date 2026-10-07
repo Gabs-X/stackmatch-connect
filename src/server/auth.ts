@@ -1,5 +1,5 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { eq, lte } from "drizzle-orm";
+import { and, eq, lte, ne } from "drizzle-orm";
 import { onlyDigits, type AccountType, type AuthUser, type SignUpInput } from "@/lib/auth";
 import type { Db } from "./db";
 import { sessions, users, type UserRow } from "./db/schema";
@@ -114,4 +114,15 @@ export async function userForSession(
 
 export async function deleteSession(db: Db, token: string) {
   await db.delete(sessions).where(eq(sessions.id, hashToken(token)));
+}
+
+/** Ends every session of the account except the one with `keepToken`, the one making the change. */
+export async function deleteOtherSessions(db: Db, userId: string, keepToken: string | undefined) {
+  await db
+    .delete(sessions)
+    .where(
+      keepToken
+        ? and(eq(sessions.userId, userId), ne(sessions.id, hashToken(keepToken)))
+        : eq(sessions.userId, userId),
+    );
 }

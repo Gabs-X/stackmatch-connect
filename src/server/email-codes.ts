@@ -4,11 +4,11 @@ import type { Db } from "./db";
 import { emailCodes } from "./db/schema";
 
 /**
- * Six-digit codes e-mailed to confirm an address or reset a password. Only a hash is stored; a
+ * Six-digit codes e-mailed to confirm an address, reset a password or change the e-mail. Only a hash is stored; a
  * code expires after a while and stops working after a few wrong guesses, which together keep the
  * million possible codes out of reach.
  */
-export type CodePurpose = "VERIFY_EMAIL" | "RESET_PASSWORD";
+export type CodePurpose = "VERIFY_EMAIL" | "RESET_PASSWORD" | "CHANGE_EMAIL";
 
 export const codeLifetimeMinutes = 15;
 export const maxCodeAttempts = 5;
@@ -31,13 +31,15 @@ const deleteCode = (db: Db, userId: string, purpose: CodePurpose) =>
 
 /**
  * A new code that replaces the previous one, or how long to wait when one was sent moments ago.
- * The caller e-mails the code; it is never stored.
+ * The caller e-mails the code; it is never stored. For CHANGE_EMAIL, `targetEmail` is the new
+ * address the code goes to, which a right code then confirms.
  */
 export async function issueCode(
   db: Db,
   userId: string,
   purpose: CodePurpose,
   now = Date.now(),
+  targetEmail: string | null = null,
 ): Promise<{ code: string } | { retryInSeconds: number }> {
   const current = await findCode(db, userId, purpose);
   const elapsed = current ? (now - current.createdAt.getTime()) / 1000 : Infinity;
@@ -48,6 +50,7 @@ export async function issueCode(
     codeHash: hashCode(userId, purpose, code),
     expiresAt: new Date(now + codeLifetimeMinutes * 60_000),
     attempts: 0,
+    targetEmail,
     createdAt: new Date(now),
   };
   await db
@@ -67,24 +70,36 @@ export async function consumeCode(
   typed: string,
   now = Date.now(),
 ): Promise<CodeCheck> {
+  return (await consumeCodeFor(db, userId, purpose, typed, now)).check;
+}
+
+/** Like consumeCode, also returning the address a CHANGE_EMAIL code was sent to. */
+export async function consumeCodeFor(
+  db: Db,
+  userId: string,
+  purpose: CodePurpose,
+  typed: string,
+  now = Date.now(),
+): Promise<{ check: CodeCheck; targetEmail: string | null }> {
   const current = await findCode(db, userId, purpose);
-  if (!current) return "invalid";
+  if (!current) return { check: "invalid", targetEmail: null };
+  const result = (check: CodeCheck) => ({ check, targetEmail: current.targetEmail });
   if (current.expiresAt.getTime() <= now) {
     await deleteCode(db, userId, purpose);
-    return "expired";
+    return result("expired");
   }
   if (current.codeHash === hashCode(userId, purpose, typed.trim())) {
     await deleteCode(db, userId, purpose);
-    return "ok";
+    return result("ok");
   }
   const attempts = current.attempts + 1;
   if (attempts >= maxCodeAttempts) {
     await deleteCode(db, userId, purpose);
-    return "too-many-attempts";
+    return result("too-many-attempts");
   }
   await db
     .update(emailCodes)
     .set({ attempts })
     .where(and(eq(emailCodes.userId, userId), eq(emailCodes.purpose, purpose)));
-  return "invalid";
+  return result("invalid");
 }

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as CompanySettingsRouteImport } from './routes/company-settings'
 import { Route as CreateProfileRouteImport } from './routes/create-profile'
 import { Route as DiscoverRouteImport } from './routes/discover'
@@ -29,6 +30,11 @@ import { Route as UploadsSplatRouteImport } from './routes/uploads.$'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompanySettingsRoute = CompanySettingsRouteImport.update({
@@ -109,6 +115,7 @@ const UploadsSplatRoute = UploadsSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/company-settings'
     | '/create-profile'
     | '/discover'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/company-settings'
     | '/create-profile'
     | '/discover'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/company-settings'
     | '/create-profile'
     | '/discover'
@@ -221,6 +233,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   CompanySettingsRoute: typeof CompanySettingsRoute
   CreateProfileRoute: typeof CreateProfileRoute
   DiscoverRoute: typeof DiscoverRoute
@@ -245,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/company-settings': {
@@ -357,6 +377,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   CompanySettingsRoute: CompanySettingsRoute,
   CreateProfileRoute: CreateProfileRoute,
   DiscoverRoute: DiscoverRoute,

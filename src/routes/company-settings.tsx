@@ -12,11 +12,12 @@ import {
   RotateCcw,
   UserRound,
 } from "lucide-react";
-import { useEffect, useId, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useId, type ComponentProps } from "react";
 import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { FieldError } from "@/components/auth-layout";
 import { RequireAccount } from "@/components/require-account";
+import { SettingsSection } from "@/components/settings-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,7 +113,7 @@ function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySet
 
       <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-6" onSubmit={onSubmit} noValidate>
-          <Section
+          <SettingsSection
             icon={<Lock className="size-4" />}
             title={t.companySettings.registration}
             note={t.companySettings.registrationNote}
@@ -129,9 +130,12 @@ function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySet
                 className="sm:col-span-2"
               />
             </dl>
-          </Section>
+          </SettingsSection>
 
-          <Section icon={<Building2 className="size-4" />} title={t.companySettings.company}>
+          <SettingsSection
+            icon={<Building2 className="size-4" />}
+            title={t.companySettings.company}
+          >
             <div className="grid gap-5 sm:grid-cols-2">
               <TextField
                 label={t.companySettings.website + " " + t.companySettings.optional}
@@ -154,9 +158,9 @@ function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySet
               error={message(errors.about?.message)}
               count={t.companySettings.aboutCount(values.about?.length ?? 0)}
             />
-          </Section>
+          </SettingsSection>
 
-          <Section
+          <SettingsSection
             icon={<UserRound className="size-4" />}
             title={t.companySettings.contact}
             note={t.companySettings.contactNote}
@@ -193,7 +197,7 @@ function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySet
                 autoComplete="tel"
               />
             </div>
-          </Section>
+          </SettingsSection>
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button
@@ -219,32 +223,6 @@ function SettingsForm({ user, settings }: { user: AuthUser; settings: CompanySet
         </aside>
       </div>
     </main>
-  );
-}
-
-function Section({
-  icon,
-  title,
-  note,
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  note?: string;
-  children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section aria-labelledby={id} className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
-      <h2 id={id} className="flex items-center gap-2 font-bold">
-        <span className="grid size-7 place-items-center rounded-md bg-primary/10 text-primary">
-          {icon}
-        </span>
-        {title}
-      </h2>
-      {note && <p className="mt-1.5 text-sm text-muted-foreground">{note}</p>}
-      <div className="mt-5 space-y-5">{children}</div>
-    </section>
   );
 }
 

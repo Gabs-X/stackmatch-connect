@@ -155,3 +155,18 @@ export function landingFor(user: AuthUser, redirect?: unknown) {
   const target = safeRedirect(redirect, homeFor(user));
   return user.emailVerified ? target : `/verify-email?redirect=${encodeURIComponent(target)}`;
 }
+
+// Account settings: each asks for the current password.
+const currentPassword = z.string().min(1, "required");
+
+export const changePasswordSchema = z.object({ currentPassword, password: newPassword });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const changeEmailSchema = z.object({ email, password: currentPassword });
+export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
+
+export const deleteAccountSchema = z.object({
+  password: currentPassword,
+  confirm: z.boolean().refine(Boolean, "confirmDelete"),
+});
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

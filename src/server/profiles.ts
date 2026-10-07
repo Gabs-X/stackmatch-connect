@@ -41,7 +41,7 @@ function uniqueIds(ids: Map<string, number>, names: string[]) {
 }
 
 /** URLs of the images the developer's saved profile uses: the photo and the project covers. */
-async function storedImages(db: Db, userId: string) {
+export async function storedImages(db: Db, userId: string) {
   const [profile] = await db
     .select({ photo: developerProfiles.photo })
     .from(developerProfiles)

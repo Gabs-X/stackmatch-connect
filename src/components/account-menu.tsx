@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bookmark, Building2, Heart, LogOut, Search, UserRound } from "lucide-react";
+import { Bookmark, Building2, Heart, LogOut, Search, UserCog, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,6 +103,12 @@ export function AccountMenu() {
             </DropdownMenuItem>
           </>
         )}
+        <DropdownMenuItem asChild>
+          <Link to="/account">
+            <UserCog />
+            {t.auth.menu.account}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => {

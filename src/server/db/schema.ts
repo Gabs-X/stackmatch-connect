@@ -67,7 +67,11 @@ export const loginFailures = pgTable(
   (table) => [index("login_failures_key_created_at_idx").on(table.key, table.createdAt)],
 );
 
-export const emailCodePurpose = pgEnum("email_code_purpose", ["VERIFY_EMAIL", "RESET_PASSWORD"]);
+export const emailCodePurpose = pgEnum("email_code_purpose", [
+  "VERIFY_EMAIL",
+  "RESET_PASSWORD",
+  "CHANGE_EMAIL",
+]);
 
 /** The code e-mailed to an account, one per purpose; a new one replaces the previous. */
 export const emailCodes = pgTable(
@@ -80,6 +84,8 @@ export const emailCodes = pgTable(
     /** SHA-256 of the code, never the code itself. */
     codeHash: text("code_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** For CHANGE_EMAIL: the new address, which the code was sent to. */
+    targetEmail: text("target_email"),
     /** Wrong guesses so far; the code stops working after a few. */
     attempts: integer("attempts").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

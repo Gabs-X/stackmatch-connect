@@ -58,6 +58,18 @@ const copy = {
       subject: "Seu código para redefinir a senha do StackMatch",
       intro: "Use este código para criar uma nova senha no StackMatch:",
     },
+    change: {
+      subject: "Confirme seu novo e-mail no StackMatch",
+      intro:
+        "Use este código para confirmar este endereço como o novo e-mail da sua conta no StackMatch:",
+    },
+    changed: {
+      subject: "O e-mail da sua conta no StackMatch foi alterado",
+      body: (email: string) =>
+        `O e-mail da sua conta no StackMatch foi alterado para ${email}. A partir de agora, use esse endereço para entrar.`,
+      notYou: "Se não foi você, alguém pode ter acessado sua conta.",
+      support: "Responda este e-mail para falar com o suporte do StackMatch.",
+    },
     expires: (minutes: number) => `O código vale por ${minutes} minutos.`,
     ignore: "Se não foi você, ignore este e-mail.",
   },
@@ -70,6 +82,17 @@ const copy = {
       subject: "Your StackMatch password reset code",
       intro: "Use this code to set a new password on StackMatch:",
     },
+    change: {
+      subject: "Confirm your new StackMatch e-mail",
+      intro: "Use this code to confirm this address as your StackMatch account's new e-mail:",
+    },
+    changed: {
+      subject: "Your StackMatch account e-mail was changed",
+      body: (email: string) =>
+        `Your StackMatch account e-mail was changed to ${email}. From now on, sign in with that address.`,
+      notYou: "If this wasn't you, someone may have accessed your account.",
+      support: "Reply to this e-mail to reach StackMatch support.",
+    },
     expires: (minutes: number) => `The code is valid for ${minutes} minutes.`,
     ignore: "If this wasn't you, ignore this e-mail.",
   },
@@ -81,7 +104,7 @@ const escapeHtml = (value: string) =>
 /** The e-mail with a confirmation or password reset code. */
 export function codeEmail(
   to: string,
-  kind: "verify" | "reset",
+  kind: "verify" | "reset" | "change",
   code: string,
   minutes: number,
   language: EmailLanguage,
@@ -149,4 +172,20 @@ export function messageEmail({
     html: `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5;color:#111">\n${blocks.join("\n")}\n</div>`,
     ...(replyTo ? { replyTo } : {}),
   };
+}
+
+/**
+ * Tells the old address that the account's e-mail changed, in case it wasn't its owner. With
+ * SUPPORT_EMAIL set, replies reach support; without it, the e-mail can only warn.
+ */
+export function emailChangedNotice(to: string, newEmail: string, language: EmailLanguage): Email {
+  const text = copy[language].changed;
+  const support = process.env["SUPPORT_EMAIL"]?.trim();
+  return messageEmail({
+    to,
+    subject: text.subject,
+    paragraphs: [text.body(newEmail)],
+    closing: support ? `${text.notYou} ${text.support}` : text.notYou,
+    ...(support ? { replyTo: support } : {}),
+  });
 }
