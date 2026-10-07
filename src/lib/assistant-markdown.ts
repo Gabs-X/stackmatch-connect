@@ -18,6 +18,8 @@ export const assistantPaths = [
   "/interests",
   "/company-settings",
   "/account",
+  "/support",
+  "/terms",
 ] as const;
 
 export type AssistantPath = (typeof assistantPaths)[number];

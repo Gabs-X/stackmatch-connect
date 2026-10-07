@@ -6,7 +6,7 @@ test("the Discover action bar stays usable above the assistant button", async ({
   await expect(page.locator("main section article").first()).toContainText("Gabriel Botelho");
 
   const interested = page.getByRole("button", { name: "Interessado" });
-  const assistant = page.getByRole("button", { name: "Abrir assistente" });
+  const assistant = page.getByRole("button", { name: "Conversar com a Ada" });
   const bar = await interested.boundingBox();
   const fab = await assistant.boundingBox();
   expect(bar && fab).toBeTruthy();
@@ -29,8 +29,8 @@ test("filters open in a drawer on small screens", async ({ page }) => {
 
 test("the assistant opens full screen", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Abrir assistente" }).click();
-  const chat = page.getByRole("dialog", { name: "Assistente StackMatch" });
+  await page.getByRole("button", { name: "Conversar com a Ada" }).click();
+  const chat = page.getByRole("dialog", { name: "Ada" });
   const viewport = page.viewportSize();
   // Measure after the opening animation, which scales the panel up from 98%.
   await expect(async () => {

@@ -101,6 +101,11 @@ describe("assistantGuide", () => {
   it("lists every screen the chat can link to", () => {
     expect(assistantGuide).toContain("/discover, /saved, /create-profile");
   });
+
+  it("presents Ada as an AI", () => {
+    expect(assistantGuide).toMatch(/^You are Ada, the AI support assistant of StackMatch/);
+    expect(assistantGuide).toContain("say plainly that you're an AI");
+  });
 });
 
 describe("assistantReply", () => {

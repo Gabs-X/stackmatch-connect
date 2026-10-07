@@ -14,6 +14,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
 
@@ -321,4 +322,30 @@ export const projectSkills = pgTable(
     position: integer("position").notNull(),
   },
   (table) => [primaryKey({ columns: [table.projectId, table.skillId] })],
+);
+
+/**
+ * A request for help from a person, sent from the Support page. The team answers by e-mail and
+ * closes it here; tickets outlive the account that opened them, without the link to it.
+ */
+export const supportTickets = pgTable(
+  "support_tickets",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    category: text("category").$type<TicketCategory>().notNull(),
+    subject: text("subject").notNull(),
+    message: text("message").notNull(),
+    /** The chat with Ada when the author chose to attach it. */
+    conversation: jsonb("conversation").$type<{ role: "user" | "assistant"; content: string }[]>(),
+    status: text("status").$type<TicketStatus>().notNull().default("open"),
+    ip: text("ip"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("support_tickets_user_id_idx").on(table.userId),
+    index("support_tickets_ip_created_at_idx").on(table.ip, table.createdAt),
+  ],
 );

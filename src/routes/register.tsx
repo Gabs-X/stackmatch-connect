@@ -292,7 +292,19 @@ function RegisterPage() {
               aria-describedby={errors.acceptTerms ? `${ids.terms}-error` : undefined}
               {...register("acceptTerms")}
             />
-            <span>{t.auth.acceptTerms}</span>
+            <span>
+              {t.auth.acceptTermsBefore}
+              {/* A new tab keeps what was typed in the form. */}
+              <Link
+                to="/terms"
+                target="_blank"
+                rel="noopener"
+                className="font-semibold text-primary underline-offset-2 hover:underline"
+              >
+                {t.auth.acceptTermsLink}
+              </Link>
+              .
+            </span>
           </label>
           <FieldError id={`${ids.terms}-error`} message={message(errors.acceptTerms?.message)} />
         </div>

@@ -13,6 +13,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { useEffect, type ReactNode } from "react";
 import { AppHeader } from "@/components/app-header";
 import { AssistantWidget } from "@/components/assistant-widget";
+import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { AppProvider } from "@/lib/app-context";
 import { AuthProvider } from "@/lib/auth-context";
@@ -157,6 +158,7 @@ function RootComponent() {
           <div key={shownPathname} className="page-enter">
             <Outlet />
           </div>
+          <SiteFooter />
           <Toaster
             richColors
             theme={resolved}

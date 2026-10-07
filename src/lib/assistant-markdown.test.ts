@@ -15,6 +15,9 @@ describe("parseInline", () => {
       { kind: "link", label: "Abrir o Discover", to: "/discover" },
       { kind: "text", text: " ou site", bold: false },
     ]);
+    expect(parseInline("[Abrir um ticket](/support)")).toEqual([
+      { kind: "link", label: "Abrir um ticket", to: "/support" },
+    ]);
     expect(parseInline("[Perfil](/developer/123)")).toEqual([
       { kind: "text", text: "Perfil", bold: false },
     ]);

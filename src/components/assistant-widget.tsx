@@ -356,7 +356,15 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                 )}
               </div>
               <p className="mt-2 px-1 text-center text-[0.7rem] text-muted-foreground">
-                {assistantApiUrl ? t.assistant.disclaimerLive : t.assistant.disclaimer}
+                {assistantApiUrl ? t.assistant.disclaimerLive : t.assistant.disclaimer}{" "}
+                {t.assistant.needHuman}{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-primary underline-offset-2 hover:underline"
+                  onClick={() => goTo("/support")}
+                >
+                  {t.assistant.openTicket}
+                </button>
               </p>
             </form>
           </motion.section>

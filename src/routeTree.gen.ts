@@ -19,6 +19,8 @@ import { Route as InterestsRouteImport } from './routes/interests'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiAssistantRouteImport } from './routes/api.assistant'
 import { Route as ApiTestEmailsRouteImport } from './routes/api.test-emails'
@@ -79,6 +81,16 @@ const SavedRoute = SavedRouteImport.update({
   path: '/saved',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -136,6 +148,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
@@ -157,6 +171,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
@@ -179,6 +195,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
+  '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
@@ -202,6 +220,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/support'
+    | '/terms'
     | '/verify-email'
     | '/api/assistant'
     | '/api/test-emails'
@@ -223,6 +243,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/support'
+    | '/terms'
     | '/verify-email'
     | '/api/assistant'
     | '/api/test-emails'
@@ -244,6 +266,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/saved'
+    | '/support'
+    | '/terms'
     | '/verify-email'
     | '/api/assistant'
     | '/api/test-emails'
@@ -266,6 +290,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
+  SupportRoute: typeof SupportRoute
+  TermsRoute: typeof TermsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
   ApiTestEmailsRoute: typeof ApiTestEmailsRoute
@@ -349,6 +375,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SavedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify-email': {
       id: '/verify-email'
       path: '/verify-email'
@@ -426,6 +466,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
+  SupportRoute: SupportRoute,
+  TermsRoute: TermsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAssistantRoute: ApiAssistantRoute,
   ApiTestEmailsRoute: ApiTestEmailsRoute,
