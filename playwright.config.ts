@@ -42,6 +42,8 @@ export default defineConfig({
       DATABASE_URL: "memory://",
       UPLOADS_DIR: path.join(os.tmpdir(), "stackmatch-e2e-uploads"),
       E2E: "1",
+      // Lets e2e/cron.spec.ts call the daily cleanup like Vercel Cron does.
+      CRON_SECRET: "e2e-cron-secret",
     },
     reuseExistingServer: !isCI,
     timeout: 120_000,

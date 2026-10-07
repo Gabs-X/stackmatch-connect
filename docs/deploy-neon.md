@@ -86,11 +86,20 @@ Os códigos de confirmação de e-mail e de recuperação de senha saem pelo [Re
 
 A chave dá acesso ao envio de e-mails em nome do seu domínio: as mesmas regras da connection string valem para ela.
 
-## 6. Fazer um novo deploy
+## 6. Ativar a limpeza diária
+
+Todo dia, às 03:00 de Brasília, um Cron da Vercel chama , que apaga sessões vencidas, códigos de e-mail expirados, falhas de login antigas, marcações de interesse com mais de 30 dias e skills digitadas que ninguém usa mais. O agendamento já vem no deploy; falta o segredo que protege a rota:
+
+1. Gere um texto aleatório longo (por exemplo, com ).
+2. Em **Settings → Environment Variables**, crie com ele, no ambiente **Production**.
+
+A Vercel envia esse segredo em cada chamada do Cron. Sem a variável, a rota recusa todo mundo e a limpeza não roda; o app funciona igual, só acumula registros vencidos. As execuções aparecem em **Settings → Cron Jobs**.
+
+## 7. Fazer um novo deploy
 
 A integração não refaz o deploy sozinha. Em **Deployments**, abra o último deploy e use **⋯ → Redeploy**.
 
-## 7. Conferir
+## 8. Conferir
 
 No site publicado:
 
@@ -106,7 +115,7 @@ Se algo falhar, os erros aparecem em **Deployments → (deploy) → Logs**. Os m
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL must point to a Postgres server in production` | A variável não está no ambiente do deploy. Confira o passo 1 e refaça o deploy.                    |
 | `relation "users" does not exist`                            | As migrações não foram aplicadas nesse banco. Rode o passo 2.                                      |
-| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 6).                                      |
+| Login não funciona, sem erro no log                          | Confira se o deploy é posterior à criação do banco (passo 7).                                      |
 | `No e-mail service: set RESEND_API_KEY`                      | A chave do Resend não está no projeto. Confira o passo 5 e refaça o deploy.                        |
 | `Resend refused the e-mail (403)`                            | O remetente de `EMAIL_FROM` não é de um domínio verificado no Resend (passo 5).                    |
 | `No Blob store connected`                                    | O Blob store não está conectado ao projeto. Confira o passo 4 e refaça o deploy.                   |

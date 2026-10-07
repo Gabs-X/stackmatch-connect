@@ -20,7 +20,17 @@ export default defineConfig(({ command }) => ({
       },
     }),
     // Builds the deployable server; the hosting provider (e.g. Vercel) is detected automatically.
-    ...(command === "build" ? [nitro()] : []),
+    // On Vercel it also schedules the daily cleanup (src/routes/api.cron.cleanup.ts), at 03:00 in
+    // Brasília; Hobby plans allow one run a day.
+    ...(command === "build"
+      ? [
+          nitro({
+            vercel: {
+              config: { version: 3, crons: [{ path: "/api/cron/cleanup", schedule: "0 6 * * *" }] },
+            },
+          }),
+        ]
+      : []),
     viteReact(),
   ],
 }));

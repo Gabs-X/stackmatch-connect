@@ -26,6 +26,7 @@ import { Route as ApiTestSeedRouteImport } from './routes/api.test-seed'
 import { Route as CompanyIdRouteImport } from './routes/company.$id'
 import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
 import { Route as UploadsSplatRouteImport } from './routes/uploads.$'
+import { Route as ApiCronCleanupRouteImport } from './routes/api.cron.cleanup'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -112,6 +113,11 @@ const UploadsSplatRoute = UploadsSplatRouteImport.update({
   path: '/uploads/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronCleanupRoute = ApiCronCleanupRouteImport.update({
+  id: '/api/cron/cleanup',
+  path: '/api/cron/cleanup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
   '/uploads/$': typeof UploadsSplatRoute
+  '/api/cron/cleanup': typeof ApiCronCleanupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
   '/uploads/$': typeof UploadsSplatRoute
+  '/api/cron/cleanup': typeof ApiCronCleanupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
   '/uploads/$': typeof UploadsSplatRoute
+  '/api/cron/cleanup': typeof ApiCronCleanupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/company/$id'
     | '/developer/$id'
     | '/uploads/$'
+    | '/api/cron/cleanup'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/company/$id'
     | '/developer/$id'
     | '/uploads/$'
+    | '/api/cron/cleanup'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/company/$id'
     | '/developer/$id'
     | '/uploads/$'
+    | '/api/cron/cleanup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -249,6 +261,7 @@ export interface RootRouteChildren {
   CompanyIdRoute: typeof CompanyIdRoute
   DeveloperIdRoute: typeof DeveloperIdRoute
   UploadsSplatRoute: typeof UploadsSplatRoute
+  ApiCronCleanupRoute: typeof ApiCronCleanupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/cleanup': {
+      id: '/api/cron/cleanup'
+      path: '/api/cron/cleanup'
+      fullPath: '/api/cron/cleanup'
+      preLoaderRoute: typeof ApiCronCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompanyIdRoute: CompanyIdRoute,
   DeveloperIdRoute: DeveloperIdRoute,
   UploadsSplatRoute: UploadsSplatRoute,
+  ApiCronCleanupRoute: ApiCronCleanupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
