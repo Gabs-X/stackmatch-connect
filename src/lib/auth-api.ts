@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestIP } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
   confirmEmail,
@@ -11,9 +10,11 @@ import {
 import { authenticate, createAccount, createSession, deleteSession } from "@/server/auth";
 import type { Db } from "@/server/db";
 import type { EmailLanguage } from "@/server/email";
+import { emailLimitFor } from "@/server/email-throttle";
 import { clearLoginFailures, loginLockedFor, recordLoginFailure } from "@/server/login-throttle";
 import {
   clearSessionToken,
+  clientIp,
   currentUser,
   database,
   readSessionToken,
@@ -46,32 +47,30 @@ export const fetchCurrentUser = createServerFn({ method: "GET" }).handler(() => 
  * E-mails a confirmation code right after sign-up or a sign-in that isn't confirmed yet. A failure
  * to send doesn't fail the request: the confirmation screen can ask for another code.
  */
-async function sendCodeAfterSignIn(db: Db, user: AuthUser, lang: EmailLanguage) {
+async function sendCodeAfterSignIn(db: Db, user: AuthUser, lang: EmailLanguage, ip: string | null) {
   if (user.emailVerified) return;
-  await sendVerificationCode(db, user, lang).catch((error: unknown) =>
+  await sendVerificationCode(db, user, lang, ip).catch((error: unknown) =>
     console.error("Confirmation code not sent:", error),
   );
 }
 
+/**
+ * Creates the account, unless its IP address already caused too many e-mails lately: every new
+ * account gets a confirmation code, so creating them in bulk would send e-mails in bulk.
+ */
 export const signUpFn = createServerFn({ method: "POST" })
   .validator(signUpSchema.and(z.object({ language })))
   .handler(async ({ data }): Promise<AuthResult> => {
     const db = await database();
+    const ip = clientIp();
+    const retryInSeconds = await emailLimitFor(db, ip);
+    if (retryInSeconds) return { error: "too-many-emails", retryInSeconds };
     const user = await createAccount(db, data);
     if (!user) return { error: "email-taken" };
     writeSessionToken(await createSession(db, user.id));
-    await sendCodeAfterSignIn(db, user, data.language);
+    await sendCodeAfterSignIn(db, user, data.language, ip);
     return { user };
   });
-
-/** The client's address, as Vercel's proxy reports it; null when unknown (as in some local runs). */
-function clientIp() {
-  try {
-    return getRequestIP({ xForwardedFor: true }) ?? null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Signs in, unless the e-mail or the address had too many wrong passwords lately: then even the
@@ -91,7 +90,7 @@ export const signInFn = createServerFn({ method: "POST" })
     }
     await clearLoginFailures(db, data.email);
     writeSessionToken(await createSession(db, user.id));
-    await sendCodeAfterSignIn(db, user, data.language);
+    await sendCodeAfterSignIn(db, user, data.language, ip);
     return { user };
   });
 
@@ -118,15 +117,18 @@ export const resendVerificationFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<SendResult> => {
     const user = await currentUser();
     if (!user || user.emailVerified) return { sent: true };
-    return sendVerificationCode(await database(), user, data.language);
+    return sendVerificationCode(await database(), user, data.language, clientIp());
   });
 
-/** Step 1 of password recovery. Answers the same whether or not the address has an account. */
+/**
+ * Step 1 of password recovery. Answers the same whether or not the address has an account; only
+ * the IP address's e-mail limit comes back.
+ */
 export const requestPasswordResetFn = createServerFn({ method: "POST" })
   .validator(passwordResetSchema.extend({ language }))
-  .handler(async ({ data }) => {
-    await requestPasswordReset(await database(), data.email, data.language);
-  });
+  .handler(async ({ data }) =>
+    requestPasswordReset(await database(), data.email, data.language, clientIp()),
+  );
 
 /** Step 2: sets the new password. The account signs in again with it afterwards. */
 export const resetPasswordFn = createServerFn({ method: "POST" })

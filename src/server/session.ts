@@ -1,10 +1,22 @@
-import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
+import { deleteCookie, getCookie, getRequestIP, setCookie } from "@tanstack/react-start/server";
 import { sessionDurationMs, userForSession } from "./auth";
 import type { AccountType } from "@/lib/auth";
 import { getDb } from "./db";
 
 /** The database. */
 export const database = getDb;
+
+/**
+ * The client's address, as Vercel's proxy reports it, for the sign-in and e-mail limits; null when
+ * unknown (as in some local runs).
+ */
+export function clientIp() {
+  try {
+    return getRequestIP({ xForwardedFor: true }) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const cookieName = "stackmatch_session";
 

@@ -3,6 +3,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 export type Lang = "pt" | "en";
 
+/** A wait in seconds, or in minutes once it's a minute or more. */
+const waitFor = (seconds: number) =>
+  seconds < 60 ? `${seconds}s` : `${Math.ceil(seconds / 60)} min`;
+
 const pt = {
   common: {
     close: "Fechar",
@@ -414,7 +418,9 @@ const pt = {
     verifySubmit: "Confirmar e-mail",
     verifying: "Confirmando...",
     resend: "Reenviar código",
-    resendIn: (seconds: number) => `Reenviar código em ${seconds}s`,
+    resendIn: (seconds: number) => `Reenviar código em ${waitFor(seconds)}`,
+    tooManyEmails: (seconds: number) =>
+      `Muitos e-mails com código saíram da sua rede na última hora. Tente de novo em ${waitFor(seconds)}.`,
     resent: "Enviamos um novo código.",
     verified: "E-mail confirmado!",
     notYou: "Não é você?",
@@ -441,6 +447,7 @@ const pt = {
       "email-taken": "Já existe uma conta com esse e-mail.",
       "invalid-credentials": "E-mail ou senha incorretos.",
       "login-locked": "Muitas tentativas de login sem sucesso. Tente de novo mais tarde.",
+      "too-many-emails": "Muitos e-mails com código saíram da sua rede. Tente de novo mais tarde.",
       "wrong-password": "Senha atual incorreta.",
       "same-email": "Esse já é o seu e-mail.",
       confirmDelete: "Confirme que entende que a exclusão é definitiva.",
@@ -472,7 +479,7 @@ const pt = {
     sendCode: "Enviar código",
     codeSent: (email: string) =>
       `Enviamos um código de 6 dígitos para ${email}. Digite-o para confirmar a troca.`,
-    waitCode: (seconds: number) => `Aguarde ${seconds}s para pedir outro código.`,
+    waitCode: (seconds: number) => `Aguarde ${waitFor(seconds)} para pedir outro código.`,
     confirmEmail: "Confirmar novo e-mail",
     cancel: "Cancelar",
     emailChanged: "E-mail alterado. Use o novo endereço para entrar.",
@@ -1005,7 +1012,9 @@ const en: Dict = {
     verifySubmit: "Confirm e-mail",
     verifying: "Confirming...",
     resend: "Resend code",
-    resendIn: (seconds: number) => `Resend code in ${seconds}s`,
+    resendIn: (seconds: number) => `Resend code in ${waitFor(seconds)}`,
+    tooManyEmails: (seconds: number) =>
+      `Too many code e-mails left your network in the last hour. Try again in ${waitFor(seconds)}.`,
     resent: "We sent you a new code.",
     verified: "E-mail confirmed!",
     notYou: "Not you?",
@@ -1032,6 +1041,7 @@ const en: Dict = {
       "email-taken": "An account with this e-mail already exists.",
       "invalid-credentials": "Incorrect e-mail or password.",
       "login-locked": "Too many failed sign-in attempts. Please try again later.",
+      "too-many-emails": "Too many code e-mails left your network. Please try again later.",
       "wrong-password": "Incorrect current password.",
       "same-email": "That's already your e-mail.",
       confirmDelete: "Confirm you understand the deletion is permanent.",
@@ -1063,7 +1073,7 @@ const en: Dict = {
     sendCode: "Send code",
     codeSent: (email: string) =>
       `We sent a 6-digit code to ${email}. Enter it to confirm the change.`,
-    waitCode: (seconds: number) => `Wait ${seconds}s to ask for another code.`,
+    waitCode: (seconds: number) => `Wait ${waitFor(seconds)} to ask for another code.`,
     confirmEmail: "Confirm new e-mail",
     cancel: "Cancel",
     emailChanged: "E-mail changed. Sign in with the new address.",

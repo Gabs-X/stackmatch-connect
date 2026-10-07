@@ -81,6 +81,9 @@ async function seed(page: Page, data: object) {
 /** Publishes more developer profiles (made with developer() from test-data.ts). */
 export const seedDevelopers = (page: Page, developers: object[]) => seed(page, { developers });
 
+/** Uses up the code e-mails this machine's IP address may cause (see src/server/email-throttle.ts). */
+export const seedEmailLimitReached = (page: Page) => seed(page, { emailLimitReached: true });
+
 /** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
 export const seedSavedTalents = (page: Page, developerIds: string[]) =>
   seed(page, { savedTalents: { companyId: "demo-company", developerIds } });

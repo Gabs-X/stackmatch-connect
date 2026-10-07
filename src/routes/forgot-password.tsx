@@ -66,6 +66,8 @@ function EmailForm({ onSent }: { onSent: (email: string) => void }) {
   const { t, lang } = useI18n();
   const emailId = useId();
   const [failed, setFailed] = useState(false);
+  // Seconds the network must wait: it asked for too many code e-mails lately.
+  const [wait, setWait] = useState(0);
   const {
     register,
     handleSubmit,
@@ -82,15 +84,18 @@ function EmailForm({ onSent }: { onSent: (email: string) => void }) {
       noValidate
       onSubmit={handleSubmit(async ({ email }) => {
         setFailed(false);
+        setWait(0);
         try {
-          await requestPasswordResetFn({ data: { email, language: lang } });
-          onSent(email.trim());
+          const result = await requestPasswordResetFn({ data: { email, language: lang } });
+          if ("retryInSeconds" in result) setWait(result.retryInSeconds);
+          else onSent(email.trim());
         } catch {
           setFailed(true);
         }
       })}
     >
       {failed && <FormAlert>{t.auth.errors["unknown"]}</FormAlert>}
+      {wait > 0 && <FormAlert>{t.auth.tooManyEmails(wait)}</FormAlert>}
       <div>
         <Label htmlFor={emailId}>{t.auth.email}</Label>
         <Input

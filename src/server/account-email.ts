@@ -4,6 +4,7 @@ import { hashPassword } from "./auth";
 import type { Db } from "./db";
 import { sessions, users } from "./db/schema";
 import { codeEmail, sendEmail, type EmailLanguage } from "./email";
+import { emailLimitFor, recordEmailSend } from "./email-throttle";
 import { clearLoginFailures } from "./login-throttle";
 import { codeLifetimeMinutes, consumeCode, issueCode, type CodeCheck } from "./email-codes";
 
@@ -16,15 +17,22 @@ const codeError: Record<Exclude<CodeCheck, "ok">, CodeErrorCode> = {
   "too-many-attempts": "too-many-attempts",
 };
 
-/** E-mails a new confirmation code to an account that hasn't confirmed its address yet. */
+/**
+ * E-mails a new confirmation code to an account that hasn't confirmed its address yet, unless the
+ * account or the IP address asked for too many lately.
+ */
 export async function sendVerificationCode(
   db: Db,
   user: AuthUser,
   language: EmailLanguage,
+  ip: string | null = null,
   now = Date.now(),
 ): Promise<SendResult> {
+  const wait = await emailLimitFor(db, ip, now);
+  if (wait) return { retryInSeconds: wait };
   const issued = await issueCode(db, user.id, "VERIFY_EMAIL", now);
   if (!("code" in issued)) return issued;
+  await recordEmailSend(db, ip, now);
   await sendEmail(codeEmail(user.email, "verify", issued.code, codeLifetimeMinutes, language));
   return { sent: true };
 }
@@ -50,20 +58,27 @@ const findByEmail = async (db: Db, email: string) =>
 
 /**
  * E-mails a password reset code when the address has an account. Says nothing either way, so the
- * screen can't be used to find out which addresses are registered.
+ * screen can't be used to find out which addresses are registered. Only the IP address's limit is
+ * told, and it's checked before looking the address up, so it says nothing about it either.
  */
 export async function requestPasswordReset(
   db: Db,
   email: string,
   language: EmailLanguage,
+  ip: string | null = null,
   now = Date.now(),
-) {
+): Promise<SendResult> {
+  const wait = await emailLimitFor(db, ip, now);
+  if (wait) return { retryInSeconds: wait };
   const user = await findByEmail(db, email);
-  if (!user) return;
+  if (!user) return { sent: true };
   const issued = await issueCode(db, user.id, "RESET_PASSWORD", now);
   // Asked again within the cooldown: the code sent moments ago still works.
-  if ("code" in issued)
+  if ("code" in issued) {
+    await recordEmailSend(db, ip, now);
     await sendEmail(codeEmail(user.email, "reset", issued.code, codeLifetimeMinutes, language));
+  }
+  return { sent: true };
 }
 
 /**

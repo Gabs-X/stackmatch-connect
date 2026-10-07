@@ -37,6 +37,17 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** E-mails with a code sent per client IP, for the limit in src/server/email-throttle.ts. */
+export const emailSends = pgTable(
+  "email_sends",
+  {
+    id: serial("id").primaryKey(),
+    ip: text("ip").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("email_sends_ip_created_at_idx").on(table.ip, table.createdAt)],
+);
+
 export const sessions = pgTable(
   "sessions",
   {

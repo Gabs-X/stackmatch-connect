@@ -5,6 +5,7 @@ import { cleanup } from "./cleanup";
 import type { Db } from "./db";
 import { emailCodes, interestEvents, loginFailures, sessions, skills } from "./db/schema";
 import { issueCode } from "./email-codes";
+import { recordEmailSend } from "./email-throttle";
 import { recordLoginFailure } from "./login-throttle";
 import { saveProfile } from "./profiles";
 import { createDeveloper, createTestDb } from "./test-db";
@@ -42,6 +43,9 @@ describe("cleanup", () => {
     // A sign-in failure long gone and a recent one.
     await recordLoginFailure(db, "ana@acme.com", null, now - day);
     await recordLoginFailure(db, "bia@acme.com", null, now);
+    // An e-mail send from two hours ago and one from now.
+    await recordEmailSend(db, "203.0.113.7", now - 2 * 3_600_000);
+    await recordEmailSend(db, "198.51.100.1", now);
     // An interest mark older than the 30-day limits and a recent one.
     await db.insert(interestEvents).values([
       {
@@ -71,6 +75,7 @@ describe("cleanup", () => {
       sessions: 1,
       emailCodes: 1,
       loginFailures: 1,
+      emailSends: 1,
       interestEvents: 1,
       unusedSkills: 1,
     });

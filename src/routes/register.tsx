@@ -43,7 +43,7 @@ function RegisterPage() {
   const { type, redirect } = Route.useSearch();
   const router = useRouter();
   const { signUp } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ code: string; retryInSeconds: number } | null>(null);
   const ids = {
     name: useId(),
     company: useId(),
@@ -88,7 +88,11 @@ function RegisterPage() {
       });
       await router.navigate({ href: landingFor(created, redirect) });
     } catch (caught) {
-      setError(caught instanceof AuthError ? caught.code : "unknown");
+      setError(
+        caught instanceof AuthError
+          ? { code: caught.code, retryInSeconds: caught.retryInSeconds }
+          : { code: "unknown", retryInSeconds: 0 },
+      );
     }
   });
 
@@ -130,7 +134,9 @@ function RegisterPage() {
             className="flex items-center gap-2 rounded-md border border-destructive/30 bg-danger-soft px-3 py-2.5 text-sm text-destructive"
           >
             <AlertCircle className="size-4 shrink-0" />
-            {message(error)}
+            {error.code === "too-many-emails"
+              ? t.auth.tooManyEmails(error.retryInSeconds)
+              : message(error.code)}
           </p>
         )}
 

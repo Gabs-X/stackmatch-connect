@@ -5,6 +5,7 @@ import type { Db } from "./db";
 import { users } from "./db/schema";
 import { codeEmail, emailChangedNotice, sendEmail, type EmailLanguage } from "./email";
 import { codeLifetimeMinutes, consumeCodeFor, issueCode } from "./email-codes";
+import { emailLimitFor, recordEmailSend } from "./email-throttle";
 import { loginLockedFor, recordLoginFailure } from "./login-throttle";
 import { storedImages } from "./profiles";
 import { removeImages } from "./storage";
@@ -76,8 +77,11 @@ export async function requestEmailChange(
   const refused = await checkPassword(db, user, input.password, ip, now);
   if (refused) return refused;
   if (await emailTaken(db, email)) return { error: "email-taken" };
+  const wait = await emailLimitFor(db, ip, now);
+  if (wait) return { retryInSeconds: wait };
   const issued = await issueCode(db, user.id, "CHANGE_EMAIL", now, email);
   if (!("code" in issued)) return issued;
+  await recordEmailSend(db, ip, now);
   await sendEmail(codeEmail(email, "change", issued.code, codeLifetimeMinutes, language));
   return { sent: true };
 }

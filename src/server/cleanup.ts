@@ -4,17 +4,19 @@ import type { Db } from "./db";
 import {
   developerSkills,
   emailCodes,
+  emailSends,
   interestEvents,
   loginFailures,
   projectSkills,
   sessions,
   skills,
 } from "./db/schema";
+import { emailWindowMinutes } from "./email-throttle";
 import { loginWindowMinutes } from "./login-throttle";
 
 /**
- * Deletes what no longer matters: expired sessions and e-mail codes, sign-in failures outside the
- * throttle window, interest marks older than the longest limit that reads them, and typed skills
+ * Deletes what no longer matters: expired sessions and e-mail codes, sign-in failures and e-mail
+ * sends outside their limits' windows, interest marks older than the longest limit that reads them, and typed skills
  * nobody uses (the reference catalog stays). Run daily by Vercel Cron (/api/cron/cleanup).
  */
 export async function cleanup(db: Db, now = Date.now()) {
@@ -41,6 +43,12 @@ export async function cleanup(db: Db, now = Date.now()) {
         .delete(loginFailures)
         .where(lte(loginFailures.createdAt, before(loginWindowMinutes * 60_000)))
         .returning({ id: loginFailures.id })
+    ).length,
+    emailSends: (
+      await db
+        .delete(emailSends)
+        .where(lte(emailSends.createdAt, before(emailWindowMinutes * 60_000)))
+        .returning({ id: emailSends.id })
     ).length,
     interestEvents: (
       await db

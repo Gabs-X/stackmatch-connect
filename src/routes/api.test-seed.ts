@@ -5,7 +5,8 @@ import { profileInputSchema } from "@/lib/local-profile";
 import { saveCompanySettings } from "@/server/companies";
 import { interests, meetingRequests, savedTalents, users } from "@/server/db/schema";
 import { loadProfile, saveProfile } from "@/server/profiles";
-import { database } from "@/server/session";
+import { maxEmailsPerIp, recordEmailSend } from "@/server/email-throttle";
+import { clientIp, database } from "@/server/session";
 
 /**
  * Lets the end-to-end tests put their own data in the database (see e2e/test-data.ts). The
@@ -38,6 +39,8 @@ const seedSchema = z.object({
     )
     .default([]),
   savedTalents: z.object({ companyId: z.string(), developerIds: z.array(z.string()) }).optional(),
+  /** Uses up the e-mails this client's IP address may cause, as if it had sent them just now. */
+  emailLimitReached: z.boolean().default(false),
 });
 
 /** Not a scrypt hash, so no password matches it. */
@@ -94,6 +97,9 @@ export const Route = createFileRoute("/api/test-seed")({
           await db
             .insert(savedTalents)
             .values({ companyId: seed.savedTalents?.companyId ?? "", developerId });
+
+        if (seed.emailLimitReached)
+          for (let sent = 0; sent < maxEmailsPerIp; sent++) await recordEmailSend(db, clientIp());
 
         return new Response(null, { status: 204 });
       },

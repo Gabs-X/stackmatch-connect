@@ -22,8 +22,12 @@ export type AuthUser = {
   emailVerified: boolean;
 };
 
-/** "login-locked": too many wrong passwords lately; see src/server/login-throttle.ts. */
-export type AuthErrorCode = "email-taken" | "invalid-credentials" | "login-locked";
+/**
+ * "login-locked": too many wrong passwords lately (src/server/login-throttle.ts). "too-many-emails":
+ * the IP address caused too many e-mails lately (src/server/email-throttle.ts).
+ */
+export type AuthErrorCode =
+  "email-taken" | "invalid-credentials" | "login-locked" | "too-many-emails";
 
 /** Why a code from an e-mail wasn't accepted. */
 export type CodeErrorCode = "invalid-code" | "expired-code" | "too-many-attempts";
@@ -31,7 +35,7 @@ export type CodeErrorCode = "invalid-code" | "expired-code" | "too-many-attempts
 export class AuthError extends Error {
   constructor(
     readonly code: AuthErrorCode,
-    /** For "login-locked": seconds until signing in is allowed again. */
+    /** For "login-locked" and "too-many-emails": seconds until trying again is allowed. */
     readonly retryInSeconds = 0,
   ) {
     super(code);

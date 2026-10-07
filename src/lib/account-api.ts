@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestIP } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
   changePassword,
@@ -7,7 +6,13 @@ import {
   deleteAccount,
   requestEmailChange,
 } from "@/server/account-settings";
-import { clearSessionToken, currentUser, database, readSessionToken } from "@/server/session";
+import {
+  clearSessionToken,
+  clientIp,
+  currentUser,
+  database,
+  readSessionToken,
+} from "@/server/session";
 import {
   changeEmailSchema,
   changePasswordSchema,
@@ -17,15 +22,6 @@ import {
 
 /** Settings the signed-in account changes about itself (see src/server/account-settings.ts). */
 const language = z.enum(["pt", "en"]).default("pt");
-
-/** The client's address, for the sign-in limit that wrong passwords here count against. */
-function clientIp() {
-  try {
-    return getRequestIP({ xForwardedFor: true }) ?? null;
-  } catch {
-    return null;
-  }
-}
 
 async function signedIn() {
   const user = await currentUser();

@@ -1,5 +1,12 @@
 import type { Page } from "@playwright/test";
-import { confirmEmail, emailCode, expect, test, uniqueEmail } from "./fixtures";
+import {
+  confirmEmail,
+  emailCode,
+  expect,
+  seedEmailLimitReached,
+  test,
+  uniqueEmail,
+} from "./fixtures";
 
 const main = (page: Page) => page.getByRole("main");
 
@@ -279,4 +286,26 @@ test("repeated wrong passwords lock the sign-in until the password is reset", as
   await expect(page).toHaveURL(/\/login$/);
   await signIn(email, "novasenha1");
   await expect(page).toHaveURL(/\/discover$/);
+});
+
+test("a network that caused too many code e-mails waits to sign up or recover a password", async ({
+  page,
+}) => {
+  await seedEmailLimitReached(page);
+  await registerAccount(page, {
+    type: "developer",
+    name: "Ana Souza",
+    title: "Frontend Developer",
+    email: uniqueEmail("ana@example.com"),
+  });
+  await expect(main(page).getByRole("alert")).toHaveText(
+    "Muitos e-mails com código saíram da sua rede na última hora. Tente de novo em 60 min.",
+  );
+  await expect(page).toHaveURL(/\/register/);
+
+  await page.goto("/forgot-password");
+  await main(page).getByLabel("E-mail").fill("teste.dev@example.com");
+  await main(page).getByRole("button", { name: "Enviar código" }).click();
+  await expect(main(page).getByRole("alert")).toContainText("Muitos e-mails com código");
+  await expect(page.getByRole("heading", { name: "Recuperar senha" })).toBeVisible();
 });
