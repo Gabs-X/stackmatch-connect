@@ -1,3 +1,5 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { emptyProfile, newProject, type LocalProfile } from "@/lib/local-profile";
 import { createAccount } from "./auth";
@@ -10,6 +12,7 @@ import {
   loadPublishedProfiles,
   saveProfile,
 } from "./profiles";
+import { testJpeg } from "./jpeg";
 import { seedDatabase, seedDeveloperId, seedDeveloperProfile } from "./seed";
 import { localImagePath, readLocalImage } from "./storage";
 import { createTestDb } from "./test-db";
@@ -195,8 +198,8 @@ describe("skill catalog", () => {
 });
 
 describe("images", () => {
-  // A tiny but real JPEG would do; the storage only keeps bytes.
-  const newImage = `data:image/jpeg;base64,${Buffer.from("jpeg bytes").toString("base64")}`;
+  const jpeg = testJpeg(400, 300);
+  const newImage = `data:image/jpeg;base64,${jpeg.toString("base64")}`;
   const stored = (url: string) => readLocalImage(url.slice(localImagePath.length));
 
   it("move new images to file storage and keep only their URL", async () => {
@@ -210,7 +213,7 @@ describe("images", () => {
     const saved = await loadProfile(db, id);
     expect(saved?.photo).toMatch(/^\/uploads\/photos\/[a-z0-9-]+\/[a-z0-9-]+\.jpg$/);
     expect(saved?.projects[0]?.image).toMatch(/^\/uploads\/covers\//);
-    expect((await stored(saved?.photo ?? ""))?.toString()).toBe("jpeg bytes");
+    expect(await stored(saved?.photo ?? "")).toEqual(jpeg);
     expect((await loadPublishedProfile(db, id))?.image).toBe(saved?.photo);
   });
 
@@ -249,5 +252,28 @@ describe("images", () => {
     expect((await loadProfile(db, biaId))?.photo).toBe("");
     // Ana's photo is untouched.
     expect(await stored(anaPhoto)).not.toBeNull();
+  });
+
+  it("refuse what isn't a JPEG the form makes, without storing anything", async () => {
+    const id = await developerAccount("ana@example.com");
+    const dataUrl = (bytes: Buffer) => `data:image/jpeg;base64,${bytes.toString("base64")}`;
+    const refused = [
+      // Not an image at all.
+      { photo: dataUrl(Buffer.from("<script>alert(1)</script>")) },
+      // Larger than the browser makes: photos are 512×512 at most, covers fit 960×600.
+      { photo: dataUrl(testJpeg(513, 513)) },
+      {
+        photo: newImage,
+        projects: [newProject({ name: "Site", image: dataUrl(testJpeg(961, 600)) })],
+      },
+      // Cut short.
+      { photo: dataUrl(testJpeg(400, 300).subarray(0, 12)) },
+    ];
+    for (const images of refused)
+      await expect(saveProfile(db, id, { ...ana, ...images })).rejects.toThrow("Invalid image");
+    expect(await loadProfile(db, id)).toBeNull();
+    expect(
+      await readdir(path.join(process.env["UPLOADS_DIR"] ?? "", "photos", id)).catch(() => []),
+    ).toEqual([]);
   });
 });

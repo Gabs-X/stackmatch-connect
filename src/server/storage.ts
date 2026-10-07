@@ -1,5 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { profilePhotoSize, projectCoverSize } from "@/lib/local-profile";
+import { jpegSize } from "./jpeg";
 
 /**
  * Where profile photos and project covers live: Vercel Blob when BLOB_READ_WRITE_TOKEN is set
@@ -83,9 +85,31 @@ const dataUrlPrefix = "data:image/jpeg;base64,";
 
 export const isDataUrl = (value: string) => value.startsWith(dataUrlPrefix);
 
-/** Stores an image the form sent as a data URL and returns its URL. */
-export function storeImage(folder: string, owner: string, dataUrl: string) {
-  const bytes = Buffer.from(dataUrl.slice(dataUrlPrefix.length), "base64");
+/** The largest image the browser makes for each folder (readProfilePhoto, readProjectImage). */
+const maxSize = {
+  photos: { width: profilePhotoSize, height: profilePhotoSize },
+  covers: projectCoverSize,
+};
+
+export type ImageFolder = keyof typeof maxSize;
+
+const dataUrlBytes = (dataUrl: string) =>
+  Buffer.from(dataUrl.slice(dataUrlPrefix.length), "base64");
+
+/**
+ * Whether a data URL holds a whole JPEG no larger than the browser makes for the folder. The form
+ * only sends those; anything else came from somewhere else and isn't stored.
+ */
+export function isStorableImage(folder: ImageFolder, dataUrl: string) {
+  if (!isDataUrl(dataUrl)) return false;
+  const size = jpegSize(dataUrlBytes(dataUrl));
+  const max = maxSize[folder];
+  return size !== null && size.width <= max.width && size.height <= max.height;
+}
+
+/** Stores an image the form sent as a data URL (checked with isStorableImage) and returns its URL. */
+export function storeImage(folder: ImageFolder, owner: string, dataUrl: string) {
+  const bytes = dataUrlBytes(dataUrl);
   const key = `${folder}/${owner.toLowerCase().replace(/[^a-z0-9-]/g, "-")}/${crypto.randomUUID()}.jpg`;
   return storage().put(key, bytes);
 }

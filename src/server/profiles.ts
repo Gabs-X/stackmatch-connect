@@ -2,7 +2,7 @@ import { asc, count, eq, gt, inArray, or, sql } from "drizzle-orm";
 import type { Developer } from "@/lib/developers";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
-import { isDataUrl, removeImages, storeImage } from "./storage";
+import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
 import { developerProfiles, developerSkills, projectSkills, projects, skills } from "./db/schema";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -58,12 +58,20 @@ export async function storedImages(db: Db, userId: string) {
  *
  * Images arrive as data URLs when new and are moved to file storage; the database keeps their URL.
  * A URL is only kept when it's already one of this profile's images, and images the profile no
- * longer uses are deleted once the save went through.
+ * longer uses are deleted once the save went through. A new image must be a JPEG no larger than the
+ * browser makes (see isStorableImage), or the save fails.
  */
 export async function saveProfile(db: Db, userId: string, input: LocalProfile) {
+  // Checked before storing any, so a bad one doesn't leave the others behind.
+  const images: [ImageFolder, string][] = [
+    ["photos", input.photo],
+    ...input.projects.map((project): [ImageFolder, string] => ["covers", project.image]),
+  ];
+  if (images.some(([folder, image]) => isDataUrl(image) && !isStorableImage(folder, image)))
+    throw new Error("Invalid image: not a JPEG the form makes");
   const previous = await storedImages(db, userId);
   const uploaded: string[] = [];
-  const resolve = async (folder: string, image: string) => {
+  const resolve = async (folder: ImageFolder, image: string) => {
     if (!image) return "";
     if (!isDataUrl(image)) return previous.includes(image) ? image : "";
     const url = await storeImage(folder, userId, image);

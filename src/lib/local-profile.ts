@@ -211,10 +211,12 @@ function readImage(
   });
 }
 
+export const projectCoverSize = { width: 960, height: 600 };
+
 /** A project cover: the whole image, downscaled to fit 960×600. */
 export function readProjectImage(file: File) {
   return readImage(file, (width, height) => {
-    const scale = Math.min(1, 960 / width, 600 / height);
+    const scale = Math.min(1, projectCoverSize.width / width, projectCoverSize.height / height);
     return {
       source: { x: 0, y: 0, width, height },
       width: width * scale,

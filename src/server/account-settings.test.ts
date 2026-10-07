@@ -14,6 +14,7 @@ import { outbox } from "./email";
 import { loginLockedFor } from "./login-throttle";
 import { loadProfile, saveProfile } from "./profiles";
 import { localImagePath, readLocalImage } from "./storage";
+import { testJpeg } from "./jpeg";
 import { createTestDb } from "./test-db";
 
 let db: Db;
@@ -152,7 +153,7 @@ describe("deleteAccount", () => {
       workMode: "Remoto",
       availability: "Disponível agora",
       bio: "Bio.",
-      photo: `data:image/jpeg;base64,${Buffer.from("foto").toString("base64")}`,
+      photo: `data:image/jpeg;base64,${testJpeg(512, 512).toString("base64")}`,
     });
     const photo = (await loadProfile(db, ana.id))?.photo ?? "";
     const token = await createSession(db, ana.id);
