@@ -351,6 +351,12 @@ const pt = {
     limited: (minutes: number) =>
       `Você fez muitas perguntas em pouco tempo. Tente de novo em ${minutes === 1 ? "1 minuto" : `${minutes} minutos`}.`,
     retry: "Tentar novamente",
+    signInTitle: "Oi! Eu sou a Ada.",
+    signInText:
+      "Para conversar comigo, entre na sua conta do StackMatch. Ainda não tem uma? Crie sua conta: é rápido.",
+    signInRequired: "Sua sessão terminou. Entre na sua conta para continuar conversando com a Ada.",
+    createAccount: "Criar conta",
+    signIn: "Já tenho conta",
     previewReply:
       "Obrigada pela mensagem! Ainda estou em modo de prévia: minha IA será conectada junto com o backend do StackMatch. Em breve vou poder tirar dúvidas sobre o Discover, filtros, perfis e propostas de reunião.",
   },
@@ -1054,6 +1060,12 @@ const en: Dict = {
     limited: (minutes: number) =>
       `You've asked a lot of questions in a short time. Try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`}.`,
     retry: "Try again",
+    signInTitle: "Hi! I'm Ada.",
+    signInText:
+      "To chat with me, sign in to your StackMatch account. Don't have one yet? Create your account: it's quick.",
+    signInRequired: "Your session ended. Sign in to keep chatting with Ada.",
+    createAccount: "Create account",
+    signIn: "I have an account",
     previewReply:
       "Thanks for your message! I'm still in preview mode: my AI will be connected together with the StackMatch backend. Soon I'll be able to answer questions about Discover, filters, profiles and meeting proposals.",
   },

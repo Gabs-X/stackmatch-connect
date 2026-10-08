@@ -1,7 +1,32 @@
 import { expect, signInAs, test } from "./fixtures";
 
+test("visitors are asked to create an account or sign in before chatting", async ({ page }) => {
+  await page.goto("/terms");
+  await page.getByRole("button", { name: "Conversar com a Ada" }).click();
+  const chat = page.getByRole("dialog", { name: "Ada" });
+  await expect(chat.getByText(/Para conversar comigo, entre na sua conta/)).toBeVisible();
+  await expect(chat.getByLabel("Mensagem para a Ada")).toBeHidden();
+  await expect(chat.getByRole("button", { name: "Como funciona o Discover?" })).toBeHidden();
+
+  await chat.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL(/\/register\?redirect=%2Fterms$/);
+  await expect(page.getByRole("heading", { name: "Criar sua conta" })).toBeVisible();
+  await expect(chat).toBeHidden();
+
+  await page.getByRole("button", { name: "Conversar com a Ada" }).click();
+  await chat.getByRole("button", { name: "Já tenho conta" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test("the API answers only signed-in accounts", async ({ request }) => {
+  const response = await request.post("/api/assistant", {
+    data: { messages: [{ role: "user", content: "Oi" }], locale: "pt-BR" },
+  });
+  expect(response.status()).toBe(401);
+});
+
 test("the assistant answers a suggestion with the preview reply", async ({ page }) => {
-  await page.goto("/");
+  await signInAs(page, "developer");
   await page.getByRole("button", { name: "Conversar com a Ada" }).click();
 
   const chat = page.getByRole("dialog", { name: "Ada" });
@@ -13,7 +38,7 @@ test("the assistant answers a suggestion with the preview reply", async ({ page 
 });
 
 test("stopping a reply halts the text and Escape closes the chat", async ({ page }) => {
-  await page.goto("/");
+  await signInAs(page, "developer");
   await page.getByRole("button", { name: "Conversar com a Ada" }).click();
   const chat = page.getByRole("dialog", { name: "Ada" });
 
@@ -55,7 +80,7 @@ test("a signed-in chat greets by name, follows the account and leaves on sign-ou
   await page.getByRole("button", { name: "Menu da conta de Gabriel Botelho" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
   await page.getByRole("button", { name: "Conversar com a Ada" }).click();
-  await expect(chat.getByRole("heading", { name: "Oi! Eu sou a Ada." })).toBeVisible();
+  await expect(chat.getByRole("button", { name: "Criar conta" })).toBeVisible();
   await expect(chat.getByText("Minha pergunta salva")).toBeHidden();
 
   // Another account doesn't see it; the same account gets it back.

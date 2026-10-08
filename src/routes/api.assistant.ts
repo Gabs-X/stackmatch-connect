@@ -41,6 +41,10 @@ export const Route = createFileRoute("/api/assistant")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Only accounts chat with Ada; visitors are asked to sign in or create one.
+        const user = await currentUser();
+        if (!user) return new Response("Sign in to chat", { status: 401 });
+
         const client = assistantClient();
         if (!client) return new Response("Assistant not configured", { status: 503 });
 
@@ -57,14 +61,11 @@ export const Route = createFileRoute("/api/assistant")({
           });
         await recordAssistantRequest(db, ip);
 
-        const user = await currentUser();
-        const account = user
-          ? {
-              accountType: user.accountType,
-              emailVerified: user.emailVerified,
-              firstName: firstNameOf(user.name),
-            }
-          : null;
+        const account = {
+          accountType: user.accountType,
+          emailVerified: user.emailVerified,
+          firstName: firstNameOf(user.name),
+        };
         const reply = assistantReply(client, body, account, request.signal);
         let first: IteratorResult<string>;
         try {

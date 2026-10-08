@@ -1,6 +1,15 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, MessageCircle, RotateCcw, Sparkles, Square, X } from "lucide-react";
+import {
+  ArrowUp,
+  LogIn,
+  MessageCircle,
+  RotateCcw,
+  Sparkles,
+  Square,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { AssistantMessage } from "@/components/assistant-message";
 import { Button } from "@/components/ui/button";
@@ -29,6 +38,8 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
   const { user, ready } = useAuth();
   // The account whose chat is shown: null for visitors, undefined until the session is known.
   const owner = ready ? (user?.id ?? null) : undefined;
+  // Only accounts chat with Ada; visitors are invited to create one or sign in.
+  const visitor = owner === null;
   const ownerRef = useRef(owner);
   ownerRef.current = owner;
   const [loadedFor, setLoadedFor] = useState<string | null | undefined>(undefined);
@@ -102,10 +113,21 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
     // On phones the chat covers the page; close it so the screen shows.
     if (!window.matchMedia("(min-width: 640px)").matches) setOpen(false);
   };
-  const errorText = (error: unknown) =>
-    error instanceof AssistantHttpError && error.status === 429
-      ? t.assistant.limited(Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)))
-      : t.assistant.error;
+  // Come back to this page after signing in, unless it's the home page or a sign-in screen.
+  const authRedirect = ["/", "/login", "/register"].includes(pathname)
+    ? {}
+    : { redirect: pathname };
+  const goToAuth = (to: "/login" | "/register") => {
+    void navigate({ to, search: authRedirect });
+    setOpen(false);
+  };
+  const errorText = (error: unknown) => {
+    if (!(error instanceof AssistantHttpError)) return t.assistant.error;
+    if (error.status === 401) return t.assistant.signInRequired;
+    if (error.status === 429)
+      return t.assistant.limited(Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)));
+    return t.assistant.error;
+  };
   const streaming = status === "streaming";
   const last = messages.at(-1);
   // The reply placeholder exists from the start of a request; show dots until text arrives.
@@ -132,7 +154,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
   }, [messages, waitingFirstChunk, reduceMotion]);
 
   const submit = (text = draft) => {
-    if (!text.trim() || streaming || syncing) return;
+    if (!text.trim() || streaming || syncing || visitor) return;
     send(text, errorText);
     setDraft("");
     inputRef.current?.focus();
@@ -212,7 +234,27 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
               aria-live="polite"
               aria-busy={streaming}
             >
-              {messages.length === 0 ? (
+              {visitor ? (
+                <div className="flex h-full flex-col justify-end">
+                  <span className="assistant-avatar size-12">
+                    <Sparkles className="size-6" />
+                  </span>
+                  <h3 className="mt-4 font-display text-xl font-bold">{t.assistant.signInTitle}</h3>
+                  <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                    {t.assistant.signInText}
+                  </p>
+                  <div className="mt-6 flex flex-col gap-2">
+                    <Button onClick={() => goToAuth("/register")}>
+                      <UserPlus />
+                      {t.assistant.createAccount}
+                    </Button>
+                    <Button variant="outline" onClick={() => goToAuth("/login")}>
+                      <LogIn />
+                      {t.assistant.signIn}
+                    </Button>
+                  </div>
+                </div>
+              ) : messages.length === 0 ? (
                 <div className="flex h-full flex-col justify-end">
                   <span className="assistant-avatar size-12">
                     <Sparkles className="size-6" />
@@ -315,48 +357,56 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                 submit();
               }}
             >
-              <div className="flex items-end gap-2 rounded-xl border bg-background p-1.5 transition-colors focus-within:border-primary">
-                <textarea
-                  ref={inputRef}
-                  rows={1}
-                  value={draft}
-                  maxLength={2000}
-                  aria-label={t.assistant.inputLabel}
-                  placeholder={t.assistant.placeholder}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={onInputKeyDown}
-                  className="field-sizing-content max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
-                />
-                {streaming ? (
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="secondary"
-                    className="size-9 shrink-0 rounded-lg"
-                    aria-label={t.assistant.stop}
-                    title={t.assistant.stop}
-                    onClick={() => {
-                      stop();
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    <Square className="fill-current" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="size-9 shrink-0 rounded-lg"
-                    aria-label={t.assistant.send}
-                    title={t.assistant.send}
-                    disabled={!draft.trim()}
-                  >
-                    <ArrowUp />
-                  </Button>
+              {!visitor && (
+                <div className="flex items-end gap-2 rounded-xl border bg-background p-1.5 transition-colors focus-within:border-primary">
+                  <textarea
+                    ref={inputRef}
+                    rows={1}
+                    value={draft}
+                    maxLength={2000}
+                    aria-label={t.assistant.inputLabel}
+                    placeholder={t.assistant.placeholder}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={onInputKeyDown}
+                    className="field-sizing-content max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                  {streaming ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      className="size-9 shrink-0 rounded-lg"
+                      aria-label={t.assistant.stop}
+                      title={t.assistant.stop}
+                      onClick={() => {
+                        stop();
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      <Square className="fill-current" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="size-9 shrink-0 rounded-lg"
+                      aria-label={t.assistant.send}
+                      title={t.assistant.send}
+                      disabled={!draft.trim()}
+                    >
+                      <ArrowUp />
+                    </Button>
+                  )}
+                </div>
+              )}
+              <p
+                className={cn(
+                  "px-1 text-center text-[0.7rem] text-muted-foreground",
+                  !visitor && "mt-2",
                 )}
-              </div>
-              <p className="mt-2 px-1 text-center text-[0.7rem] text-muted-foreground">
-                {assistantApiUrl ? t.assistant.disclaimerLive : t.assistant.disclaimer}{" "}
+              >
+                {!visitor &&
+                  `${assistantApiUrl ? t.assistant.disclaimerLive : t.assistant.disclaimer} `}
                 {t.assistant.needHuman}{" "}
                 <button
                   type="button"
