@@ -1,6 +1,6 @@
 import { parseLocation } from "./cities";
 import type { Developer } from "./developers";
-import type { JobInput } from "./jobs";
+import type { JobSnapshot } from "./jobs";
 
 /**
  * How well a developer's profile meets a job's requirements, criterion by criterion. It compares
@@ -41,7 +41,7 @@ export type JobMatch = {
 const key = (value: string) => value.trim().toLowerCase();
 
 /** Whether the job cares where the developer lives: a city was given and it isn't remote only. */
-export const locationApplies = (job: Pick<JobInput, "location" | "workModes">) =>
+export const locationApplies = (job: Pick<JobSnapshot, "location" | "workModes">) =>
   Boolean(job.location) && !(job.workModes.length === 1 && job.workModes[0] === "Remoto");
 
 /** 1 in the same city, 0.5 in the same state, 0 elsewhere. */
@@ -53,7 +53,7 @@ export function locationMet(jobLocation: string, developerLocation: string) {
 }
 
 export function matchJob(
-  job: JobInput,
+  job: JobSnapshot,
   developer: Pick<
     Developer,
     "skills" | "seniority" | "workMode" | "hiringTypes" | "availability" | "location"

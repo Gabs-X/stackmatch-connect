@@ -128,6 +128,9 @@ function JobCard({ job, index }: { job: JobSummary; index: number }) {
         </span>
       </div>
       {compensation && <p className="mt-1 text-sm text-muted-foreground">{compensation}</p>}
+      {!closed && job.listed && (
+        <p className="mt-1 text-xs font-semibold text-primary">{t.jobs.listedBadge}</p>
+      )}
       {stack.length > 0 && (
         <ul className="mt-4 flex flex-wrap gap-2">
           {stack.slice(0, 6).map((skill) => (

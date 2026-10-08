@@ -18,6 +18,7 @@ export const assistantPaths = [
   "/jobs/new",
   "/create-profile",
   "/interests",
+  "/job-board",
   "/company-settings",
   "/account",
   "/support",

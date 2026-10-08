@@ -190,6 +190,13 @@
       "when": 1791483723169,
       "tag": "0026_job_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791488340630,
+      "tag": "0027_job_board",
+      "breakpoints": true
     }
   ]
 }

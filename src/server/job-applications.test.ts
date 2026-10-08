@@ -3,7 +3,7 @@ import type { AuthUser } from "@/lib/auth";
 import { emptyJob, type JobInput } from "@/lib/jobs";
 import type { Db } from "./db";
 import { outbox } from "./email";
-import { applyToJob, listOpenJobsFor } from "./job-applications";
+import { applyToJob, listJobBoard, listOpenJobsFor } from "./job-applications";
 import { advanceCandidate, createJob, listCandidates, listJobs, setJobStatus } from "./jobs";
 import { markInterest } from "./interests";
 import { createCompany, createDeveloper, createTestDb } from "./test-db";
@@ -14,6 +14,7 @@ let marina: string;
 
 const frontend: JobInput = {
   ...emptyJob,
+  listed: false,
   title: "Front-end Pleno",
   description: "App de pagamentos.",
   requiredSkills: ["React"],
@@ -103,5 +104,32 @@ describe("job applications", () => {
     expect(await applyToJob(db, marina, { jobId: job.id, message: "" }, appUrl)).toEqual({
       error: "unknown-job",
     });
+  });
+
+  it("lists the open jobs companies published, newest first, to any developer", async () => {
+    const globex = await createCompany(db, "rh@globex.com", "Globex");
+    const hidden = await newJob();
+    const listed = await newJob({ ...frontend, title: "Mobile", listed: true });
+    const closed = await newJob({ ...frontend, title: "Antiga", listed: true });
+    await setJobStatus(db, acme.id, closed.id, "closed");
+    const other = await createJob(db, globex.id, { ...frontend, title: "Dados", listed: true });
+    if (!("job" in other)) throw new Error("job not created");
+
+    const board = await listJobBoard(db, marina);
+    expect(board.jobs.map((job) => [job.title, job.company])).toEqual([
+      ["Dados", "Globex"],
+      ["Mobile", "Acme"],
+    ]);
+    expect(board.jobs[0]).not.toHaveProperty("listed");
+    expect(hidden.listed).toBe(false);
+
+    // Listed jobs take offers without the company reaching the developer first.
+    expect(await applyToJob(db, marina, { jobId: listed.id, message: "" }, appUrl)).toHaveProperty(
+      "appliedAt",
+    );
+    expect(await applyToJob(db, marina, { jobId: hidden.id, message: "" }, appUrl)).toEqual({
+      error: "unknown-job",
+    });
+    expect((await listJobBoard(db, marina)).jobs[1]?.appliedAt).not.toBeNull();
   });
 });

@@ -136,7 +136,8 @@ function OpenJobItem({
   );
 }
 
-function ApplyDialog({
+/** Asks for an optional message and offers the developer for the job; shared with the job board. */
+export function ApplyDialog({
   job,
   translations,
   onClose,

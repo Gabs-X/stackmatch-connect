@@ -94,6 +94,12 @@ export function AccountMenu() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
+              <Link to="/job-board">
+                <BriefcaseBusiness />
+                {t.auth.menu.jobs}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link to="/interests">
                 <Heart />
                 {t.auth.menu.interests}

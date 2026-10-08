@@ -197,3 +197,43 @@ test("a developer the company reached offers themselves for one of its jobs", as
   await expect(page.getByRole("main")).toContainText("Trabalho com React Native há 3 anos.");
   await expect(page.getByText(/^Se ofereceu em/)).toBeVisible();
 });
+
+test("any developer finds a published job in the job board and offers themselves", async ({
+  page,
+}) => {
+  await signInAs(page, "company");
+  await page.goto("/jobs/new");
+  await page.getByLabel("Título").fill("Engenharia de Dados");
+  await page.getByLabel("Skills obrigatórias").fill("Python");
+  await page.getByLabel("Skills obrigatórias").press("Enter");
+  // New jobs go to the job board unless the company unticks it.
+  await expect(page.getByLabel("Publicar no mural de vagas")).toBeChecked();
+  await page.getByRole("button", { name: "Criar vaga" }).click();
+  await expect(page.getByText("Aberta · No mural de vagas")).toBeVisible();
+  const jobUrl = page.url();
+  await page.goto("/jobs/new");
+  await page.getByLabel("Título").fill("Vaga interna");
+  await page.getByLabel("Publicar no mural de vagas").uncheck();
+  await page.getByRole("button", { name: "Criar vaga" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Vaga interna" })).toBeVisible();
+
+  await page.context().clearCookies();
+  await signInAs(page, "developer");
+  await page.getByRole("navigation").getByRole("link", { name: "Vagas" }).click();
+  const job = page.getByRole("article", { name: "Engenharia de Dados" });
+  await expect(job).toContainText("Empresa Teste");
+  await expect(page.getByRole("article", { name: "Vaga interna" })).toHaveCount(0);
+  await page.getByLabel("Buscar vagas").fill("kotlin");
+  await expect(page.getByText("Nenhuma vaga com esses filtros.")).toBeVisible();
+  await page.getByLabel("Buscar vagas").fill("python");
+  await job.getByRole("button", { name: "Quero participar: Engenharia de Dados" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Enviar" }).click();
+  await expect(job.getByText(/^Você se ofereceu em/)).toBeVisible();
+  const email = await lastEmail(page, "teste.emp@example.com");
+  expect(email.subject).toBe("Gabriel Botelho se ofereceu para a vaga Engenharia de Dados");
+
+  await page.context().clearCookies();
+  await signInAs(page, "company");
+  await page.goto(jobUrl);
+  await expect(page.getByText(/^Se ofereceu em/)).toBeVisible();
+});

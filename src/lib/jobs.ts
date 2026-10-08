@@ -46,6 +46,8 @@ export const jobInputSchema = z
     compensationMin: amount,
     compensationMax: amount,
     compensationPeriod: z.enum(compensationPeriods),
+    /** In the job board, for any developer to see while it's open (see listJobBoard). */
+    listed: z.boolean().default(false),
   })
   .refine(
     (job) =>
@@ -70,6 +72,8 @@ export const emptyJob: JobInput = {
   compensationMin: null,
   compensationMax: null,
   compensationPeriod: "month",
+  // New jobs go to the job board unless the company unticks it.
+  listed: true,
 };
 
 export type JobStatus = "open" | "closed";
@@ -85,7 +89,13 @@ export type Job = JobInput & {
  * The job as it was when the company reached a developer from it, kept with the interest mark or
  * the proposal: what the developer was told stays the same if the job changes or goes away.
  */
-export type JobSnapshot = JobInput;
+export type JobSnapshot = Omit<JobInput, "listed">;
+
+/** The job without what only its company needs, as developers are shown it. */
+export function toSnapshot(job: JobInput): JobSnapshot {
+  const { listed: _listed, ...snapshot } = job;
+  return snapshot;
+}
 
 /**
  * A job in the company's list, with how many developers are at each stage and how many offered
@@ -117,6 +127,9 @@ export type ApplicationInput = z.infer<typeof applicationInputSchema>;
  * page, with when they offered themselves for it.
  */
 export type OpenJob = JobSnapshot & { id: string; appliedAt: string | null };
+
+/** A job of the job board: an open job of any company, with the company's name. */
+export type BoardJob = OpenJob & { companyId: string; company: string };
 
 /**
  * The Discover filters a job starts with: its whole stack, and the options it accepts. Its city

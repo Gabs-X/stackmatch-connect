@@ -12,6 +12,7 @@ import {
   type JobStage,
   type JobStatus,
   type JobSummary,
+  toSnapshot,
 } from "@/lib/jobs";
 import type { Db } from "./db";
 import { companyTexts, savedSettings } from "./companies";
@@ -53,6 +54,7 @@ export async function toJobs(db: Db | Tx, rows: JobRow[]): Promise<Job[]> {
       compensationMax: row.compensationMax,
       compensationPeriod: row.compensationPeriod,
       status: row.status,
+      listed: row.listed,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -70,6 +72,7 @@ const jobFields = (input: JobInput) => ({
   compensationMin: input.compensationMin,
   compensationMax: input.compensationMax,
   compensationPeriod: input.compensationPeriod,
+  listed: input.listed,
 });
 
 /** Replaces the job's stack. A skill listed as both must-have and nice-to-have is a must-have. */
@@ -295,9 +298,10 @@ export async function removeCandidate(
 export async function jobSnapshot(db: Db, companyId: string, jobId: string) {
   const job = await loadJob(db, companyId, jobId);
   if (!job) return null;
-  const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...snapshot } = job;
+  const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...input } = job;
+  const snapshot = toSnapshot(input);
   return {
-    snapshot: snapshot satisfies JobSnapshot,
+    snapshot,
     translations: await loadTranslations(db, [companyId], jobTexts(snapshot)),
   };
 }

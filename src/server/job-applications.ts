@@ -1,6 +1,12 @@
 import { and, desc, eq } from "drizzle-orm";
 import { dictionaries, type Lang } from "@/lib/i18n";
-import { jobTexts, type ApplicationInput, type OpenJob } from "@/lib/jobs";
+import {
+  jobTexts,
+  toSnapshot,
+  type ApplicationInput,
+  type BoardJob,
+  type OpenJob,
+} from "@/lib/jobs";
 import type { Translations } from "@/lib/translations";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
@@ -14,9 +20,9 @@ import { developerExists } from "./saved-talents";
 import { loadTranslations } from "./translations";
 
 /**
- * Developers offering themselves for a job. Jobs have no public page: a developer only sees the
- * open jobs of a company that reached them, on that company's page, and can offer themselves for
- * each one once.
+ * Developers offering themselves for a job. A developer sees the open jobs of a company that
+ * reached them, on that company's page, and the open jobs companies put in the job board; they can
+ * offer themselves for each one once.
  */
 
 /** The company's open jobs, newest first, for a developer it reached; null if it never did. */
@@ -40,8 +46,9 @@ export async function listOpenJobsFor(
       db,
       rows.map((row) => row.job),
     )
-  ).map(({ status: _status, createdAt: _created, updatedAt: _updated, ...job }, index) => ({
-    ...job,
+  ).map(({ id, status: _status, createdAt: _created, updatedAt: _updated, ...job }, index) => ({
+    ...toSnapshot(job),
+    id,
     appliedAt: rows[index]?.appliedAt?.toISOString() ?? null,
   }));
   return {
@@ -54,13 +61,60 @@ export async function listOpenJobsFor(
   };
 }
 
+/** The most jobs the job board shows: the newest ones. */
+export const jobBoardSize = 200;
+
+/**
+ * The job board: open jobs that their companies listed, newest first, with the company's name and
+ * when the developer offered themselves for each.
+ */
+export async function listJobBoard(
+  db: Db,
+  developerId: string,
+): Promise<{ jobs: BoardJob[]; translations: Translations }> {
+  const rows = await db
+    .select({ job: jobs, company: users.companyName, appliedAt: jobCandidates.appliedAt })
+    .from(jobs)
+    .innerJoin(users, eq(users.id, jobs.companyId))
+    .leftJoin(
+      jobCandidates,
+      and(eq(jobCandidates.jobId, jobs.id), eq(jobCandidates.developerId, developerId)),
+    )
+    .where(and(eq(jobs.listed, true), eq(jobs.status, "open")))
+    .orderBy(desc(jobs.createdAt), desc(jobs.id))
+    .limit(jobBoardSize);
+  const board: BoardJob[] = (
+    await toJobs(
+      db,
+      rows.map((row) => row.job),
+    )
+  ).map(({ id, status: _status, createdAt: _created, updatedAt: _updated, ...job }, index) => {
+    const row = rows[index];
+    return {
+      ...toSnapshot(job),
+      id,
+      companyId: row?.job.companyId ?? "",
+      company: row?.company ?? "",
+      appliedAt: row?.appliedAt?.toISOString() ?? null,
+    };
+  });
+  return {
+    jobs: board,
+    translations: await loadTranslations(
+      db,
+      [...new Set(board.map((job) => job.companyId))],
+      board.flatMap((job) => jobTexts(job)),
+    ),
+  };
+}
+
 export type ApplicationResult =
   { appliedAt: string } | { error: "unknown-job" | "no-profile" | "already-applied" };
 
 /**
  * Offers the developer for the job: puts them in it (at "saved" when they weren't there yet, or
  * where the company already had them) with their message, and e-mails the company's contact. Only
- * for an open job of a company that reached them, and once per job.
+ * for an open job in the job board or of a company that reached them, and once per job.
  */
 export async function applyToJob(
   db: Db,
@@ -70,14 +124,14 @@ export async function applyToJob(
   now = Date.now(),
 ): Promise<ApplicationResult> {
   const [job] = await db
-    .select({ companyId: jobs.companyId, status: jobs.status })
+    .select({ companyId: jobs.companyId, status: jobs.status, listed: jobs.listed })
     .from(jobs)
     .where(eq(jobs.id, jobId))
     .limit(1);
   if (
     !job ||
     job.status !== "open" ||
-    !(await companyReachedDeveloper(db, job.companyId, developerId))
+    (!job.listed && !(await companyReachedDeveloper(db, job.companyId, developerId)))
   )
     return { error: "unknown-job" };
   if (!(await developerExists(db, developerId))) return { error: "no-profile" };

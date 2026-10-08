@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BriefcaseBusiness, Code2, Loader2, MapPin, Wallet, X } from "lucide-react";
+import { BriefcaseBusiness, Code2, Loader2, MapPin, Megaphone, Wallet, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { FieldError } from "@/components/auth-layout";
 import { LocationField } from "@/components/location-field";
@@ -43,6 +43,7 @@ export function JobForm({
   const [saving, setSaving] = useState(false);
   const titleId = useId();
   const descriptionId = useId();
+  const listedId = useId();
   const update = <K extends keyof JobInput>(key: K, value: JobInput[K]) => {
     setJob((current) => ({ ...current, [key]: value }));
     if (key in errors) setErrors((current) => ({ ...current, [key]: undefined }));
@@ -199,6 +200,25 @@ export function JobForm({
             value={job.compensationPeriod}
             onChange={(value) => update("compensationPeriod", value)}
           />
+        </div>
+      </SettingsSection>
+
+      <SettingsSection icon={<Megaphone className="size-4" />} title={t.jobs.form.visibility}>
+        <div className="flex items-start gap-3">
+          <input
+            id={listedId}
+            type="checkbox"
+            className="mt-0.5 size-4 shrink-0 accent-primary"
+            checked={job.listed}
+            onChange={(event) => update("listed", event.target.checked)}
+            aria-describedby={`${listedId}-hint`}
+          />
+          <div>
+            <Label htmlFor={listedId}>{t.jobs.form.listed}</Label>
+            <p id={`${listedId}-hint`} className="mt-1 text-xs text-muted-foreground">
+              {t.jobs.form.listedHint}
+            </p>
+          </div>
         </div>
       </SettingsSection>
 

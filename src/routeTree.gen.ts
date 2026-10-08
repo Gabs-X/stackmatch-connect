@@ -16,6 +16,7 @@ import { Route as CreateProfileRouteImport } from './routes/create-profile'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as InterestsRouteImport } from './routes/interests'
+import { Route as JobBoardRouteImport } from './routes/job-board'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
@@ -69,6 +70,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const InterestsRoute = InterestsRouteImport.update({
   id: '/interests',
   path: '/interests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobBoardRoute = JobBoardRouteImport.update({
+  id: '/job-board',
+  path: '/job-board',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/interests': typeof InterestsRoute
+  '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/interests': typeof InterestsRoute
+  '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/interests': typeof InterestsRoute
+  '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/forgot-password'
     | '/interests'
+    | '/job-board'
     | '/login'
     | '/register'
     | '/saved'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/forgot-password'
     | '/interests'
+    | '/job-board'
     | '/login'
     | '/register'
     | '/saved'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/forgot-password'
     | '/interests'
+    | '/job-board'
     | '/login'
     | '/register'
     | '/saved'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InterestsRoute: typeof InterestsRoute
+  JobBoardRoute: typeof JobBoardRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
@@ -417,6 +430,13 @@ declare module '@tanstack/react-router' {
       path: '/interests'
       fullPath: '/interests'
       preLoaderRoute: typeof InterestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/job-board': {
+      id: '/job-board'
+      path: '/job-board'
+      fullPath: '/job-board'
+      preLoaderRoute: typeof JobBoardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -563,6 +583,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InterestsRoute: InterestsRoute,
+  JobBoardRoute: JobBoardRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,

@@ -431,10 +431,15 @@ export const jobs = pgTable(
       .notNull()
       .default("month"),
     status: text("status").$type<JobStatus>().notNull().default("open"),
+    /** In the job board, where any developer can see it while it's open and offer themselves. */
+    listed: boolean("listed").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("jobs_company_id_idx").on(table.companyId)],
+  (table) => [
+    index("jobs_company_id_idx").on(table.companyId),
+    index("jobs_listed_idx").on(table.listed, table.status, table.createdAt),
+  ],
 );
 
 /** A job's stack, from the shared skill catalog: must-haves and nice-to-haves. */

@@ -14,7 +14,7 @@ import {
   updateJob,
 } from "@/server/jobs";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { applyToJob, listOpenJobsFor } from "@/server/job-applications";
+import { applyToJob, listJobBoard, listOpenJobsFor } from "@/server/job-applications";
 import { database, requireAccount } from "@/server/session";
 import { applicationInputSchema, jobInputSchema, jobStages } from "./jobs";
 
@@ -147,6 +147,14 @@ export const applyToJobFn = createServerFn({ method: "POST" })
       getRequestUrl().origin,
     ),
   );
+
+/** Stands for `GET /job-board`: the open jobs companies listed, for developers. */
+export const fetchJobBoard = createServerFn({ method: "GET" }).handler(async () =>
+  listJobBoard(await database(), (await requireAccount("developer")).id),
+);
+
+export const jobBoardQuery = (accountId: string) =>
+  queryOptions({ queryKey: ["job-board", accountId], queryFn: () => fetchJobBoard() });
 
 export const openJobsQuery = (accountId: string, companyId: string) =>
   queryOptions({

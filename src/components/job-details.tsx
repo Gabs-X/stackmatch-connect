@@ -1,7 +1,7 @@
 import { Briefcase, Clock3, MapPin, Wallet } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { JobInput } from "@/lib/jobs";
+import type { JobSnapshot } from "@/lib/jobs";
 import { useCompensationLabel } from "@/lib/use-compensation-label";
 import type { Translations } from "@/lib/translations";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ export function JobDetails({
   className,
   showDescription = true,
 }: {
-  job: JobInput;
+  job: JobSnapshot;
   translations?: Translations | undefined;
   className?: string;
   showDescription?: boolean;
@@ -112,7 +112,7 @@ export function JobContext({
   translations,
   className,
 }: {
-  job: JobInput;
+  job: JobSnapshot;
   translations?: Translations | undefined;
   className?: string;
 }) {
