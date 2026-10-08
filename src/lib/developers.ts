@@ -30,7 +30,6 @@ export type Developer = {
   skills: string[];
   experience: string;
   image: string;
-  rate: number;
   projects: Project[];
   links: ProfessionalLinks;
   /** Role, bio and project descriptions in both languages, when they were translated. */

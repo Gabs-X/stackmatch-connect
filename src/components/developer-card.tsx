@@ -15,7 +15,7 @@ export function DeveloperCard({
   compact?: boolean;
   showProfile?: boolean;
 }) {
-  const { t, tv, formatCurrency } = useI18n();
+  const { t, tv } = useI18n();
   const { user } = useAuth();
   // Profiles created in the app are identified by their owner's account id.
   const own = developer.id === user?.id;
@@ -93,13 +93,6 @@ export function DeveloperCard({
             </span>
           )}
         </div>
-        {compact && Number.isFinite(developer.rate) && (
-          <p className="mt-3 text-sm font-semibold">
-            <span className="text-xs font-normal text-muted-foreground">{t.profile.rate}: </span>
-            {formatCurrency(developer.rate)}
-            <span className="text-xs font-normal text-muted-foreground">/h</span>
-          </p>
-        )}
         {!compact && developer.bio && (
           <p className="mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">
             {tv(developer.bio, developer.translations)}

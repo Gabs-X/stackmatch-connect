@@ -30,7 +30,7 @@ export const Route = createFileRoute("/saved")({
 });
 
 type Filter = "all" | "available";
-type Sort = "availability" | "rate" | "experience";
+type Sort = "availability" | "experience";
 
 const availableNow = availabilityOptions[0];
 // Unknown values go last, after every option in the catalog.
@@ -38,13 +38,10 @@ const availabilityRank = (developer: Developer) => {
   const rank = (availabilityOptions as readonly string[]).indexOf(developer.availability);
   return rank < 0 ? availabilityOptions.length : rank;
 };
-// Rate and experience are optional; profiles without them go last.
-const rateOf = (developer: Developer) =>
-  Number.isFinite(developer.rate) ? developer.rate : Number.POSITIVE_INFINITY;
+// Experience is optional; profiles without it go last.
 const yearsOf = (developer: Developer) => Number.parseInt(developer.experience, 10) || -1;
 const sorters: Record<Sort, (a: Developer, b: Developer) => number> = {
   availability: (a, b) => availabilityRank(a) - availabilityRank(b),
-  rate: (a, b) => rateOf(a) - rateOf(b),
   experience: (a, b) => yearsOf(b) - yearsOf(a),
 };
 
@@ -161,7 +158,6 @@ function SavedPage() {
                   className="h-9 rounded-md border bg-card px-2 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="availability">{t.saved.sortAvailability}</option>
-                  <option value="rate">{t.saved.sortRate}</option>
                   <option value="experience">{t.saved.sortExperience}</option>
                 </select>
               </label>

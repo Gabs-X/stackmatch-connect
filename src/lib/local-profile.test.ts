@@ -54,7 +54,6 @@ describe("localProfileToDeveloper", () => {
   });
 
   it("leaves fields the developer didn't answer empty", () => {
-    expect(Number.isNaN(developer.rate)).toBe(true);
     expect(developer.hiringTypes).toEqual([]);
   });
 
@@ -84,19 +83,18 @@ describe("localProfileToDeveloper", () => {
   });
 });
 
-describe("experience, rate and hiring types", () => {
+describe("experience and hiring types", () => {
   it("stay empty when the developer didn't answer them", () => {
     const developer = localProfileToDeveloper(emptyProfile, "ana");
     expect(developer.experience).toBe("");
-    expect(Number.isNaN(developer.rate)).toBe(true);
   });
 
   it("reach Discover in the catalog's format, so its filters apply", () => {
     const developer = localProfileToDeveloper(
-      { ...emptyProfile, experienceYears: 4, rate: 95, hiringTypes: ["PJ", "CLT"] },
+      { ...emptyProfile, experienceYears: 4, hiringTypes: ["PJ", "CLT"] },
       "ana",
     );
-    expect(developer).toMatchObject({ experience: "4 anos", rate: 95, hiringTypes: ["PJ", "CLT"] });
+    expect(developer).toMatchObject({ experience: "4 anos", hiringTypes: ["PJ", "CLT"] });
     expect(experienceLabel(1)).toBe("1 ano");
     expect(experienceLabel(0)).toBe("0 anos");
   });
@@ -131,7 +129,7 @@ describe("missingProfileFields", () => {
     expect(missingProfileFields({ ...complete, name: "   " })).toEqual(["name"]);
   });
 
-  it("accepts a profile without projects, links, rate or experience", () => {
+  it("accepts a profile without projects, links or experience", () => {
     expect(complete.projects).toEqual([]);
     expect(missingProfileFields(complete)).toEqual([]);
   });

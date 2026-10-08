@@ -49,7 +49,6 @@ const ana: LocalProfile = {
   bio: "Desenvolvo interfaces acessíveis.",
   skills: ["React", "TypeScript"],
   experienceYears: 4,
-  rate: 95.5,
   hiringTypes: ["PJ", "CLT"],
   github: "https://github.com/anasouza",
   projects: [
@@ -102,10 +101,9 @@ describe("saveProfile and loadProfile", () => {
 
   it("keep answers left blank empty", async () => {
     const id = await developerAccount("ana@example.com");
-    await saveProfile(db, id, { ...ana, experienceYears: null, rate: null, hiringTypes: [] });
+    await saveProfile(db, id, { ...ana, experienceYears: null, hiringTypes: [] });
     expect(await loadProfile(db, id)).toMatchObject({
       experienceYears: null,
-      rate: null,
       hiringTypes: [],
     });
   });
@@ -129,7 +127,6 @@ describe("published profiles", () => {
     expect(published[0]).toMatchObject({
       role: "Staff Engineer",
       experience: "4 anos",
-      rate: 95.5,
       image: "https://github.com/anasouza.png?size=768",
     });
     expect(published[0]?.projects[0]?.links.demo).toBe("https://clinic.app/");

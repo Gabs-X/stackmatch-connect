@@ -6,11 +6,8 @@ export type Filters = {
   mode: string[];
   hiring: string[];
   availability: string[];
-  rate: number[];
 };
-export type FilterGroup = Exclude<keyof Filters, "rate">;
-
-export const maxRate = 300;
+export type FilterGroup = keyof Filters;
 
 export const defaultFilters: Filters = {
   skills: [],
@@ -18,7 +15,6 @@ export const defaultFilters: Filters = {
   mode: [],
   hiring: [],
   availability: [],
-  rate: [maxRate],
 };
 
 const options = z.array(z.string().max(100)).max(100);
@@ -30,5 +26,4 @@ export const filtersSchema = z.object({
   mode: options,
   hiring: options,
   availability: options,
-  rate: z.array(z.number().min(0).max(maxRate)).max(1),
 });

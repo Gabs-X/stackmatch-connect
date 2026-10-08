@@ -52,7 +52,6 @@ const exampleDeveloper: Developer = {
   skills: ["React", "Next.js", "TypeScript", "Tailwind", "GraphQL"],
   experience: "8 anos",
   image: heroPhoto,
-  rate: 180,
   hiringTypes: ["Contrato", "PJ"],
   projects: [],
   links: { github: "", linkedin: "" },

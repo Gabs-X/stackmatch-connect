@@ -106,7 +106,7 @@ Sign-up and sign-in:
 Account (/account): change e-mail (a code goes to the new address; the old one gets a notice), change password (other sessions are signed out) and delete the account, which also deletes profile, projects, company details, saved talent, interests, proposals and images. Each action asks for the current password. Deleting can't be undone.
 
 For developers:
-- My profile is a step-by-step form: photo, name, professional title, location (state, then city), seniority, years of experience, work mode, availability, hourly rate (BRL), hiring types, bio, skills, projects and links (GitHub, LinkedIn, portfolio).
+- My profile is a step-by-step form: photo, name, professional title, location (state, then city), seniority, years of experience, work mode, availability, hiring types, bio, skills, projects and links (GitHub, LinkedIn, portfolio).
 - Required fields, marked with *: name, title, location, seniority, work mode, availability, bio and at least one skill. The form doesn't move on until they're filled.
 - Skills: typing suggests skills from a reference catalog and from other profiles; if none fits, what was typed becomes a new skill.
 - Projects are optional ("Continuar sem projetos" / continue without projects). Each has a description, technologies, cover image, repository and demo links, and can be edited or removed.
@@ -116,7 +116,7 @@ For developers:
 - Developers are notified by e-mail when a company marks interest (at most once every 30 days per company) and on every meeting proposal.
 
 For companies:
-- Discover shows published developer profiles one card at a time. Filters: technologies, seniority, work mode, hiring type, availability and maximum hourly rate; chips remove selected filters.
+- Discover shows published developer profiles one card at a time. Filters: technologies, seniority, work mode, hiring type and availability; chips remove selected filters.
 - Card actions (buttons or dragging): pass (skips, nobody is notified), save (adds to Saved talent, nobody is notified) and interested (records interest, also saves, and e-mails the developer). Undo reverses the last action; undoing an interest removes it, but an e-mail already sent stays sent. Profiles already saved don't appear again. When the list ends, it can be restarted.
 - Saved talent: compact cards with the main data, a link to the full profile and a button to remove from the shortlist. Each company account has its own shortlist.
 - Meeting proposal: from a developer's profile, suggest a date and time (Brasília time, GMT−3) and an optional message. The developer receives it by e-mail and replies directly to the company's contact; StackMatch doesn't manage the meeting or block calendars. If the e-mail can't be sent, the proposal isn't recorded and an error is shown.

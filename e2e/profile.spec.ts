@@ -62,8 +62,6 @@ test("the shortlist filters, sorts and undoes a removal", async ({ page }) => {
   await expect(cards.first()).toContainText("Marina Costa");
   await page.getByRole("button", { name: /Todos os salvos/ }).click();
 
-  await page.getByLabel("Ordenar por").selectOption({ label: "Menor valor por hora" });
-  await expect(cards.first()).toContainText("Diego Santos");
   await page.getByLabel("Ordenar por").selectOption({ label: "Mais experiência" });
   await expect(cards.first()).toContainText("Marina Costa");
 

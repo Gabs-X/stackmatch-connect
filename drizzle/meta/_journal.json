@@ -155,6 +155,13 @@
       "when": 1791471328102,
       "tag": "0021_translation_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791472173506,
+      "tag": "0022_drop_hourly_rate",
+      "breakpoints": true
     }
   ]
 }

@@ -23,7 +23,6 @@ const base: LocalProfile = {
   bio: "Bio.",
   skills: ["React", "TypeScript"],
   hiringTypes: ["PJ"],
-  rate: 150,
 };
 
 /** Publishes a profile per entry, in order, and returns their ids by name. */
@@ -81,17 +80,6 @@ describe("searchProfiles", () => {
     expect(await names({ mode: ["Híbrido"] })).toEqual(["Bia"]);
     expect(await names({ mode: ["Remoto"] })).toEqual(["Ana"]);
     expect(await names({ availability: ["Em 30 dias"] })).toEqual(["Bia"]);
-  });
-
-  it("limits the rate below the maximum; at the maximum, any rate or none passes", async () => {
-    await publish({
-      Ana: { rate: 150 },
-      Bia: { rate: 160 },
-      Caio: { rate: null },
-      Davi: { rate: 450 },
-    });
-    expect(await names({})).toEqual(["Ana", "Bia", "Caio", "Davi"]);
-    expect(await names({ rate: [150] })).toEqual(["Ana"]);
   });
 
   it("pages in publication order, leaving out and counting the excluded profiles", async () => {

@@ -1,6 +1,6 @@
-import { and, arrayOverlaps, asc, count, eq, gt, inArray, lte, not, or, sql } from "drizzle-orm";
+import { and, arrayOverlaps, asc, count, eq, gt, inArray, not, or, sql } from "drizzle-orm";
 import type { Developer } from "@/lib/developers";
-import { maxRate, type Filters } from "@/lib/filters";
+import type { Filters } from "@/lib/filters";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
 import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
@@ -112,7 +112,6 @@ async function writeProfile(db: Db, userId: string, profile: LocalProfile) {
       availability: profile.availability,
       hiringTypes: profile.hiringTypes,
       experienceYears: profile.experienceYears,
-      hourlyRate: profile.rate,
       bio: profile.bio,
       photo: profile.photo,
       githubUrl: profile.github,
@@ -226,7 +225,6 @@ async function loadProfiles(db: Db, userIds?: string[]): Promise<Map<string, Loc
         website: row.websiteUrl,
         skills: (skillsBy.get(row.userId) ?? []).map((skill) => skill.name),
         experienceYears: row.experienceYears,
-        rate: row.hourlyRate,
         hiringTypes: row.hiringTypes,
         projects: (projectsBy.get(row.userId) ?? []).map((project) => ({
           id: project.id,
@@ -275,11 +273,9 @@ export async function loadPublishedProfiles(db: Db, userIds?: string[]): Promise
 
 /**
  * The Discover filters as a condition on developer_profiles. Options inside a group combine with
- * OR; groups combine with AND. The rate filter at its maximum means no limit; below it, profiles
- * without a rate (developers who left it blank) are left out instead of guessed.
+ * OR; groups combine with AND.
  */
 function matchingFilters(db: Db, filters: Filters) {
-  const rate = filters.rate[0] ?? maxRate;
   return and(
     filters.skills.length
       ? inArray(
@@ -299,7 +295,6 @@ function matchingFilters(db: Db, filters: Filters) {
     filters.availability.length
       ? inArray(developerProfiles.availability, filters.availability)
       : undefined,
-    rate < maxRate ? lte(developerProfiles.hourlyRate, rate) : undefined,
   );
 }
 

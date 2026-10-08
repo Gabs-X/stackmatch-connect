@@ -95,7 +95,7 @@ const pt: LegalText = {
       title: "1. Dados que tratamos",
       items: [
         "Conta: nome, e-mail, senha (guardada só como hash, nunca em texto), tipo de conta, cargo e, para empresas, nome da empresa e CNPJ.",
-        "Perfil de desenvolvedor: foto, localização, senioridade, experiência, valor por hora, disponibilidade, bio, skills, projetos e links, além da tradução automática do cargo, da bio e das descrições dos projetos para o outro idioma do site.",
+        "Perfil de desenvolvedor: foto, localização, senioridade, experiência, disponibilidade, bio, skills, projetos e links, além da tradução automática do cargo, da bio e das descrições dos projetos para o outro idioma do site.",
         "Dados da empresa: site, localização, descrição e o contato que os desenvolvedores veem (nome, cargo, e-mail e telefone).",
         "Interações: talentos salvos, marcações de interesse, propostas de reunião e as mensagens enviadas nelas.",
         "Ada: as perguntas e respostas da conversa, que fica guardada na sua conta (a Ada só conversa com quem entrou em uma conta).",
@@ -224,7 +224,7 @@ const en: LegalText = {
       title: "1. Data we handle",
       items: [
         "Account: name, e-mail, password (stored only as a hash, never as text), account type, job title and, for companies, company name and CNPJ.",
-        "Developer profile: photo, location, seniority, experience, hourly rate, availability, bio, skills, projects and links, plus the automatic translation of the role, bio and project descriptions into the site's other language.",
+        "Developer profile: photo, location, seniority, experience, availability, bio, skills, projects and links, plus the automatic translation of the role, bio and project descriptions into the site's other language.",
         "Company details: website, location, description and the contact developers see (name, role, e-mail and phone).",
         "Interactions: saved talent, interest marks, meeting proposals and the messages sent with them.",
         "Ada: the questions and answers of the conversation, kept in your account (Ada only chats with people signed in to an account).",

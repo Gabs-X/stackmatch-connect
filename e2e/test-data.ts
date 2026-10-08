@@ -15,7 +15,6 @@ export const developer = (fields: {
   skills: string[];
   hiringTypes: string[];
   experienceYears: number;
-  rate: number;
   project: string;
 }) => ({
   id: fields.id,
@@ -34,7 +33,6 @@ export const developer = (fields: {
     website: "",
     skills: fields.skills,
     experienceYears: fields.experienceYears,
-    rate: fields.rate,
     hiringTypes: fields.hiringTypes,
     projects: [
       {
@@ -64,7 +62,6 @@ export const testDevelopers = [
     skills: ["React", "TypeScript"],
     hiringTypes: ["CLT", "PJ"],
     experienceYears: 8,
-    rate: 150,
     project: "Nexo Design System",
   }),
   developer({
@@ -78,7 +75,6 @@ export const testDevelopers = [
     skills: ["Node.js", "PostgreSQL"],
     hiringTypes: ["PJ"],
     experienceYears: 7,
-    rate: 140,
     project: "Ledger API",
   }),
   developer({
@@ -92,7 +88,6 @@ export const testDevelopers = [
     skills: ["Java", "Spring Boot"],
     hiringTypes: ["CLT"],
     experienceYears: 4,
-    rate: 90,
     project: "Gov Connect",
   }),
   developer({
@@ -106,7 +101,6 @@ export const testDevelopers = [
     skills: ["Angular", "TypeScript"],
     hiringTypes: ["Freelancer"],
     experienceYears: 1,
-    rate: 60,
     project: "Painel Fiscal",
   }),
 ];

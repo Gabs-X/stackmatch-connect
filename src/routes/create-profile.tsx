@@ -370,13 +370,6 @@ function CreateProfile() {
                 value={profile.experienceYears?.toString() ?? ""}
                 onChange={(value) => updateField("experienceYears", wholeNumber(value, 60))}
               />
-              <Field
-                label={t.create.rate}
-                placeholder={t.create.ratePh}
-                inputMode="numeric"
-                value={profile.rate?.toString() ?? ""}
-                onChange={(value) => updateField("rate", wholeNumber(value, 10000))}
-              />
               <fieldset className="sm:col-span-2">
                 <legend className="text-sm font-medium">{t.create.hiringTypes}</legend>
                 <p className="mt-1 text-xs text-muted-foreground">{t.create.hiringTypesHint}</p>

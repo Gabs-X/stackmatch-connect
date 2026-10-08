@@ -10,7 +10,7 @@ import { isTranslated } from "@/lib/translations";
 
 /**
  * A developer's full profile: the header with photo, name and role, then about, skills,
- * experience and projects beside a column with availability, rate and links. Companies see it at
+ * experience and projects beside a column with availability and links. Companies see it at
  * /developer/$id, and developers preview their own in My profile.
  */
 export function DeveloperProfileView({
@@ -30,11 +30,10 @@ export function DeveloperProfileView({
   /** Under the bio, e.g. that some text isn't translated yet. */
   note?: ReactNode;
 }) {
-  const { t, tv, lang, formatCurrency } = useI18n();
+  const { t, tv, lang } = useI18n();
   // What the developer wrote, machine-translated into the screen's language unless asked not to.
   const [original, setOriginal] = useState(false);
   const text = (value: string) => (original ? value : tv(value, d.translations));
-  // Rate and experience are optional in the profile form.
   const place = [d.location, tv(d.workMode)].filter(Boolean).join(" · ");
   return (
     <>
@@ -180,16 +179,6 @@ export function DeveloperProfileView({
               <Check className="size-4" />
               {d.availability ? tv(d.availability) : "—"}
             </p>
-            {Number.isFinite(d.rate) && (
-              <>
-                <div className="my-5 border-t" />
-                <p className="text-xs text-muted-foreground">{t.profile.rate}</p>
-                <p className="mt-1 font-display text-2xl font-bold">
-                  {formatCurrency(d.rate)}
-                  <span className="text-sm font-normal text-muted-foreground">/h</span>
-                </p>
-              </>
-            )}
             <div className="my-5 border-t" />
             <p className="text-xs font-bold uppercase text-muted-foreground">{t.profile.links}</p>
             <div className="mt-3 space-y-2">

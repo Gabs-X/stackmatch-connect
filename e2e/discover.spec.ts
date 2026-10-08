@@ -175,7 +175,6 @@ test("the list arrives a page at a time as the company goes through it", async (
         skills: ["Go"],
         hiringTypes: ["PJ"],
         experienceYears: 3,
-        rate: 100,
         project: "API",
       }),
     ),

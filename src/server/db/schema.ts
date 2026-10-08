@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
-  doublePrecision,
   index,
   integer,
   jsonb,
@@ -249,8 +248,6 @@ export const developerProfiles = pgTable("developer_profiles", {
   availability: text("availability").notNull(),
   hiringTypes: text("hiring_types").array().notNull().default([]),
   experienceYears: integer("experience_years"),
-  /** BRL per hour. */
-  hourlyRate: doublePrecision("hourly_rate"),
   bio: text("bio").notNull(),
   /** Square JPEG data URL from the form, or "" to fall back to the GitHub avatar. */
   photo: text("photo").notNull().default(""),

@@ -50,7 +50,6 @@ export const seedDeveloperProfile: LocalProfile = {
   website: "https://gabrielanthony.vercel.app",
   skills: ["React", "Next.js", "Node.js", "NestJS", "C#", "PostgreSQL"],
   experienceYears: 5,
-  rate: 120,
   hiringTypes: ["Freelancer", "PJ"],
   projects: [
     {

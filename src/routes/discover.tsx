@@ -25,7 +25,7 @@ import {
   type DiscoverAction,
   type HistoryEntry,
 } from "@/lib/discover-history";
-import { defaultFilters, maxRate, type FilterGroup, type Filters } from "@/lib/filters";
+import { defaultFilters, type FilterGroup, type Filters } from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
 import { discoverQuery } from "@/lib/profile-api";
 
@@ -54,7 +54,7 @@ export const Route = createFileRoute("/discover")({
 });
 
 function DiscoverPage() {
-  const { t, tv, formatCurrency } = useI18n();
+  const { t, tv } = useI18n();
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -117,7 +117,6 @@ function DiscoverPage() {
   const active = (
     ["skills", "seniority", "mode", "hiring", "availability"] as FilterGroup[]
   ).flatMap((group) => filters[group].map((value) => ({ group, value })));
-  const rateActive = filters.rate[0] !== defaultFilters.rate[0];
   const finished = total > 0 && index >= total;
   const progress = total ? Math.min(index / total, 1) * 100 : 0;
   const undo = (entry = historyRef.current.at(-1)) => {
@@ -173,7 +172,7 @@ function DiscoverPage() {
             </SheetContent>
           </Sheet>
         </div>
-        {(active.length > 0 || rateActive) && (
+        {active.length > 0 && (
           <div className="mt-5 flex flex-wrap gap-2">
             {active.map(({ group, value }) => (
               <button
@@ -191,17 +190,6 @@ function DiscoverPage() {
                 {tv(value)} <span aria-hidden="true">×</span>
               </button>
             ))}
-            {rateActive && (
-              <button
-                type="button"
-                className="filter-chip filter-chip-active"
-                aria-label={t.filters.remove + ": " + t.filters.maxRate}
-                onClick={() => changeFilters({ ...filters, rate: defaultFilters.rate })}
-              >
-                {t.filters.maxRate}: {formatCurrency(filters.rate[0] ?? maxRate)}{" "}
-                <span aria-hidden="true">×</span>
-              </button>
-            )}
           </div>
         )}
         <div className="mt-7 grid items-start gap-8 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,500px)_1fr]">

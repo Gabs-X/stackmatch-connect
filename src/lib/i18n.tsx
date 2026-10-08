@@ -43,7 +43,6 @@ const pt = {
     location: "Modelo de trabalho",
     availability: "Disponibilidade",
     remove: "Remover filtro",
-    maxRate: "Valor máximo/h",
     hiring: "Contratação",
   },
   home: {
@@ -61,7 +60,7 @@ const pt = {
     steps: [
       {
         title: "Defina o que procura",
-        description: "Escolha stack, senioridade, modelo de trabalho e faixa de valor.",
+        description: "Escolha stack, senioridade, modelo de trabalho e disponibilidade.",
       },
       {
         title: "Descubra profissionais",
@@ -140,7 +139,6 @@ const pt = {
     filterAvailable: "Disponíveis agora",
     sortLabel: "Ordenar por",
     sortAvailability: "Disponibilidade",
-    sortRate: "Menor valor por hora",
     sortExperience: "Mais experiência",
     count: (n: number) => (n === 1 ? "1 talento" : `${n} talentos`),
   },
@@ -160,7 +158,6 @@ const pt = {
     featured: "Projetos em destaque",
     noProjects: "Este profissional ainda não adicionou projetos ao perfil.",
     availability: "Disponibilidade",
-    rate: "Valor por hora",
     links: "Links profissionais",
     portfolioLink: "Portfólio",
     openRealLink: (label: string, url: string) => `${label}: ${url} (abre em nova aba)`,
@@ -237,8 +234,6 @@ const pt = {
     availability: "Disponibilidade",
     experienceYears: "Anos de experiência",
     experienceYearsPh: "Ex: 5",
-    rate: "Valor por hora (R$)",
-    ratePh: "Ex: 120",
     hiringTypes: "Tipos de contratação",
     hiringTypesHint: "Usados pelos filtros que as empresas aplicam no Discover.",
     bio: "Bio profissional",
@@ -775,7 +770,6 @@ const en: Dict = {
     location: "Work model",
     availability: "Availability",
     remove: "Remove filter",
-    maxRate: "Max rate/h",
     hiring: "Hiring type",
   },
   home: {
@@ -793,7 +787,7 @@ const en: Dict = {
     steps: [
       {
         title: "Define what you need",
-        description: "Choose stack, seniority, work model and rate range.",
+        description: "Choose stack, seniority, work model and availability.",
       },
       {
         title: "Discover professionals",
@@ -867,7 +861,6 @@ const en: Dict = {
     filterAvailable: "Available now",
     sortLabel: "Sort by",
     sortAvailability: "Availability",
-    sortRate: "Lowest hourly rate",
     sortExperience: "Most experience",
     count: (n: number) => (n === 1 ? "1 profile" : `${n} profiles`),
   },
@@ -887,7 +880,6 @@ const en: Dict = {
     featured: "Featured projects",
     noProjects: "This professional hasn't added any projects yet.",
     availability: "Availability",
-    rate: "Hourly rate",
     links: "Professional links",
     portfolioLink: "Portfolio",
     openRealLink: (label: string, url: string) => `${label}: ${url} (opens in a new tab)`,
@@ -965,8 +957,6 @@ const en: Dict = {
     availability: "Availability",
     experienceYears: "Years of experience",
     experienceYearsPh: "E.g. 5",
-    rate: "Hourly rate (R$)",
-    ratePh: "E.g. 120",
     hiringTypes: "Hiring types",
     hiringTypesHint: "Used by the filters companies apply in Discover.",
     bio: "Professional bio",

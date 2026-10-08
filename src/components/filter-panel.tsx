@@ -1,14 +1,13 @@
 import { useI18n } from "@/lib/i18n";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import {
   availabilityOptions,
   hiringOptions,
   seniorityOptions,
   workModeOptions,
 } from "@/lib/developers";
-import { defaultFilters, maxRate, type FilterGroup, type Filters } from "@/lib/filters";
+import { defaultFilters, type FilterGroup, type Filters } from "@/lib/filters";
 
 const groups = [
   [
@@ -43,7 +42,7 @@ export function FilterPanel({
   value: Filters;
   onChange: (next: Filters) => void;
 }) {
-  const { t, tv, formatCurrency } = useI18n();
+  const { t, tv } = useI18n();
 
   const toggle = (key: FilterGroup, item: string) =>
     onChange({
@@ -84,21 +83,6 @@ export function FilterPanel({
           </div>
         </section>
       ))}
-      <section>
-        <div className="mb-4 flex justify-between text-sm font-semibold">
-          <span>{t.filters.maxRate}</span>
-          <span>{formatCurrency(value.rate[0] ?? maxRate)}</span>
-        </div>
-        <Slider
-          aria-label={t.filters.maxRate}
-          aria-valuetext={formatCurrency(value.rate[0] ?? maxRate)}
-          min={60}
-          max={maxRate}
-          step={10}
-          value={value.rate}
-          onValueChange={(rate) => onChange({ ...value, rate })}
-        />
-      </section>
     </div>
   );
 }

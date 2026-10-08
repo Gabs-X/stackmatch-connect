@@ -74,7 +74,6 @@ const profileSchema = z.object({
   website: link,
   skills: z.array(text(50).min(1)).max(40),
   experienceYears: z.number().int().min(0).max(60).nullable(),
-  rate: z.number().min(0).max(10000).nullable(),
   hiringTypes: z.array(z.string()),
   projects: z
     .array(
@@ -121,7 +120,6 @@ export const emptyProfile: LocalProfile = {
   website: "",
   skills: ["React", "TypeScript"],
   experienceYears: null,
-  rate: null,
   hiringTypes: [],
   projects: [],
 };
@@ -140,7 +138,7 @@ export const requiredProfileFields = {
 
 export type RequiredProfileField = keyof typeof requiredProfileFields;
 
-/** Required fields still blank, in form order. Projects, links, rate and experience are optional. */
+/** Required fields still blank, in form order. Projects, links and experience are optional. */
 export function missingProfileFields(profile: LocalProfile): RequiredProfileField[] {
   return (Object.keys(requiredProfileFields) as RequiredProfileField[]).filter((field) => {
     const value = profile[field];
@@ -244,7 +242,7 @@ const projectColors = ["project-blue", "project-green", "project-violet", "proje
 
 /**
  * Presents an account's profile as a catalog entry, identified by the account id. Answers left
- * blank stay empty (rate is NaN), so filters on them exclude it instead of guessing.
+ * blank stay empty.
  */
 export function localProfileToDeveloper(profile: LocalProfile, accountId: string): Developer {
   return {
@@ -261,7 +259,6 @@ export function localProfileToDeveloper(profile: LocalProfile, accountId: string
     experience: experienceLabel(profile.experienceYears),
     // The uploaded photo, else the GitHub avatar; without either, the card shows initials.
     image: profile.photo || (githubAvatarUrl(profileLink(profile.github) ?? "") ?? ""),
-    rate: profile.rate ?? Number.NaN,
     hiringTypes: profile.hiringTypes,
     links: {
       github: profileLink(profile.github) ?? "",

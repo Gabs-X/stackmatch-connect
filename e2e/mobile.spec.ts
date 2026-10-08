@@ -7,11 +7,15 @@ test("the Discover action bar stays usable above the assistant button", async ({
 
   const interested = page.getByRole("button", { name: "Interessado" });
   const assistant = page.getByRole("button", { name: "Conversar com a Ada" });
-  const bar = await interested.boundingBox();
-  const fab = await assistant.boundingBox();
-  expect(bar && fab).toBeTruthy();
-  // The floating button sits entirely above the action buttons.
-  expect(fab!.y + fab!.height).toBeLessThanOrEqual(bar!.y);
+  // The floating button sits entirely above the action buttons, once the page settles at the top
+  // (right after signing in it can still be scrolled for a moment).
+  await expect
+    .poll(async () => {
+      const bar = await interested.boundingBox();
+      const fab = await assistant.boundingBox();
+      return bar && fab ? bar.y - (fab.y + fab.height) : -1;
+    })
+    .toBeGreaterThanOrEqual(0);
 
   await interested.click();
   await expect(page.getByText(/^2 de 5 perfis$/)).toBeVisible();
