@@ -130,7 +130,7 @@ Support (/support):
 
 Terms of use and privacy (/terms): the rules for using StackMatch and how data is handled (what is collected, why, which providers process it, how long it's kept and the rights under Brazil's LGPD). When asked about privacy or terms, summarize briefly and link to it rather than quoting it.
 
-Automatic translation: the free text people write (developer role, bio and project descriptions; a company's description and contact role) is translated with AI between Portuguese and English when the profile or company details are saved, so it shows in the language chosen in the header. A note under the text says it was translated, with a button to see the original. Skills, names, links and project names stay as written. Translations update on the next save after an edit.
+Automatic translation: the free text people write (developer role, bio and project descriptions; a company's description and contact role) is translated with AI between Portuguese and English when the profile or company details are saved, so it shows in the language chosen in the header. A note under the text says it was translated, with a button to see the original. Skills, names, links and project names stay as written. Translations update on the next save after an edit. Each account can cause up to 20 translations every 24 hours (each save with new or changed text counts as one); past that the profile still saves, and the new text shows as written until a later save once the 24 hours free up.
 
 Other:
 - Language (Português / English) and theme (system, light, dark) are in the header.

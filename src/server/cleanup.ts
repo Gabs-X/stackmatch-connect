@@ -12,13 +12,15 @@ import {
   projectSkills,
   sessions,
   skills,
+  translationRequests,
 } from "./db/schema";
 import { emailWindowMinutes } from "./email-throttle";
 import { loginWindowMinutes } from "./login-throttle";
+import { translationWindowHours } from "./translation-throttle";
 
 /**
  * Deletes what no longer matters: expired sessions and e-mail codes, sign-in failures, e-mail
- * sends and assistant questions outside their limits' windows, interest marks older than the longest limit that reads them, and typed skills
+ * sends, assistant questions and translations outside their limits' windows, interest marks older than the longest limit that reads them, and typed skills
  * nobody uses (the reference catalog stays). Run daily by Vercel Cron (/api/cron/cleanup).
  */
 export async function cleanup(db: Db, now = Date.now()) {
@@ -57,6 +59,12 @@ export async function cleanup(db: Db, now = Date.now()) {
         .delete(assistantRequests)
         .where(lte(assistantRequests.createdAt, before(assistantWindowMinutes * 60_000)))
         .returning({ id: assistantRequests.id })
+    ).length,
+    translationRequests: (
+      await db
+        .delete(translationRequests)
+        .where(lte(translationRequests.createdAt, before(translationWindowHours * 3_600_000)))
+        .returning({ id: translationRequests.id })
     ).length,
     interestEvents: (
       await db

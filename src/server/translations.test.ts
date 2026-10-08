@@ -9,6 +9,12 @@ import { loadPublishedProfile, profileTexts, saveProfile } from "./profiles";
 import { createAccount } from "./auth";
 import { createDeveloper, createTestDb } from "./test-db";
 import {
+  canTranslate,
+  maxTranslationsPerAccount,
+  recordTranslationRequest,
+  translationWindowHours,
+} from "./translation-throttle";
+import {
   DeepLError,
   deeplTranslator,
   defaultTranslator,
@@ -86,6 +92,37 @@ describe("updateTranslations", () => {
     ).resolves.toBeUndefined();
     expect(error).toHaveBeenCalled();
     error.mockRestore();
+  });
+
+  it("stops translating an account at its limit, but not without the limit", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (let i = 0; i < maxTranslationsPerAccount; i++)
+      await updateTranslations(db, ana, [`Bio número ${i} em ação`], { translator: fakeTranslate });
+    expect(fakeTranslate).toHaveBeenCalledTimes(maxTranslationsPerAccount);
+
+    // Past the limit the text stays as written, and saving what's translated costs nothing.
+    await updateTranslations(db, ana, ["Bio nova demais em ação"], { translator: fakeTranslate });
+    expect(fakeTranslate).toHaveBeenCalledTimes(maxTranslationsPerAccount);
+    expect(await loadTranslations(db, [ana], ["Bio nova demais em ação"])).toEqual({});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("translation limit"));
+
+    // Another account has its own limit, and the backfill script skips it.
+    const bia = await createDeveloper(db, "bia@example.com");
+    await updateTranslations(db, bia, ["Bio da Bia em ação"], { translator: fakeTranslate });
+    await updateTranslations(db, ana, ["Bio nova demais em ação"], {
+      translator: fakeTranslate,
+      limited: false,
+    });
+    expect(fakeTranslate).toHaveBeenCalledTimes(maxTranslationsPerAccount + 2);
+    warn.mockRestore();
+  });
+
+  it("frees the limit as requests leave the window", async () => {
+    const now = Date.now();
+    for (let i = 0; i < maxTranslationsPerAccount; i++)
+      await recordTranslationRequest(db, ana, now - translationWindowHours * 3_600_000 + 60_000);
+    expect(await canTranslate(db, ana, now)).toBe(false);
+    expect(await canTranslate(db, ana, now + 120_000)).toBe(true);
   });
 
   it("skips texts the model left out", async () => {

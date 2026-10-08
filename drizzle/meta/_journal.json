@@ -148,6 +148,13 @@
       "when": 1791408005859,
       "tag": "0020_text_translations",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791471328102,
+      "tag": "0021_translation_requests",
+      "breakpoints": true
     }
   ]
 }

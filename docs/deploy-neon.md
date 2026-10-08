@@ -88,7 +88,7 @@ A chave dá acesso ao envio de e-mails em nome do seu domínio: as mesmas regras
 
 ## 6. Ativar a limpeza diária
 
-Todo dia, às 03:00 de Brasília, um Cron da Vercel chama `/api/cron/cleanup`, que apaga sessões vencidas, códigos de e-mail expirados, falhas de login antigas, marcações de interesse com mais de 30 dias e skills digitadas que ninguém usa mais. O agendamento já vem no deploy; falta o segredo que protege a rota:
+Todo dia, às 03:00 de Brasília, um Cron da Vercel chama `/api/cron/cleanup`, que apaga sessões vencidas, códigos de e-mail expirados, falhas de login antigas, envios de e-mail, perguntas ao assistente e pedidos de tradução antigos, marcações de interesse com mais de 30 dias e skills digitadas que ninguém usa mais. O agendamento já vem no deploy; falta o segredo que protege a rota:
 
 1. Gere um texto aleatório longo (por exemplo, com `openssl rand -hex 32`).
 2. Em **Settings → Environment Variables**, crie `CRON_SECRET` com ele, no ambiente **Production**.

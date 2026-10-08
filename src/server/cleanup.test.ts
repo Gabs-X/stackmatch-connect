@@ -10,6 +10,7 @@ import { recordEmailSend } from "./email-throttle";
 import { recordLoginFailure } from "./login-throttle";
 import { saveProfile } from "./profiles";
 import { createDeveloper, createTestDb } from "./test-db";
+import { recordTranslationRequest } from "./translation-throttle";
 
 let db: Db;
 
@@ -50,6 +51,9 @@ describe("cleanup", () => {
     // An assistant question from two hours ago and one from now.
     await recordAssistantRequest(db, "203.0.113.7", now - 2 * 3_600_000);
     await recordAssistantRequest(db, "198.51.100.1", now);
+    // A translation from two days ago and one from now.
+    await recordTranslationRequest(db, marina, now - 2 * day);
+    await recordTranslationRequest(db, ana.id, now);
     // An interest mark older than the 30-day limits and a recent one.
     await db.insert(interestEvents).values([
       {
@@ -81,6 +85,7 @@ describe("cleanup", () => {
       loginFailures: 1,
       emailSends: 1,
       assistantRequests: 1,
+      translationRequests: 1,
       interestEvents: 1,
       unusedSkills: 1,
     });

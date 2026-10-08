@@ -7,6 +7,7 @@ import type { Translations } from "@/lib/translations";
 import { assistantClient, assistantModel } from "./assistant";
 import type { Db } from "./db";
 import { textTranslations } from "./db/schema";
+import { canTranslate, recordTranslationRequest } from "./translation-throttle";
 
 /**
  * Translates the free text people write (bio, role, project descriptions, a company's description)
@@ -210,8 +211,10 @@ export function defaultTranslator(): Translator | null {
 
 /**
  * Makes sure every text the account shows has both languages: translates only the ones without a
- * stored translation, and drops stored ones for texts it no longer has. Never throws: a failure
- * goes to the log and the texts stay as written.
+ * stored translation, and drops stored ones for texts it no longer has. Each request to the
+ * translator counts against the account's limit (see ./translation-throttle) unless `limited` is
+ * false; past it, new texts stay as written. Never throws: a failure goes to the log and the texts
+ * stay as written.
  */
 export async function updateTranslations(
   db: Db,
@@ -220,7 +223,8 @@ export async function updateTranslations(
   {
     translator = defaultTranslator(),
     signal = AbortSignal.timeout(30_000),
-  }: { translator?: Translator | null; signal?: AbortSignal } = {},
+    limited = true,
+  }: { translator?: Translator | null; signal?: AbortSignal; limited?: boolean } = {},
 ) {
   const current = unique(texts);
   const hashes = current.map(hashText);
@@ -237,6 +241,14 @@ export async function updateTranslations(
     const stored = await loadTranslations(db, [ownerId], current);
     const missing = current.filter((text) => !stored[text]);
     if (!missing.length) return;
+    if (limited) {
+      if (!(await canTranslate(db, ownerId))) {
+        console.warn(`Translations for ${ownerId}: the account reached its translation limit.`);
+        return;
+      }
+      // Counted before the request, so failed ones count too.
+      await recordTranslationRequest(db, ownerId);
+    }
 
     const results = await translator(missing, signal);
     if (!results) {

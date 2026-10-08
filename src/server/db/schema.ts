@@ -375,3 +375,18 @@ export const textTranslations = pgTable(
   },
   (table) => [primaryKey({ columns: [table.ownerId, table.hash, table.language] })],
 );
+
+/** Each translation an account caused, for the per-account limit (see translation-throttle.ts). */
+export const translationRequests = pgTable(
+  "translation_requests",
+  {
+    id: serial("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("translation_requests_owner_id_created_at_idx").on(table.ownerId, table.createdAt),
+  ],
+);
