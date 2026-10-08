@@ -1,4 +1,4 @@
-import { expect, signInAs, test } from "./fixtures";
+import { expect, seedSavedTalents, signInAs, test } from "./fixtures";
 
 test("verified profile links open the owner's real pages in a new tab", async ({ page }) => {
   await page.goto("/developer/demo-developer");
@@ -48,4 +48,27 @@ test("saving from the profile adds it to the shortlist", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Marina Costa" })).toBeVisible();
   await page.getByRole("button", { name: "Remover Marina Costa" }).click();
   await expect(page.getByText("Você ainda não salvou nenhum talento.")).toBeVisible();
+});
+
+test("the shortlist filters, sorts and undoes a removal", async ({ page }) => {
+  await seedSavedTalents(page, ["marina-costa", "rafael-lima", "diego-santos"]);
+  await signInAs(page, "company");
+  await page.goto("/saved");
+  const cards = page.getByRole("main").getByRole("article");
+  await expect(cards).toHaveCount(3);
+
+  await page.getByRole("button", { name: /Disponíveis agora/ }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText("Marina Costa");
+  await page.getByRole("button", { name: /Todos os salvos/ }).click();
+
+  await page.getByLabel("Ordenar por").selectOption({ label: "Menor valor por hora" });
+  await expect(cards.first()).toContainText("Diego Santos");
+  await page.getByLabel("Ordenar por").selectOption({ label: "Mais experiência" });
+  await expect(cards.first()).toContainText("Marina Costa");
+
+  await page.getByRole("button", { name: "Remover Rafael Lima" }).click();
+  await expect(cards).toHaveCount(2);
+  await page.locator("[data-sonner-toast]").getByRole("button", { name: "Desfazer" }).click();
+  await expect(cards).toHaveCount(3);
 });
