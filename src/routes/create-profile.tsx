@@ -5,6 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ChevronDown,
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -221,31 +222,45 @@ function CreateProfile() {
     );
   if (preview)
     return (
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setPreview(false)}>
-            <ChevronLeft />
-            {t.create.backEdit}
-          </Button>
-          <Button variant="outline" onClick={() => setShowCard((current) => !current)}>
-            {showCard ? <UserRound /> : <IdCard />}
-            {showCard ? t.create.showFullProfile : t.create.showCard}
-          </Button>
-          {completed && (
-            <Button asChild>
-              <Link to="/interests">
-                {t.create.viewInterested}
-                <ChevronRight />
-              </Link>
-            </Button>
-          )}
-        </div>
-        {completed && (
-          <p role="status" className="mt-4 text-sm text-positive">
-            {t.create.finishToast} {t.create.finishDesc}
-          </p>
-        )}
-        <ProfilePreview profile={profile} accountId={accountId} showCard={showCard} />
+      <main className="pb-20">
+        <ProfilePreview
+          profile={profile}
+          accountId={accountId}
+          showCard={showCard}
+          back={
+            <button
+              type="button"
+              onClick={() => setPreview(false)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              {t.create.backEdit}
+            </button>
+          }
+          status={
+            completed && (
+              <p role="status" className="mt-4 text-sm text-positive">
+                {t.create.finishToast} {t.create.finishDesc}
+              </p>
+            )
+          }
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setShowCard((current) => !current)}>
+                {showCard ? <UserRound /> : <IdCard />}
+                {showCard ? t.create.showFullProfile : t.create.showCard}
+              </Button>
+              {completed && (
+                <Button asChild>
+                  <Link to="/interests">
+                    {t.create.viewInterested}
+                    <ChevronRight />
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
       </main>
     );
   return (
