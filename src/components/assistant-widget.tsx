@@ -2,6 +2,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowUp,
+  Check,
   LogIn,
   MessageCircle,
   RotateCcw,
@@ -243,6 +244,19 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
                   <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
                     {t.assistant.signInText}
                   </p>
+                  <p className="mt-6 text-xs font-bold uppercase text-muted-foreground">
+                    {t.assistant.signInPerksLabel}
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {t.assistant.signInPerks.map((perk) => (
+                      <li key={perk} className="flex items-start gap-2.5 text-sm leading-5">
+                        <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                          <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+                        </span>
+                        {perk}
+                      </li>
+                    ))}
+                  </ul>
                   <div className="mt-6 flex flex-col gap-2">
                     <Button onClick={() => goToAuth("/register")}>
                       <UserPlus />

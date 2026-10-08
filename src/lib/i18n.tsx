@@ -353,7 +353,13 @@ const pt = {
     retry: "Tentar novamente",
     signInTitle: "Oi! Eu sou a Ada.",
     signInText:
-      "Para conversar comigo, entre na sua conta do StackMatch. Ainda não tem uma? Crie sua conta: é rápido.",
+      "Para conversar comigo, entre na sua conta do StackMatch ou crie uma em poucos passos.",
+    signInPerksLabel: "Com a sua conta, eu posso",
+    signInPerks: [
+      "Tirar dúvidas sobre o Discover, os perfis e as propostas",
+      "Levar você direto para a tela certa",
+      "Guardar a nossa conversa para você continuar depois",
+    ],
     signInRequired: "Sua sessão terminou. Entre na sua conta para continuar conversando com a Ada.",
     createAccount: "Criar conta",
     signIn: "Já tenho conta",
@@ -1061,8 +1067,13 @@ const en: Dict = {
       `You've asked a lot of questions in a short time. Try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`}.`,
     retry: "Try again",
     signInTitle: "Hi! I'm Ada.",
-    signInText:
-      "To chat with me, sign in to your StackMatch account. Don't have one yet? Create your account: it's quick.",
+    signInText: "To chat with me, sign in to your StackMatch account or create one in a few steps.",
+    signInPerksLabel: "With your account, I can",
+    signInPerks: [
+      "Answer questions about Discover, profiles and proposals",
+      "Take you straight to the right screen",
+      "Keep our conversation so you can pick it up later",
+    ],
     signInRequired: "Your session ended. Sign in to keep chatting with Ada.",
     createAccount: "Create account",
     signIn: "I have an account",
