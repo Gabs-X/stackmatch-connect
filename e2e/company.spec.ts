@@ -36,3 +36,21 @@ test("a company that never reached the developer is not shown", async ({ page })
   await page.goto("/company/someone-else");
   await expect(page.getByRole("heading", { name: "Empresa não encontrada" })).toBeVisible();
 });
+
+test("the summaries filter the interested companies", async ({ page }) => {
+  await signInAs(page, "developer");
+  await page.goto("/interests");
+  const list = page.getByRole("main").getByRole("listitem");
+  await expect(list).toHaveCount(3);
+
+  await page.getByRole("button", { name: /Propuseram conversa/ }).click();
+  await expect(list).toHaveCount(1);
+  await expect(list.first()).toContainText("VerdeTech");
+
+  await page.getByRole("button", { name: /Marcaram interesse/ }).click();
+  await expect(list).toHaveCount(2);
+  await expect(list.filter({ hasText: "VerdeTech" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Todas as empresas/ }).click();
+  await expect(list).toHaveCount(3);
+});
