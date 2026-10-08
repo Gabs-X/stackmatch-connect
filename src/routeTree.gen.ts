@@ -29,8 +29,12 @@ import { Route as ApiTestResetRouteImport } from './routes/api.test-reset'
 import { Route as ApiTestSeedRouteImport } from './routes/api.test-seed'
 import { Route as CompanyIdRouteImport } from './routes/company.$id'
 import { Route as DeveloperIdRouteImport } from './routes/developer.$id'
+import { Route as JobsIndexRouteImport } from './routes/jobs.index'
+import { Route as JobsNewRouteImport } from './routes/jobs.new'
 import { Route as UploadsSplatRouteImport } from './routes/uploads.$'
 import { Route as ApiCronCleanupRouteImport } from './routes/api.cron.cleanup'
+import { Route as JobsIdIndexRouteImport } from './routes/jobs.$id.index'
+import { Route as JobsIdEditRouteImport } from './routes/jobs.$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -132,6 +136,16 @@ const DeveloperIdRoute = DeveloperIdRouteImport.update({
   path: '/developer/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JobsIndexRoute = JobsIndexRouteImport.update({
+  id: '/jobs/',
+  path: '/jobs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsNewRoute = JobsNewRouteImport.update({
+  id: '/jobs/new',
+  path: '/jobs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UploadsSplatRoute = UploadsSplatRouteImport.update({
   id: '/uploads/$',
   path: '/uploads/$',
@@ -140,6 +154,16 @@ const UploadsSplatRoute = UploadsSplatRouteImport.update({
 const ApiCronCleanupRoute = ApiCronCleanupRouteImport.update({
   id: '/api/cron/cleanup',
   path: '/api/cron/cleanup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsIdIndexRoute = JobsIdIndexRouteImport.update({
+  id: '/jobs/$id/',
+  path: '/jobs/$id/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsIdEditRoute = JobsIdEditRouteImport.update({
+  id: '/jobs/$id/edit',
+  path: '/jobs/$id/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -164,8 +188,12 @@ export interface FileRoutesByFullPath {
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
+  '/jobs/new': typeof JobsNewRoute
   '/uploads/$': typeof UploadsSplatRoute
+  '/jobs/': typeof JobsIndexRoute
   '/api/cron/cleanup': typeof ApiCronCleanupRoute
+  '/jobs/$id/edit': typeof JobsIdEditRoute
+  '/jobs/$id/': typeof JobsIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -188,8 +216,12 @@ export interface FileRoutesByTo {
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
+  '/jobs/new': typeof JobsNewRoute
   '/uploads/$': typeof UploadsSplatRoute
+  '/jobs': typeof JobsIndexRoute
   '/api/cron/cleanup': typeof ApiCronCleanupRoute
+  '/jobs/$id/edit': typeof JobsIdEditRoute
+  '/jobs/$id': typeof JobsIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -213,8 +245,12 @@ export interface FileRoutesById {
   '/api/test-seed': typeof ApiTestSeedRoute
   '/company/$id': typeof CompanyIdRoute
   '/developer/$id': typeof DeveloperIdRoute
+  '/jobs/new': typeof JobsNewRoute
   '/uploads/$': typeof UploadsSplatRoute
+  '/jobs/': typeof JobsIndexRoute
   '/api/cron/cleanup': typeof ApiCronCleanupRoute
+  '/jobs/$id/edit': typeof JobsIdEditRoute
+  '/jobs/$id/': typeof JobsIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -239,8 +275,12 @@ export interface FileRouteTypes {
     | '/api/test-seed'
     | '/company/$id'
     | '/developer/$id'
+    | '/jobs/new'
     | '/uploads/$'
+    | '/jobs/'
     | '/api/cron/cleanup'
+    | '/jobs/$id/edit'
+    | '/jobs/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -263,8 +303,12 @@ export interface FileRouteTypes {
     | '/api/test-seed'
     | '/company/$id'
     | '/developer/$id'
+    | '/jobs/new'
     | '/uploads/$'
+    | '/jobs'
     | '/api/cron/cleanup'
+    | '/jobs/$id/edit'
+    | '/jobs/$id'
   id:
     | '__root__'
     | '/'
@@ -287,8 +331,12 @@ export interface FileRouteTypes {
     | '/api/test-seed'
     | '/company/$id'
     | '/developer/$id'
+    | '/jobs/new'
     | '/uploads/$'
+    | '/jobs/'
     | '/api/cron/cleanup'
+    | '/jobs/$id/edit'
+    | '/jobs/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -312,8 +360,12 @@ export interface RootRouteChildren {
   ApiTestSeedRoute: typeof ApiTestSeedRoute
   CompanyIdRoute: typeof CompanyIdRoute
   DeveloperIdRoute: typeof DeveloperIdRoute
+  JobsNewRoute: typeof JobsNewRoute
   UploadsSplatRoute: typeof UploadsSplatRoute
+  JobsIndexRoute: typeof JobsIndexRoute
   ApiCronCleanupRoute: typeof ApiCronCleanupRoute
+  JobsIdEditRoute: typeof JobsIdEditRoute
+  JobsIdIndexRoute: typeof JobsIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -458,6 +510,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeveloperIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jobs/': {
+      id: '/jobs/'
+      path: '/jobs'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof JobsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/new': {
+      id: '/jobs/new'
+      path: '/jobs/new'
+      fullPath: '/jobs/new'
+      preLoaderRoute: typeof JobsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/uploads/$': {
       id: '/uploads/$'
       path: '/uploads/$'
@@ -470,6 +536,20 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/cleanup'
       fullPath: '/api/cron/cleanup'
       preLoaderRoute: typeof ApiCronCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/$id/': {
+      id: '/jobs/$id/'
+      path: '/jobs/$id'
+      fullPath: '/jobs/$id/'
+      preLoaderRoute: typeof JobsIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/$id/edit': {
+      id: '/jobs/$id/edit'
+      path: '/jobs/$id/edit'
+      fullPath: '/jobs/$id/edit'
+      preLoaderRoute: typeof JobsIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -496,8 +576,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTestSeedRoute: ApiTestSeedRoute,
   CompanyIdRoute: CompanyIdRoute,
   DeveloperIdRoute: DeveloperIdRoute,
+  JobsNewRoute: JobsNewRoute,
   UploadsSplatRoute: UploadsSplatRoute,
+  JobsIndexRoute: JobsIndexRoute,
   ApiCronCleanupRoute: ApiCronCleanupRoute,
+  JobsIdEditRoute: JobsIdEditRoute,
+  JobsIdIndexRoute: JobsIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

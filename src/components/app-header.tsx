@@ -39,6 +39,7 @@ export function AppHeader() {
         ]
       : [
           { to: "/discover" as const, label: t.nav.discover, icon: Search },
+          { to: "/jobs" as const, label: t.nav.jobs, icon: BriefcaseBusiness },
           { to: "/saved" as const, label: t.nav.saved, icon: Bookmark },
         ];
   return (

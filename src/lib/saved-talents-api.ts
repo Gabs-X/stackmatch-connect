@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { advanceCandidate } from "@/server/jobs";
 import { listSavedTalents, removeSavedTalent, saveTalent } from "@/server/saved-talents";
 import { database, requireAccount } from "@/server/session";
 
@@ -10,13 +11,15 @@ export const fetchSavedTalents = createServerFn({ method: "GET" }).handler(async
   listSavedTalents(await database(), (await requireAccount("company")).id),
 );
 
-/** Stands for `POST /me/saved`. */
+/** Stands for `POST /me/saved`. From inside a job, also adds the developer to it as saved. */
 export const saveTalentFn = createServerFn({ method: "POST" })
-  .validator(developerId)
+  .validator(z.object({ developerId, jobId: z.string().min(1).max(200).optional() }))
   .handler(async ({ data }) => {
     const company = await requireAccount("company");
-    if (!(await saveTalent(await database(), company.id, data)))
+    const db = await database();
+    if (!(await saveTalent(db, company.id, data.developerId)))
       throw new Error("Unknown developer profile.");
+    if (data.jobId) await advanceCandidate(db, company.id, data.jobId, data.developerId, "saved");
   });
 
 /** Stands for `DELETE /me/saved/:id`. */

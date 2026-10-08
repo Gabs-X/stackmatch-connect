@@ -7,8 +7,8 @@ import {
   useMotionValue,
   useTransform,
 } from "framer-motion";
-import { Bookmark, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { Bookmark, BriefcaseBusiness, Check, Filter, RotateCcw, Undo2, X } from "lucide-react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
@@ -27,9 +27,15 @@ import {
 } from "@/lib/discover-history";
 import { defaultFilters, type FilterGroup, type Filters } from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
+import { useAuth } from "@/lib/auth-context";
+import { jobFilters, type Job } from "@/lib/jobs";
+import { jobCandidatesQuery, jobQuery } from "@/lib/jobs-api";
 import { discoverQuery } from "@/lib/profile-api";
 
 export const Route = createFileRoute("/discover")({
+  // ?job=<id>: searching for one of the company's jobs (see src/lib/jobs.ts).
+  validateSearch: (search: Record<string, unknown>): { job?: string } =>
+    typeof search["job"] === "string" ? { job: search["job"] } : {},
   head: () => ({
     meta: [
       { title: "Stack Match" },
@@ -48,19 +54,76 @@ export const Route = createFileRoute("/discover")({
   }),
   component: () => (
     <RequireAccount type="company">
-      <DiscoverPage />
+      <DiscoverRoute />
     </RequireAccount>
   ),
 });
 
-function DiscoverPage() {
+function DiscoverRoute() {
+  const { job: jobId } = Route.useSearch();
+  const { t } = useI18n();
+  const { user } = useAuth();
+  const accountId = user?.id ?? "";
+  const job = useQuery({ ...jobQuery(accountId, jobId ?? ""), enabled: Boolean(jobId && user) });
+  const candidates = useQuery({
+    ...jobCandidatesQuery(accountId, jobId ?? ""),
+    enabled: Boolean(jobId && user),
+  });
+  if (!jobId) return <DiscoverPage key="all" />;
+  // Fresh, not cached: who is already in the job decides what this round leaves out.
+  if (job.data && candidates.data && candidates.isFetchedAfterMount)
+    return (
+      <DiscoverPage
+        key={jobId}
+        job={job.data}
+        members={candidates.data.map((candidate) => candidate.developerId)}
+      />
+    );
+  const missing = job.data === null || candidates.data === null;
+  return (
+    <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
+      {missing || job.isError || candidates.isError ? (
+        <div role="alert">
+          <p className="text-sm text-muted-foreground">
+            {missing ? t.jobs.notFound : t.jobs.loadError}
+          </p>
+          <Button asChild className="mt-4">
+            <Link to="/jobs">{t.jobs.backToJobs}</Link>
+          </Button>
+        </div>
+      ) : (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t.common.loading}
+        </p>
+      )}
+    </main>
+  );
+}
+
+/**
+ * The cards, one at a time. Inside a job, it starts from the job's filters, leaves out the developers
+ * already in it (instead of the saved ones) and adds each saved or marked developer to it.
+ */
+function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: string[] }) {
   const { t, tv } = useI18n();
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [filters, setFilters] = useState<Filters>(job ? jobFilters(job) : defaultFilters);
+  // Developers in the job, kept here as this round adds and undoes them.
+  const [members, setMembers] = useState<readonly string[]>(initialMembers ?? noIds);
   const [index, setIndex] = useState(0);
-  const { hydrated, saved, interests, addSaved, registerInterest, removeSaved, removeInterest } =
-    useApp();
+  const {
+    hydrated,
+    saved,
+    interests,
+    addSaved,
+    registerInterest,
+    removeSaved,
+    removeInterest,
+    leaveJob,
+  } = useApp();
+  // What a round leaves out: the saved profiles, or inside a job, the ones already in it.
+  const alreadyIn = job ? members : saved;
   const [feedback, setFeedback] = useState<{ action: "save" | "interest"; name: string } | null>(
     null,
   );
@@ -76,12 +139,12 @@ function DiscoverPage() {
   const rotate = useTransform(x, [-220, 220], [-8, 8]);
   const yesOpacity = useTransform(x, [30, 120], [0, 1]);
   const noOpacity = useTransform(x, [-120, -30], [1, 0]);
-  // Profiles already in the shortlist when this round started stay out of Discover. Ones saved
-  // during the round stay in place, so the position, the counter and undo keep working.
+  // Profiles already in the shortlist (or the job) when this round started stay out of Discover.
+  // Ones saved during the round stay in place, so the position, the counter and undo keep working.
   const [hiddenIds, setHiddenIds] = useState<readonly string[] | null>(null);
   useEffect(() => {
-    if (hydrated) setHiddenIds((current) => current ?? saved);
-  }, [hydrated, saved]);
+    if (hydrated) setHiddenIds((current) => current ?? alreadyIn);
+  }, [hydrated, alreadyIn]);
   // The server filters and sends the profiles a page at a time, leaving out the hidden ones.
   const { data, isPending, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
@@ -102,7 +165,7 @@ function DiscoverPage() {
   const loading =
     (isPending && !isError) || hiddenIds === null || (!current && index < total && !isError);
   const startRound = () => {
-    setHiddenIds(saved);
+    setHiddenIds(alreadyIn);
     setIndex(0);
     setFeedback(null);
     updateHistory([]);
@@ -110,7 +173,7 @@ function DiscoverPage() {
   const changeFilters = (next: Filters) => {
     setFeedback(null);
     setFilters(next);
-    setHiddenIds(saved);
+    setHiddenIds(alreadyIn);
     setIndex(0);
     updateHistory([]);
   };
@@ -123,6 +186,10 @@ function DiscoverPage() {
     if (!entry || !canUndo(entry, historyRef.current)) return;
     if (entry.addedSaved) removeSaved(entry.id);
     if (entry.addedInterest) removeInterest(entry.id);
+    if (job && entry.addedToJob) {
+      leaveJob(entry.id, job.id);
+      setMembers((ids) => ids.filter((id) => id !== entry.id));
+    }
     updateHistory(historyRef.current.slice(0, -1));
     setFeedback(null);
     setIndex(entry.index);
@@ -130,11 +197,19 @@ function DiscoverPage() {
   };
   const next = (action: DiscoverAction) => {
     if (!current) return;
-    const entry = createHistoryEntry(current, action, index, saved, interests);
+    const entry = createHistoryEntry(
+      current,
+      action,
+      index,
+      saved,
+      interests,
+      job ? members : null,
+    );
     updateHistory([...historyRef.current, entry]);
     if (action !== "pass") {
-      addSaved(current.id);
-      if (action === "interest") registerInterest(current.id);
+      addSaved(current.id, job?.id);
+      if (action === "interest") registerInterest(current.id, job?.id);
+      if (job && entry.addedToJob) setMembers((ids) => [...ids, current.id]);
       setFeedback({ action, name: current.name });
     } else setFeedback(null);
     toast(
@@ -172,6 +247,13 @@ function DiscoverPage() {
             </SheetContent>
           </Sheet>
         </div>
+        {job && (
+          <JobBanner
+            job={job}
+            changed={JSON.stringify(filters) !== JSON.stringify(jobFilters(job))}
+            onReset={() => changeFilters(jobFilters(job))}
+          />
+        )}
         {active.length > 0 && (
           <div className="mt-5 flex flex-wrap gap-2">
             {active.map(({ group, value }) => (
@@ -209,8 +291,11 @@ function DiscoverPage() {
                   )}
                 </span>
                 {!loading && hiddenCount > 0 && total > 0 && (
-                  <Link to="/saved" className="font-normal underline-offset-4 hover:underline">
-                    {t.discover.hiddenSaved(hiddenCount)}
+                  <Link
+                    {...(job ? { to: "/jobs/$id", params: { id: job.id } } : { to: "/saved" })}
+                    className="font-normal underline-offset-4 hover:underline"
+                  >
+                    {job ? t.jobs.hiddenInJob(hiddenCount) : t.discover.hiddenSaved(hiddenCount)}
                   </Link>
                 )}
               </span>
@@ -289,10 +374,20 @@ function DiscoverPage() {
                 <div className="grid min-h-[500px] place-items-center rounded-lg border border-dashed bg-card p-8 text-center">
                   <div>
                     <Bookmark className="mx-auto size-12 text-primary" />
-                    <h2 className="mt-4 text-xl font-bold">{t.discover.allSavedTitle}</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">{t.discover.allSavedSub}</p>
+                    <h2 className="mt-4 text-xl font-bold">
+                      {job ? t.jobs.allInJobTitle : t.discover.allSavedTitle}
+                    </h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {job ? t.jobs.allInJobSub : t.discover.allSavedSub}
+                    </p>
                     <Button asChild className="mt-5">
-                      <Link to="/saved">{t.discover.viewSaved}</Link>
+                      {job ? (
+                        <Link to="/jobs/$id" params={{ id: job.id }}>
+                          {t.jobs.viewJob}
+                        </Link>
+                      ) : (
+                        <Link to="/saved">{t.discover.viewSaved}</Link>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -339,7 +434,7 @@ function DiscoverPage() {
                     >
                       {t.discover.stampNo}
                     </motion.div>
-                    <DeveloperCard developer={current} showProfile />
+                    <DeveloperCard developer={current} showProfile jobId={job?.id} />
                   </motion.div>
                 </AnimatePresence>
               )}
@@ -417,6 +512,37 @@ function SearchOff() {
   return (
     <div className="mx-auto grid size-12 place-items-center rounded-lg bg-muted">
       <Filter className="text-muted-foreground" />
+    </div>
+  );
+}
+
+/** Which job Discover is searching for, with a way back to its filters and out of it. */
+function JobBanner({ job, changed, onReset }: { job: Job; changed: boolean; onReset: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="stagger-item mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+      <p className="flex min-w-0 items-center gap-2 text-sm">
+        <BriefcaseBusiness className="size-4 shrink-0 text-primary" aria-hidden="true" />
+        <span className="text-muted-foreground">{t.jobs.searchingFor}</span>
+        <Link
+          to="/jobs/$id"
+          params={{ id: job.id }}
+          className="truncate font-semibold underline-offset-4 hover:underline"
+        >
+          {job.title}
+        </Link>
+      </p>
+      <span className="flex flex-wrap gap-2">
+        {changed && (
+          <Button variant="ghost" size="sm" onClick={onReset}>
+            <RotateCcw />
+            {t.jobs.resetFilters}
+          </Button>
+        )}
+        <Button asChild variant="outline" size="sm">
+          <Link to="/discover">{t.jobs.leaveJob}</Link>
+        </Button>
+      </span>
     </div>
   );
 }

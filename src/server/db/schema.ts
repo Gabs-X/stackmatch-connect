@@ -13,6 +13,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { CompensationPeriod, JobStage, JobStatus } from "@/lib/jobs";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -385,5 +386,79 @@ export const translationRequests = pgTable(
   },
   (table) => [
     index("translation_requests_owner_id_created_at_idx").on(table.ownerId, table.createdAt),
+  ],
+);
+
+/**
+ * A company's job opening or project scope. Options are catalog values, like the profiles', so
+ * they turn straight into Discover filters (see src/lib/jobs.ts).
+ */
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    seniority: text("seniority").array().notNull().default([]),
+    workModes: text("work_modes").array().notNull().default([]),
+    hiringTypes: text("hiring_types").array().notNull().default([]),
+    availability: text("availability").array().notNull().default([]),
+    location: text("location").notNull().default(""),
+    /** BRL, per compensationPeriod. */
+    compensationMin: integer("compensation_min"),
+    compensationMax: integer("compensation_max"),
+    compensationPeriod: text("compensation_period")
+      .$type<CompensationPeriod>()
+      .notNull()
+      .default("month"),
+    status: text("status").$type<JobStatus>().notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("jobs_company_id_idx").on(table.companyId)],
+);
+
+/** A job's stack, from the shared skill catalog: must-haves and nice-to-haves. */
+export const jobSkills = pgTable(
+  "job_skills",
+  {
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    skillId: integer("skill_id")
+      .notNull()
+      .references(() => skills.id),
+    required: boolean("required").notNull(),
+    position: integer("position").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.jobId, table.skillId] })],
+);
+
+/**
+ * The developers a company reached for a job, and how far each got. Saving, marking interest or
+ * proposing a call inside the job adds the developer or moves them forward; the company can also
+ * move them by hand.
+ */
+export const jobCandidates = pgTable(
+  "job_candidates",
+  {
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stage: text("stage").$type<JobStage>().notNull(),
+    stageChangedAt: timestamp("stage_changed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.jobId, table.developerId] }),
+    index("job_candidates_developer_id_idx").on(table.developerId),
   ],
 );

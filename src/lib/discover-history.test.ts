@@ -11,6 +11,7 @@ describe("createHistoryEntry", () => {
       index: 2,
       addedSaved: false,
       addedInterest: false,
+      addedToJob: false,
     });
   });
 
@@ -30,6 +31,13 @@ describe("createHistoryEntry", () => {
     const entry = createHistoryEntry(marina, "interest", 0, ["marina-costa"], ["marina-costa"]);
     expect(entry.addedSaved).toBe(false);
     expect(entry.addedInterest).toBe(false);
+  });
+
+  it("records joining the job being searched for, but not outside a job or when passing", () => {
+    expect(createHistoryEntry(marina, "save", 0, ["marina-costa"], [], []).addedToJob).toBe(true);
+    expect(createHistoryEntry(marina, "save", 0, [], [], ["marina-costa"]).addedToJob).toBe(false);
+    expect(createHistoryEntry(marina, "pass", 0, [], [], []).addedToJob).toBe(false);
+    expect(createHistoryEntry(marina, "interest", 0, [], []).addedToJob).toBe(false);
   });
 });
 

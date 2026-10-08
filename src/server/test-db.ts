@@ -40,3 +40,19 @@ export async function createDeveloper(db: Db, email: string, name = "Ana Souza")
   });
   return user.id;
 }
+
+/** A company account, the kind that creates jobs and reaches developers. */
+export async function createCompany(db: Db, email: string, company = "Acme") {
+  const user = await createAccount(db, {
+    accountType: "company",
+    name: "Bia Santos",
+    company,
+    cnpj: "11222333000181",
+    jobTitle: "Tech Recruiter",
+    email,
+    password: "segredo123",
+    acceptTerms: true,
+  });
+  if (!user) throw new Error("account not created");
+  return user;
+}

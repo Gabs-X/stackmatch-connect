@@ -11,6 +11,7 @@ import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
 import { developerProfiles, interests, meetingRequests } from "./db/schema";
 import { sendEmail } from "./email";
+import { advanceCandidate } from "./jobs";
 import { developerEmail, meetingEmail } from "./notifications";
 import { meetingLimit } from "./outreach";
 
@@ -48,7 +49,8 @@ export type SendResult =
 /**
  * Records the proposal, signed with the company's current contact, and e-mails it to the developer
  * with Reply-To set to that contact. If the e-mail can't be sent, the proposal is dropped, so the
- * company never counts on one the developer didn't get.
+ * company never counts on one the developer didn't get. Sent from inside a job, it moves the developer
+ * there to "contacted".
  */
 export async function sendMeetingRequest(
   db: Db,
@@ -87,6 +89,8 @@ export async function sendMeetingRequest(
     await db.delete(meetingRequests).where(eq(meetingRequests.id, row.id));
     return { error: "not-sent" };
   }
+  if (input.jobId)
+    await advanceCandidate(db, company.id, input.jobId, input.developerId, "contacted", now);
   return { request };
 }
 

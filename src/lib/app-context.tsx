@@ -7,6 +7,7 @@ import type { MarkResult } from "@/server/outreach";
 import { useI18n, type Lang } from "./i18n";
 import { outreachLimits } from "./outreach";
 import { fetchMyInterests, markInterestFn, removeInterestFn } from "./interests-api";
+import { removeCandidateFn } from "./jobs-api";
 import { fetchSavedTalents, removeSavedTalentFn, saveTalentFn } from "./saved-talents-api";
 
 type AppState = {
@@ -15,11 +16,14 @@ type AppState = {
   saved: string[];
   /** Developers the signed-in company marked as interesting; they see the company that did it. */
   interests: string[];
-  addSaved: (id: string) => void;
-  registerInterest: (id: string) => void;
+  /** With a job, the developer also joins it (see src/server/jobs.ts). */
+  addSaved: (id: string, jobId?: string) => void;
+  registerInterest: (id: string, jobId?: string) => void;
   removeSaved: (id: string) => void;
   removeInterest: (id: string) => void;
   toggleSaved: (id: string) => void;
+  /** Takes the developer out of the job, after the saves and marks already on their way. */
+  leaveJob: (id: string, jobId: string) => void;
 };
 // Keep a single context instance across hot reloads so provider/consumers never diverge.
 const globalStore = globalThis as unknown as {
@@ -37,18 +41,21 @@ class Refused extends Error {
   }
 }
 
+type AddRequest = { data: string; language: Lang; jobId?: string | undefined };
+
 /** Each hiring account's shortlist and interest marks, kept on the server. */
 const lists = {
   saved: {
     fetch: fetchSavedTalents,
-    add: ({ data }: { data: string; language: Lang }) => saveTalentFn({ data }),
+    add: ({ data, jobId }: AddRequest) =>
+      saveTalentFn({ data: { developerId: data, ...(jobId ? { jobId } : {}) } }),
     remove: removeSavedTalentFn,
   },
   interests: {
     fetch: fetchMyInterests,
     // The developer gets an e-mail about the first mark, in this screen's language.
-    add: ({ data, language }: { data: string; language: Lang }) =>
-      markInterestFn({ data: { developerId: data, language } }),
+    add: ({ data, language, jobId }: AddRequest) =>
+      markInterestFn({ data: { developerId: data, language, ...(jobId ? { jobId } : {}) } }),
     remove: removeInterestFn,
   },
 } satisfies Record<ListName, unknown>;
@@ -118,13 +125,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
    * Shows the change right away and sends it to the server. If the server refuses (a limit, or an
    * error), the list goes back to what the server has.
    */
-  const setInList = (list: ListName, id: string, keep: boolean) => {
+  const setInList = (list: ListName, id: string, keep: boolean, jobId?: string) => {
     updateList(list, keep ? add(id) : remove(id));
     // One request at a time per list, so an undo right after an action reaches the server last.
     pending.current[list] = pending.current[list]
       .then(async () => {
         const result = keep
-          ? await lists[list].add({ data: id, language: lang })
+          ? await lists[list].add({ data: id, language: lang, jobId })
           : await lists[list].remove({ data: id });
         if (result && typeof result === "object" && "error" in result) throw new Refused(result);
       })
@@ -141,11 +148,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (stored) updateList(list, () => stored);
       });
   };
-  const addSaved = (id: string) => setInList("saved", id, true);
-  const registerInterest = (id: string) => setInList("interests", id, true);
+  const addSaved = (id: string, jobId?: string) => setInList("saved", id, true, jobId);
+  const registerInterest = (id: string, jobId?: string) => setInList("interests", id, true, jobId);
   const removeSaved = (id: string) => setInList("saved", id, false);
   const removeInterest = (id: string) => setInList("interests", id, false);
   const toggleSaved = (id: string) => setInList("saved", id, !saved.includes(id));
+  const leaveJob = (id: string, jobId: string) => {
+    const after = Promise.all([pending.current.saved, pending.current.interests]);
+    pending.current.saved = after
+      .then(() => removeCandidateFn({ data: { jobId, developerId: id } }))
+      .catch((error: unknown) => console.error(error));
+  };
   return (
     <AppContext.Provider
       value={{
@@ -157,6 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         removeSaved,
         removeInterest,
         toggleSaved,
+        leaveJob,
       }}
     >
       {children}

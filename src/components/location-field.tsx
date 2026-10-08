@@ -11,10 +11,16 @@ export function LocationField({
   value,
   onChange,
   error,
+  required = true,
+  label,
+  hint,
 }: {
   value: string;
   onChange: (value: string) => void;
   error?: string | undefined;
+  required?: boolean;
+  label?: string;
+  hint?: string;
 }) {
   const { t } = useI18n();
   const id = useId();
@@ -38,10 +44,12 @@ export function LocationField({
   return (
     <fieldset>
       <legend className="text-sm font-medium">
-        {t.create.location}
-        <span aria-hidden="true" className="ml-0.5 text-destructive">
-          *
-        </span>
+        {label ?? t.create.location}
+        {required && (
+          <span aria-hidden="true" className="ml-0.5 text-destructive">
+            *
+          </span>
+        )}
       </legend>
       <div className="mt-2 grid grid-cols-2 gap-3">
         <div>
@@ -50,7 +58,7 @@ export function LocationField({
             id={`${id}-state`}
             className={selectClass}
             value={uf}
-            aria-required="true"
+            aria-required={required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={description}
             onChange={(event) => {
@@ -73,7 +81,7 @@ export function LocationField({
             className={selectClass}
             value={location.city}
             disabled={!uf || isPending || isError}
-            aria-required="true"
+            aria-required={required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={description}
             onChange={(event) => onChange(event.target.value ? `${event.target.value}, ${uf}` : "")}
@@ -90,7 +98,7 @@ export function LocationField({
         </div>
       </div>
       <p id={`${id}-hint`} className="mt-2 text-xs text-muted-foreground">
-        {t.create.locationHint}
+        {hint ?? t.create.locationHint}
       </p>
       {uf && isPending && (
         <p role="status" className="mt-2 text-xs text-muted-foreground">

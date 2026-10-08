@@ -29,6 +29,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
+import { jobsQueryKey } from "@/lib/jobs-api";
 import { sendMeetingRequestFn, sentMeetingRequestsQuery } from "@/lib/meetings-api";
 import { outreachLimits } from "@/lib/outreach";
 import { useCompanySettings } from "@/lib/use-company-settings";
@@ -38,6 +39,8 @@ type ScheduleDialogProps = {
   developerId: string;
   developerName: string;
   triggerClassName?: string;
+  /** The job the proposal is about; the developer moves to "contacted" in it. */
+  jobId?: string | undefined;
 };
 
 /**
@@ -48,6 +51,7 @@ export function ScheduleDialog({
   developerId,
   developerName,
   triggerClassName,
+  jobId,
 }: ScheduleDialogProps) {
   const { t, lang } = useI18n();
   const { user } = useAuth();
@@ -129,6 +133,7 @@ export function ScheduleDialog({
           date: format(date, "yyyy-MM-dd"),
           time,
           message: message.trim(),
+          ...(jobId ? { jobId } : {}),
           // The e-mail goes out as the preview shows it, in this screen's language.
           language: lang,
         },
@@ -158,6 +163,8 @@ export function ScheduleDialog({
         return;
       }
       queryClient.setQueryData(sentQuery.queryKey, (current = []) => [...current, result.request]);
+      // The developer moved to "contacted" in the job.
+      if (jobId) void queryClient.invalidateQueries({ queryKey: jobsQueryKey });
       setStep("success");
       toast.success(t.schedule.done, { description: when });
     } catch {

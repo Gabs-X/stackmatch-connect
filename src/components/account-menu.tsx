@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   Bookmark,
+  BriefcaseBusiness,
   Building2,
   Heart,
   LifeBuoy,
@@ -105,6 +106,12 @@ export function AccountMenu() {
               <Link to="/discover">
                 <Search />
                 {t.auth.menu.discover}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/jobs">
+                <BriefcaseBusiness />
+                {t.auth.menu.jobs}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

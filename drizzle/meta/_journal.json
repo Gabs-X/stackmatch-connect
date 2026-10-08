@@ -162,6 +162,13 @@
       "when": 1791472173506,
       "tag": "0022_drop_hourly_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791472989151,
+      "tag": "0023_jobs",
+      "breakpoints": true
     }
   ]
 }

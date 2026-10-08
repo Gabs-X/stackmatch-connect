@@ -7,7 +7,7 @@ import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder 
 import { loadTranslations } from "./translations";
 import { developerProfiles, developerSkills, projectSkills, projects, skills } from "./db/schema";
 
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 const skillKey = (name: string) => name.trim().toLowerCase();
 
@@ -15,7 +15,7 @@ const skillKey = (name: string) => name.trim().toLowerCase();
  * Ids of the named skills, keyed by lowercase name. Names the catalog doesn't have yet are added
  * as typed; a different case of an existing one ("react") reuses it ("React").
  */
-async function skillIds(tx: Tx, names: string[]) {
+export async function skillIds(tx: Tx, names: string[]) {
   // A new skill keeps the first spelling it was given, profile skills before project tech.
   const byKey = new Map<string, string>();
   for (const name of names) if (!byKey.has(skillKey(name))) byKey.set(skillKey(name), name.trim());
@@ -38,7 +38,7 @@ async function skillIds(tx: Tx, names: string[]) {
 }
 
 /** Skill ids for the names, in order, once each. */
-function uniqueIds(ids: Map<string, number>, names: string[]) {
+export function uniqueIds(ids: Map<string, number>, names: string[]) {
   return [...new Set(names.flatMap((name) => ids.get(skillKey(name)) ?? []))];
 }
 

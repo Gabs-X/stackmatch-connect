@@ -10,10 +10,13 @@ export function DeveloperCard({
   developer,
   compact = false,
   showProfile = compact,
+  jobId,
 }: {
   developer: Developer;
   compact?: boolean;
   showProfile?: boolean;
+  /** The job the company is looking at it for; the profile page then acts inside it. */
+  jobId?: string | undefined;
 }) {
   const { t, tv } = useI18n();
   const { user } = useAuth();
@@ -119,6 +122,7 @@ export function DeveloperCard({
               <Link
                 to="/developer/$id"
                 params={{ id: developer.id }}
+                search={jobId ? { job: jobId } : {}}
                 onPointerDown={(event) => event.stopPropagation()}
               >
                 {t.card.viewProfile} <ArrowUpRight />

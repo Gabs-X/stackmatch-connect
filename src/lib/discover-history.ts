@@ -9,6 +9,8 @@ export type HistoryEntry = {
   index: number;
   addedSaved: boolean;
   addedInterest: boolean;
+  /** Whether it added the developer to the job Discover was searching for. */
+  addedToJob: boolean;
 };
 
 /**
@@ -21,6 +23,8 @@ export function createHistoryEntry(
   index: number,
   saved: readonly string[],
   interests: readonly string[],
+  /** Developers in the job being searched for; null outside a job. */
+  jobMembers: readonly string[] | null = null,
 ): HistoryEntry {
   return {
     id: developer.id,
@@ -28,6 +32,7 @@ export function createHistoryEntry(
     index,
     addedSaved: action !== "pass" && !saved.includes(developer.id),
     addedInterest: action === "interest" && !interests.includes(developer.id),
+    addedToJob: action !== "pass" && jobMembers !== null && !jobMembers.includes(developer.id),
   };
 }
 
