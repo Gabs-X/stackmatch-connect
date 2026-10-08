@@ -288,6 +288,29 @@ export async function loadPublishedProfiles(db: Db, userIds?: string[]): Promise
   });
 }
 
+/** The profile's state, from its location ("Recife, PE" -> "PE"). */
+const profileState = sql`upper(trim(substring(${developerProfiles.location} from ',([^,]*)$')))`;
+
+/**
+ * Profiles in any of the places: a city with its state ("Recife, PE") or a whole state ("PE").
+ * Cities compare without case or surrounding spaces, as the job ranking does.
+ */
+function inPlaces(places: string[]) {
+  const cities = places.filter((place) => parseLocation(place).uf);
+  const states = places
+    .filter((place) => !parseLocation(place).uf)
+    .map((uf) => uf.trim().toUpperCase());
+  return or(
+    cities.length
+      ? inArray(
+          sql`lower(trim(${developerProfiles.location}))`,
+          cities.map((city) => city.trim().toLowerCase()),
+        )
+      : undefined,
+    states.length ? inArray(profileState, states) : undefined,
+  );
+}
+
 /**
  * The Discover filters as a condition on developer_profiles. Options inside a group combine with
  * OR; groups combine with AND.
@@ -312,6 +335,7 @@ function matchingFilters(db: Db, filters: Filters) {
     filters.availability.length
       ? inArray(developerProfiles.availability, filters.availability)
       : undefined,
+    filters.places.length ? inPlaces(filters.places) : undefined,
   );
 }
 
@@ -344,7 +368,7 @@ function rankedMatching(job: JobInput) {
       : sql`0`,
     option(developerProfiles.availability, job.availability, matchWeights.availability),
     locationApplies(job)
-      ? sql`(case when lower(trim(${developerProfiles.location})) = ${job.location.trim().toLowerCase()} then ${matchWeights.location}::float when upper(trim(substring(${developerProfiles.location} from ',([^,]*)$'))) = ${uf} then ${matchWeights.location / 2}::float else 0 end)`
+      ? sql`(case when lower(trim(${developerProfiles.location})) = ${job.location.trim().toLowerCase()} then ${matchWeights.location}::float when ${profileState} = ${uf} then ${matchWeights.location / 2}::float else 0 end)`
       : sql`0`,
   ];
   return sql<number>`(${sql.join(parts, sql` + `)})`;

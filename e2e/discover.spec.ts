@@ -104,6 +104,19 @@ test("filters narrow the list and active chips can be removed", async ({ page })
   await expect(counter(page)).toHaveText("1 de 5 perfis");
 });
 
+test("the city filter takes a whole state or one of its cities", async ({ page }) => {
+  const filters = page.locator("aside").first();
+  await filters.getByLabel("Estado").selectOption("MG");
+  await filters.getByRole("button", { name: "Adicionar local" }).click();
+  await expect(counter(page)).toHaveText("1 de 2 perfis");
+
+  await filters.getByLabel("Cidade").selectOption("Uberaba");
+  await filters.getByRole("button", { name: "Adicionar local" }).click();
+  await page.getByRole("button", { name: "Remover filtro: MG (todo o estado)" }).first().click();
+  await expect(counter(page)).toHaveText("1 de 1 perfil");
+  await expect(card(page)).toContainText("Gabriel Botelho");
+});
+
 test("a search without results offers to clear the filters", async ({ page }) => {
   await filterChip(page, "Angular").click();
   await filterChip(page, "Presencial").click();

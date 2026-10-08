@@ -7,7 +7,8 @@ import {
   seniorityOptions,
   workModeOptions,
 } from "@/lib/developers";
-import { defaultFilters, type FilterGroup, type Filters } from "@/lib/filters";
+import { defaultFilters, type Filters } from "@/lib/filters";
+import { PlaceFilter } from "./place-filter";
 
 const groups = [
   [
@@ -44,7 +45,7 @@ export function FilterPanel({
 }) {
   const { t, tv } = useI18n();
 
-  const toggle = (key: FilterGroup, item: string) =>
+  const toggle = (key: (typeof groups)[number][2], item: string) =>
     onChange({
       ...value,
       [key]: value[key].includes(item)
@@ -83,6 +84,10 @@ export function FilterPanel({
           </div>
         </section>
       ))}
+      <section>
+        <h3 className="mb-3 text-sm font-semibold">{t.filters.places}</h3>
+        <PlaceFilter value={value.places} onChange={(places) => onChange({ ...value, places })} />
+      </section>
     </div>
   );
 }

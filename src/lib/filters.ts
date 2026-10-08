@@ -6,6 +6,8 @@ export type Filters = {
   mode: string[];
   hiring: string[];
   availability: string[];
+  /** Places, as a city with its state ("Recife, PE") or a whole state ("PE"). */
+  places: string[];
 };
 export type FilterGroup = keyof Filters;
 
@@ -15,6 +17,7 @@ export const defaultFilters: Filters = {
   mode: [],
   hiring: [],
   availability: [],
+  places: [],
 };
 
 const options = z.array(z.string().max(100)).max(100);
@@ -26,4 +29,5 @@ export const filtersSchema = z.object({
   mode: options,
   hiring: options,
   availability: options,
+  places: options.default([]),
 });

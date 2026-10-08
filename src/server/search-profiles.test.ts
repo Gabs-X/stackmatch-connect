@@ -84,6 +84,18 @@ describe("searchProfiles", () => {
     expect(await names({ availability: ["Em 30 dias"] })).toEqual(["Bia"]);
   });
 
+  it("matches places by city or by whole state", async () => {
+    await publish({
+      Ana: {},
+      Bia: { location: "Olinda, PE" },
+      Caio: { location: "São Paulo, SP" },
+    });
+    expect(await names({ places: ["recife, pe"] })).toEqual(["Ana"]);
+    expect(await names({ places: ["PE"] })).toEqual(["Ana", "Bia"]);
+    expect(await names({ places: ["Recife, PE", "SP"] })).toEqual(["Ana", "Caio"]);
+    expect(await names({ places: ["RJ"] })).toEqual([]);
+  });
+
   it("pages in publication order, leaving out and counting the excluded profiles", async () => {
     const ids = await publish({ Ana: {}, Bia: {}, Caio: {}, Davi: {}, Eva: { skills: ["Go"] } });
     const page = (offset: number, exclude: string[] = []) =>

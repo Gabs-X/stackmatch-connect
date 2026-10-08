@@ -46,6 +46,10 @@ const pt = {
     availability: "Disponibilidade",
     remove: "Remover filtro",
     hiring: "Contratação",
+    places: "Cidade",
+    anyCity: "Todo o estado",
+    addPlace: "Adicionar local",
+    wholeState: (uf: string) => `${uf} (todo o estado)`,
   },
   home: {
     eyebrow: "Perfis com stack, projetos e disponibilidade",
@@ -932,6 +936,10 @@ const en: Dict = {
     availability: "Availability",
     remove: "Remove filter",
     hiring: "Hiring type",
+    places: "City",
+    anyCity: "Whole state",
+    addPlace: "Add place",
+    wholeState: (uf: string) => `${uf} (whole state)`,
   },
   home: {
     eyebrow: "Profiles with stack, projects and availability",

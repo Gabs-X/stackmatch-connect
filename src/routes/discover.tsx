@@ -15,6 +15,7 @@ import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPanel } from "@/components/filter-panel";
+import { usePlaceLabel } from "@/lib/use-place-label";
 import { MatchBreakdown } from "@/components/job-match";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,7 @@ function DiscoverRoute() {
  */
 function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: string[] }) {
   const { t, tv } = useI18n();
+  const placeLabel = usePlaceLabel();
   useLocalizedMeta(t.discover.title + " — Stack Match", t.discover.sub);
 
   const [filters, setFilters] = useState<Filters>(job ? jobFilters(job) : defaultFilters);
@@ -181,8 +183,10 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
     updateHistory([]);
   };
   const active = (
-    ["skills", "seniority", "mode", "hiring", "availability"] as FilterGroup[]
+    ["skills", "seniority", "mode", "hiring", "availability", "places"] as FilterGroup[]
   ).flatMap((group) => filters[group].map((value) => ({ group, value })));
+  const chipLabel = (group: FilterGroup, value: string) =>
+    group === "places" ? placeLabel(value) : tv(value);
   const finished = total > 0 && index >= total;
   const progress = total ? Math.min(index / total, 1) * 100 : 0;
   const undo = (entry = historyRef.current.at(-1)) => {
@@ -264,7 +268,7 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
                 type="button"
                 className="filter-chip filter-chip-active"
                 key={group + value}
-                aria-label={t.filters.remove + ": " + tv(value)}
+                aria-label={t.filters.remove + ": " + chipLabel(group, value)}
                 onClick={() =>
                   changeFilters({
                     ...filters,
@@ -272,7 +276,7 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
                   })
                 }
               >
-                {tv(value)} <span aria-hidden="true">×</span>
+                {chipLabel(group, value)} <span aria-hidden="true">×</span>
               </button>
             ))}
           </div>

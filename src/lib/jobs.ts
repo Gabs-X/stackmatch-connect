@@ -92,7 +92,10 @@ export type JobSummary = Job & { counts: Record<JobStage, number> };
 
 export type JobCandidate = { developerId: string; stage: JobStage; stageChangedAt: string };
 
-/** The Discover filters a job starts with: its whole stack, and the options it accepts. */
+/**
+ * The Discover filters a job starts with: its whole stack, and the options it accepts. Its city
+ * ranks profiles (see matchJob) instead of leaving any out.
+ */
 export function jobFilters(job: JobInput): Filters {
   return {
     skills: [...new Set([...job.requiredSkills, ...job.desiredSkills])],
@@ -100,6 +103,7 @@ export function jobFilters(job: JobInput): Filters {
     mode: [...job.workModes],
     hiring: [...job.hiringTypes],
     availability: [...job.availability],
+    places: [],
   };
 }
 
