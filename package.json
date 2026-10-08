@@ -18,7 +18,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "images:migrate": "tsx scripts/migrate-images.ts",
     "vercel-build": "tsx scripts/migrate.ts --production-only && npm run build",
-    "translations:backfill": "tsx scripts/translate-texts.ts"
+    "translations:backfill": "tsx scripts/translate-texts.ts",
+    "jobs:notify-published": "tsx scripts/notify-published-jobs.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"
