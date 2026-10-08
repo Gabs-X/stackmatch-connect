@@ -2,7 +2,7 @@
  * `npm run translations:backfill`: translates the free text of every developer profile and company
  * already in the database, the ones saved before automatic translation existed (new saves are
  * translated on their own). Texts with a translation are skipped, so running it again only does
- * what's missing. Like db:migrate, it reads DATABASE_URL (and DEEPL_API_KEY, ANTHROPIC_API_KEY) from
+ * what's missing. Like db:migrate, it reads DATABASE_URL and DEEPL_API_KEY (and the optional Claude backup's settings) from
  * .env.migrate.local when they aren't set.
  */
 import { existsSync } from "node:fs";
@@ -17,7 +17,9 @@ if (existsSync(migrateEnvFile)) process.loadEnvFile(migrateEnvFile);
 
 const translator = defaultTranslator();
 if (!translator) {
-  console.error("DEEPL_API_KEY or ANTHROPIC_API_KEY is needed to translate.");
+  console.error(
+    "DEEPL_API_KEY is needed to translate (or TRANSLATION_BACKUP=claude with ANTHROPIC_API_KEY).",
+  );
   process.exit(1);
 }
 

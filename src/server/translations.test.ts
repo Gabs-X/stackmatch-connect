@@ -313,21 +313,7 @@ describe("withBackup", () => {
 describe("defaultTranslator", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("is null without any key, and set up with either", () => {
-    vi.stubEnv("DEEPL_API_KEY", "");
-    vi.stubEnv("ANTHROPIC_API_KEY", "");
-    expect(defaultTranslator()).toBeNull();
-    vi.stubEnv("DEEPL_API_KEY", "key:fx");
-    expect(defaultTranslator()).toBeTypeOf("function");
-    vi.stubEnv("DEEPL_API_KEY", "");
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    expect(defaultTranslator()).toBeTypeOf("function");
-  });
-
-  it("tries DeepL first and Claude when DeepL is out of quota", async () => {
-    vi.stubEnv("DEEPL_API_KEY", "key:fx");
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    const calls: string[] = [];
+  const stubFetch = (calls: string[]) =>
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string | URL | Request) => {
@@ -337,6 +323,32 @@ describe("defaultTranslator", () => {
           : Response.json({ error: { type: "authentication_error" } }, { status: 401 });
       }),
     );
+
+  it("uses only DeepL by default, even with the assistant's Claude key", async () => {
+    vi.stubEnv("TRANSLATION_BACKUP", "");
+    vi.stubEnv("DEEPL_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    expect(defaultTranslator()).toBeNull();
+
+    vi.stubEnv("DEEPL_API_KEY", "key:fx");
+    const calls: string[] = [];
+    stubFetch(calls);
+    await expect(defaultTranslator()?.(["Oi"], new AbortController().signal)).rejects.toMatchObject(
+      { status: 456 },
+    );
+    expect(calls.every((url) => url.includes("api-free.deepl.com"))).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to Claude only with TRANSLATION_BACKUP=claude", async () => {
+    vi.stubEnv("TRANSLATION_BACKUP", "claude");
+    vi.stubEnv("DEEPL_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    expect(defaultTranslator()).toBeTypeOf("function");
+
+    vi.stubEnv("DEEPL_API_KEY", "key:fx");
+    const calls: string[] = [];
+    stubFetch(calls);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const translate = defaultTranslator();
     await expect(translate?.(["Oi"], new AbortController().signal)).rejects.toBeDefined();

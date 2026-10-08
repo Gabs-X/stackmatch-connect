@@ -11,9 +11,10 @@ import { textTranslations } from "./db/schema";
 /**
  * Translates the free text people write (bio, role, project descriptions, a company's description)
  * between Brazilian Portuguese and English when a profile is saved, and keeps the result per
- * account. Whatever language a text was written in, it gets the other one. DeepL translates first
- * (DEEPL_API_KEY); Claude (ANTHROPIC_API_KEY) steps in when DeepL fails or its monthly quota ran
- * out, or alone when there's no DeepL key. With neither, or when both fail, texts show as written.
+ * account. Whatever language a text was written in, it gets the other one. DeepL translates
+ * (DEEPL_API_KEY). Claude is a backup only when TRANSLATION_BACKUP=claude: then it steps in when
+ * DeepL fails or its monthly quota ran out, or translates alone without a DeepL key. When nothing
+ * translates, texts show as written.
  */
 
 export const hashText = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -194,11 +195,14 @@ export function withBackup(primary: Translator, backup: Translator): Translator 
   };
 }
 
-/** DeepL with Claude as backup, whichever of them is configured; null when neither is. */
+/**
+ * DeepL, plus Claude as backup when TRANSLATION_BACKUP=claude (off by default, so every
+ * translation comes from DeepL); null when nothing is configured.
+ */
 export function defaultTranslator(): Translator | null {
   const deeplKey = process.env["DEEPL_API_KEY"]?.trim();
   const deepl = deeplKey ? deeplTranslator(deeplKey) : null;
-  const client = assistantClient();
+  const client = process.env["TRANSLATION_BACKUP"]?.trim() === "claude" ? assistantClient() : null;
   const claude = client ? claudeTranslator(client) : null;
   if (deepl && claude) return withBackup(deepl, claude);
   return deepl ?? claude;
