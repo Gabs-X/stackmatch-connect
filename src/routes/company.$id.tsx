@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { ProfileLink } from "@/components/profile-link";
 import { MeetingProposal } from "@/components/meeting-proposal";
+import { OpenJobs } from "@/components/open-jobs";
 import { RequireAccount } from "@/components/require-account";
 import { TranslationNote } from "@/components/translation-note";
 import { isTranslated } from "@/lib/translations";
@@ -159,6 +160,7 @@ function CompanyDetails({ user }: { user: AuthUser }) {
               <TranslationNote original={original} onToggle={() => setOriginal(!original)} />
             )}
           </section>
+          <OpenJobs accountId={user.id} companyId={company.companyId} />
           <section>
             <h2 className="text-xl font-bold">{t.company.activity}</h2>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">

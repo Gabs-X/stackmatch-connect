@@ -156,3 +156,44 @@ test("a proposal from a job tells the developer what the job is about", async ({
   await page.goto(`/jobs/${jobId}`);
   await expect(page.getByLabel("Etapa: Gabriel Botelho")).toHaveValue("meeting");
 });
+
+test("a developer the company reached offers themselves for one of its jobs", async ({ page }) => {
+  await signInAs(page, "company");
+  await page.goto("/jobs/new");
+  await page.getByLabel("Título").fill("Mobile Pleno");
+  await page.getByRole("button", { name: "Criar vaga" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Mobile Pleno" })).toBeVisible();
+  const jobUrl = page.url();
+  // Reaching him outside the job is enough for him to see the company's open jobs.
+  await page.goto("/discover");
+  await expect(page.locator("main section article").first()).toContainText("Gabriel Botelho");
+  await page.getByRole("button", { name: "Interessado" }).click();
+  await expect(page.locator("main section article").first()).not.toContainText("Gabriel Botelho");
+
+  await page.context().clearCookies();
+  await signInAs(page, "developer");
+  await page.goto("/interests");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Empresa Teste" })
+    .getByRole("link", { name: "Ver empresa" })
+    .click();
+  const jobs = page.getByRole("region", { name: "Vagas abertas" });
+  await expect(jobs).toContainText("Mobile Pleno");
+  await jobs.getByRole("button", { name: "Quero participar: Mobile Pleno" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Mensagem (opcional)").fill("Trabalho com React Native há 3 anos.");
+  await dialog.getByRole("button", { name: "Enviar" }).click();
+  await expect(jobs.getByText(/^Você se ofereceu em/)).toBeVisible();
+
+  const email = await lastEmail(page, "teste.emp@example.com");
+  expect(email.subject).toBe("Gabriel Botelho se ofereceu para a vaga Mobile Pleno");
+  expect(email.text).toContain("> Trabalho com React Native há 3 anos.");
+
+  await page.context().clearCookies();
+  await signInAs(page, "company");
+  await page.goto(jobUrl);
+  await expect(page.getByLabel("Etapa: Gabriel Botelho")).toHaveValue("saved");
+  await expect(page.getByRole("main")).toContainText("Trabalho com React Native há 3 anos.");
+  await expect(page.getByText(/^Se ofereceu em/)).toBeVisible();
+});

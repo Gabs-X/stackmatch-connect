@@ -183,6 +183,13 @@
       "when": 1791475926592,
       "tag": "0025_meeting_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791483723169,
+      "tag": "0026_job_applications",
+      "breakpoints": true
     }
   ]
 }

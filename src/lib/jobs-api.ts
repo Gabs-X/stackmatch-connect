@@ -13,8 +13,10 @@ import {
   translateCompanyTexts,
   updateJob,
 } from "@/server/jobs";
+import { getRequestUrl } from "@tanstack/react-start/server";
+import { applyToJob, listOpenJobsFor } from "@/server/job-applications";
 import { database, requireAccount } from "@/server/session";
-import { jobInputSchema, jobStages } from "./jobs";
+import { applicationInputSchema, jobInputSchema, jobStages } from "./jobs";
 
 export const jobId = z.string().min(1).max(200);
 const developerId = z.string().min(1).max(200);
@@ -119,4 +121,35 @@ export const jobCandidatesQuery = (accountId: string, id: string) =>
   queryOptions({
     queryKey: [...jobsQueryKey, accountId, id, "candidates"],
     queryFn: () => fetchJobCandidates({ data: id }),
+  });
+
+/**
+ * Stands for `GET /companies/:id/jobs` for developers: the open jobs of a company that reached
+ * them; null if it never did.
+ */
+export const fetchOpenJobs = createServerFn({ method: "GET" })
+  .validator(z.string().min(1).max(200))
+  .handler(async ({ data }) =>
+    listOpenJobsFor(await database(), data, (await requireAccount("developer")).id),
+  );
+
+/**
+ * Stands for `POST /jobs/:id/applications`: the developer offers themselves for the job and the
+ * company hears by e-mail. Expected refusals come back as a code (see applyToJob).
+ */
+export const applyToJobFn = createServerFn({ method: "POST" })
+  .validator(applicationInputSchema)
+  .handler(async ({ data }) =>
+    applyToJob(
+      await database(),
+      (await requireAccount("developer")).id,
+      data,
+      getRequestUrl().origin,
+    ),
+  );
+
+export const openJobsQuery = (accountId: string, companyId: string) =>
+  queryOptions({
+    queryKey: ["open-jobs", accountId, companyId],
+    queryFn: () => fetchOpenJobs({ data: companyId }),
   });

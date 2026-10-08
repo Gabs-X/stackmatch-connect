@@ -93,7 +93,7 @@ Screens (pt-BR name / en name, path):
 - Suporte / Support (/support): anyone, signed in or not; also in the account menu and the footer.
 - Termos de uso e privacidade / Terms of use and privacy (/terms): anyone; also in the footer and on the sign-up form.
 - A developer's public profile (/developer/<id>) is open to anyone with the link.
-- A company's page (/company/<id>) is visible only to developers that company contacted.
+- A company's page (/company/<id>) is visible only to developers that company contacted. It shows the company's open jobs; the developer can offer themselves for each one once ("Quero participar" / "I'm interested"), with an optional message (up to 1000 characters).
 Visitors who open a restricted page go to sign in and come back afterwards; an account of the other type sees a notice instead.
 
 Sign-up and sign-in:
@@ -125,6 +125,7 @@ For companies:
 - "Buscar no Discover" / search Discover from a job opens Discover with the job's filters (its skills, seniority, work model, contract type and availability; the filters can still be changed) and leaves out the developers already in the job. Saving, marking interest or proposing a call from there, or from a profile opened from the job, adds the developer to the job.
 - Each job keeps its developers in stages: saved, showed interest, contacted (a meeting proposal was sent) and call scheduled. The stage moves forward on its own and never back; the company can also change it or remove someone from the job on the job page.
 - When an interest mark or a meeting proposal comes from a job, the e-mail to the developer includes the job's main points (title, seniority, work model, contract type, availability, pay, skills and the start of the description), and the developer sees the job in Interested companies, as it was when they were contacted. The interest e-mail still goes at most once every 30 days per company.
+- A developer who offers themselves for a job joins it at "saved" (or stays where the company already had them), the company's contact gets an e-mail with the job and the message (replies go to the developer), and the job page shows "Se ofereceu em <data>" / "Offered themselves on <date>" with the message; the jobs list counts how many offered themselves. Jobs have no public page: only developers the company already reached see them.
 - Job match: inside a job, each profile shows how much of the job it meets, as a percentage, with each criterion (required skills 40, nice-to-have skills 15, seniority 15, work model 10, contract type 10, availability 5, and the city 5 when the job isn't remote only: full in the same city, half in the same state). Only what the job sets counts; groups left empty don't. It compares requirements with what the profile says and doesn't judge the person. Discover from a job shows the best matches first, and the job page sorts by match or by the order developers joined.
 - Company details: website, location, description and the contact developers see (name, role, e-mail, phone). Proposals are signed with this contact and replies go to its e-mail. Company name, CNPJ and login e-mail are shown read-only.
 

@@ -5,12 +5,15 @@ import {
   Archive,
   ArchiveRestore,
   Pencil,
+  Send,
   RotateCcw,
   Search,
   Trash2,
   UserMinus,
 } from "lucide-react";
+import { format } from "date-fns";
 import { useState, type CSSProperties } from "react";
+import { enUS, ptBR } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
@@ -237,7 +240,7 @@ function CandidateGrid({
   candidates: JobCandidate[];
   accountId: string;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const queryClient = useQueryClient();
   const ids = candidates.map((candidate) => candidate.developerId);
   const { data, isPending, isError, refetch } = useQuery({
@@ -357,6 +360,23 @@ function CandidateGrid({
                   <UserMinus />
                 </Button>
               </div>
+              {candidate.appliedAt && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs">
+                  <p className="flex items-center gap-1.5 font-semibold text-primary">
+                    <Send className="size-3.5" aria-hidden="true" />
+                    {t.jobs.applied(
+                      format(new Date(candidate.appliedAt), t.interests.dateFormat, {
+                        locale: lang === "pt" ? ptBR : enUS,
+                      }),
+                    )}
+                  </p>
+                  {candidate.applicationMessage && (
+                    <p className="mt-1.5 whitespace-pre-line break-words text-muted-foreground">
+                      {candidate.applicationMessage}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

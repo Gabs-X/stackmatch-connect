@@ -151,6 +151,11 @@ function JobCard({ job, index }: { job: JobSummary; index: number }) {
           </div>
         ))}
       </dl>
+      {job.applied > 0 && (
+        <p className="mt-3 text-center text-xs font-semibold text-primary">
+          {t.jobs.appliedCount(job.applied)}
+        </p>
+      )}
       <div className="mt-5 flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">
           <Link to="/jobs/$id" params={{ id: job.id }}>

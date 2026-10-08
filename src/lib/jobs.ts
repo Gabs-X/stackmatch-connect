@@ -87,10 +87,36 @@ export type Job = JobInput & {
  */
 export type JobSnapshot = JobInput;
 
-/** A job in the company's list, with how many developers are at each stage. */
-export type JobSummary = Job & { counts: Record<JobStage, number> };
+/**
+ * A job in the company's list, with how many developers are at each stage and how many offered
+ * themselves for it.
+ */
+export type JobSummary = Job & { counts: Record<JobStage, number>; applied: number };
 
-export type JobCandidate = { developerId: string; stage: JobStage; stageChangedAt: string };
+export type JobCandidate = {
+  developerId: string;
+  stage: JobStage;
+  stageChangedAt: string;
+  /** When the developer offered themselves for the job, or null if the company found them. */
+  appliedAt: string | null;
+  /** What they wrote when offering themselves, or "". */
+  applicationMessage: string;
+};
+
+/** The longest message a developer can send with an offer for a job. */
+export const maxApplicationMessage = 1000;
+
+export const applicationInputSchema = z.object({
+  jobId: z.string().min(1).max(200),
+  message: text(maxApplicationMessage),
+});
+export type ApplicationInput = z.infer<typeof applicationInputSchema>;
+
+/**
+ * An open job of a company that reached the developer, as the developer sees it on the company's
+ * page, with when they offered themselves for it.
+ */
+export type OpenJob = JobSnapshot & { id: string; appliedAt: string | null };
 
 /**
  * The Discover filters a job starts with: its whole stack, and the options it accepts. Its city

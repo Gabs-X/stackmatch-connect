@@ -23,7 +23,7 @@ import { loadTranslations, updateTranslations } from "./translations";
 type JobRow = typeof jobs.$inferSelect;
 
 /** Rows as the screens use them, with each job's stack split into must-haves and the rest. */
-async function toJobs(db: Db | Tx, rows: JobRow[]): Promise<Job[]> {
+export async function toJobs(db: Db | Tx, rows: JobRow[]): Promise<Job[]> {
   if (!rows.length) return [];
   const stack = await db
     .select({ jobId: jobSkills.jobId, name: skills.name, required: jobSkills.required })
@@ -85,7 +85,10 @@ async function writeSkills(tx: Tx, jobId: string, input: JobInput) {
   if (rows.length) await tx.insert(jobSkills).values(rows);
 }
 
-/** The company's jobs, open ones first, then newest first, with how many are at each stage. */
+/**
+ * The company's jobs, open ones first, then newest first, with how many are at each stage and how
+ * many offered themselves.
+ */
 export async function listJobs(db: Db, companyId: string): Promise<JobSummary[]> {
   const rows = await db
     .select()
@@ -94,7 +97,12 @@ export async function listJobs(db: Db, companyId: string): Promise<JobSummary[]>
     .orderBy(desc(jobs.status), desc(jobs.createdAt));
   const counted = rows.length
     ? await db
-        .select({ jobId: jobCandidates.jobId, stage: jobCandidates.stage, total: count() })
+        .select({
+          jobId: jobCandidates.jobId,
+          stage: jobCandidates.stage,
+          total: count(),
+          applied: count(jobCandidates.appliedAt),
+        })
         .from(jobCandidates)
         .where(
           inArray(
@@ -109,8 +117,13 @@ export async function listJobs(db: Db, companyId: string): Promise<JobSummary[]>
       JobStage,
       number
     >;
-    for (const row of counted) if (row.jobId === job.id) counts[row.stage] = row.total;
-    return { ...job, counts };
+    let applied = 0;
+    for (const row of counted)
+      if (row.jobId === job.id) {
+        counts[row.stage] = row.total;
+        applied += row.applied;
+      }
+    return { ...job, counts, applied };
   });
 }
 
@@ -204,6 +217,8 @@ export async function listCandidates(
     developerId: row.developerId,
     stage: row.stage,
     stageChangedAt: row.stageChangedAt.toISOString(),
+    appliedAt: row.appliedAt?.toISOString() ?? null,
+    applicationMessage: row.applicationMessage,
   }));
 }
 

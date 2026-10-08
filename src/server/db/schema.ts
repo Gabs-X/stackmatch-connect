@@ -454,9 +454,9 @@ export const jobSkills = pgTable(
 );
 
 /**
- * The developers a company reached for a job, and how far each got. Saving, marking interest or
- * proposing a call inside the job adds the developer or moves them forward; the company can also
- * move them by hand.
+ * The developers a company reached for a job, or who offered themselves for it, and how far each
+ * got. Saving, marking interest or proposing a call inside the job adds the developer or moves them
+ * forward; the company can also move them by hand.
  */
 export const jobCandidates = pgTable(
   "job_candidates",
@@ -469,6 +469,10 @@ export const jobCandidates = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     stage: text("stage").$type<JobStage>().notNull(),
     stageChangedAt: timestamp("stage_changed_at", { withTimezone: true }).notNull().defaultNow(),
+    /** When the developer offered themselves for the job, from the company's page; null if they didn't. */
+    appliedAt: timestamp("applied_at", { withTimezone: true }),
+    /** What the developer wrote to the company when offering themselves, or "". */
+    applicationMessage: text("application_message").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

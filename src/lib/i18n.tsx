@@ -783,6 +783,9 @@ const pt = {
     pipeline: "Desenvolvedores na vaga",
     pipelineSub:
       "Salvar, demonstrar interesse ou propor uma conversa dentro da vaga coloca o perfil aqui. A etapa avança sozinha, e você também pode mudá-la.",
+    applied: (date: string) => `Se ofereceu em ${date}`,
+    appliedCount: (count: number) =>
+      count === 1 ? "1 pessoa se ofereceu" : `${count} pessoas se ofereceram`,
     noCandidates: "Ninguém nesta vaga ainda.",
     noCandidatesSub:
       "Busque no Discover a partir desta vaga: os perfis que você salvar ou marcar aparecem aqui.",
@@ -889,6 +892,38 @@ const pt = {
     companyPending: "aguardando resposta",
     companyAccepted: "aceita",
     companyDeclined: "recusada",
+  },
+  // The e-mail a company gets when a developer offers themselves for one of its jobs.
+  applicationEmail: {
+    subject: (developer: string, job: string) => `${developer} se ofereceu para a vaga ${job}`,
+    greeting: (name: string) => `Olá, ${name}!`,
+    intro: (developer: string, job: string) =>
+      `${developer} viu a vaga ${job} no StackMatch e se ofereceu para ela.`,
+    action: "Ver a vaga",
+    closing: (developer: string) =>
+      `Para conversar, responda este e-mail: a resposta vai direto para ${developer}.`,
+  },
+  openJobs: {
+    title: "Vagas abertas",
+    sub: "Se alguma combina com você, ofereça-se: a empresa recebe sua mensagem por e-mail e vê você na vaga.",
+    empty: "Esta empresa não tem vagas abertas agora.",
+    loadError: "Não foi possível carregar as vagas.",
+    apply: "Quero participar",
+    applied: (date: string) => `Você se ofereceu em ${date}`,
+    dialogTitle: (job: string) => `Oferecer-se para ${job}`,
+    dialogSub:
+      "A empresa recebe um e-mail com a vaga e a mensagem abaixo, e passa a ver você na página da vaga. Você só pode se oferecer uma vez para cada vaga.",
+    message: "Mensagem (opcional)",
+    messagePh: "Conte por que a vaga combina com você.",
+    send: "Enviar",
+    cancel: "Cancelar",
+    sent: "Pronto! A empresa recebeu seu interesse por e-mail.",
+    errors: {
+      "unknown-job": "Esta vaga não está mais aberta.",
+      "no-profile": "Publique seu perfil antes de se oferecer para uma vaga.",
+      "already-applied": "Você já se ofereceu para esta vaga.",
+      generic: "Não foi possível enviar. Tente novamente.",
+    },
   },
   footer: {
     support: "Suporte",
@@ -1664,6 +1699,9 @@ const en: Dict = {
     pipeline: "Developers in this job",
     pipelineSub:
       "Saving, showing interest or proposing a call from inside the job puts the profile here. The stage moves forward on its own, and you can change it too.",
+    applied: (date: string) => `Offered themselves on ${date}`,
+    appliedCount: (count: number) =>
+      count === 1 ? "1 person offered themselves" : `${count} people offered themselves`,
     noCandidates: "Nobody in this job yet.",
     noCandidatesSub: "Search Discover from this job: the profiles you save or mark show up here.",
     removeFromJob: "Remove from job",
@@ -1768,6 +1806,38 @@ const en: Dict = {
     companyPending: "waiting for an answer",
     companyAccepted: "accepted",
     companyDeclined: "declined",
+  },
+  applicationEmail: {
+    subject: (developer: string, job: string) =>
+      `${developer} offered themselves for the job ${job}`,
+    greeting: (name: string) => `Hi, ${name}!`,
+    intro: (developer: string, job: string) =>
+      `${developer} saw the job ${job} on StackMatch and offered themselves for it.`,
+    action: "See the job",
+    closing: (developer: string) =>
+      `To talk, reply to this e-mail: your answer goes straight to ${developer}.`,
+  },
+  openJobs: {
+    title: "Open jobs",
+    sub: "If one fits you, offer yourself: the company gets your message by e-mail and sees you in the job.",
+    empty: "This company has no open jobs right now.",
+    loadError: "Couldn't load the jobs.",
+    apply: "I'm interested",
+    applied: (date: string) => `You offered yourself on ${date}`,
+    dialogTitle: (job: string) => `Offer yourself for ${job}`,
+    dialogSub:
+      "The company gets an e-mail with the job and the message below, and sees you on the job's page. You can offer yourself once per job.",
+    message: "Message (optional)",
+    messagePh: "Tell them why the job fits you.",
+    send: "Send",
+    cancel: "Cancel",
+    sent: "Done! The company got your interest by e-mail.",
+    errors: {
+      "unknown-job": "This job isn't open anymore.",
+      "no-profile": "Publish your profile before offering yourself for a job.",
+      "already-applied": "You already offered yourself for this job.",
+      generic: "Couldn't send it. Please try again.",
+    },
   },
   footer: {
     support: "Support",

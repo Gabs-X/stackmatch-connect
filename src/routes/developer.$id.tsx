@@ -151,7 +151,13 @@ function JobMembership({ developerId, jobId }: { developerId: string; jobId: str
         addSaved(developerId, jobId);
         queryClient.setQueryData(candidatesQuery.queryKey, (current) => [
           ...(current ?? []),
-          { developerId, stage: "saved" as const, stageChangedAt: new Date().toISOString() },
+          {
+            developerId,
+            stage: "saved" as const,
+            stageChangedAt: new Date().toISOString(),
+            appliedAt: null,
+            applicationMessage: "",
+          },
         ]);
         toast(t.jobs.addedToJob);
       }}
