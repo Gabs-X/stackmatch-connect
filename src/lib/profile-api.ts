@@ -10,6 +10,7 @@ import {
   saveProfile,
   searchProfiles,
 } from "@/server/profiles";
+import { loadJob } from "@/server/jobs";
 import { loadTranslations, updateTranslations } from "@/server/translations";
 import { currentUser, database, requireAccount } from "@/server/session";
 import { filtersSchema, type Filters } from "./filters";
@@ -68,11 +69,15 @@ export const searchProfilesFn = createServerFn({ method: "POST" })
       exclude: ids,
       offset: z.number().int().min(0),
       limit: z.number().int().min(1).max(50),
+      /** One of the company's jobs, to put the profiles that meet more of it first. */
+      jobId: z.string().min(1).max(200).optional(),
     }),
   )
-  .handler(async ({ data }) => {
-    await requireAccount("company");
-    return searchProfiles(await database(), data);
+  .handler(async ({ data: { jobId, ...search } }) => {
+    const company = await requireAccount("company");
+    const db = await database();
+    const job = jobId ? await loadJob(db, company.id, jobId) : null;
+    return searchProfiles(db, { ...search, rankFor: job });
   });
 
 /** Stands for `POST /profiles/by-id`: the named profiles that still exist. Companies only. */
@@ -114,12 +119,18 @@ export const profilesQueryKey = ["profiles"];
 export const discoverPageSize = 20;
 
 /** Discover's profiles, a page at a time: see searchProfiles. */
-export const discoverQuery = (filters: Filters, exclude: readonly string[]) =>
+export const discoverQuery = (filters: Filters, exclude: readonly string[], jobId?: string) =>
   infiniteQueryOptions({
-    queryKey: [...profilesQueryKey, "search", filters, exclude],
+    queryKey: [...profilesQueryKey, "search", filters, exclude, jobId ?? null],
     queryFn: ({ pageParam }) =>
       searchProfilesFn({
-        data: { filters, exclude: [...exclude], offset: pageParam, limit: discoverPageSize },
+        data: {
+          filters,
+          exclude: [...exclude],
+          offset: pageParam,
+          limit: discoverPageSize,
+          ...(jobId ? { jobId } : {}),
+        },
       }),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => {

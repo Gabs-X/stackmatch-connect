@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
+import { matchJob } from "@/lib/job-match";
 import { jobStages, type Job, type JobCandidate, type JobStage } from "@/lib/jobs";
 import {
   deleteJobFn,
@@ -243,6 +244,7 @@ function CandidateGrid({
     ...profilesByIdQuery(ids),
     placeholderData: keepPreviousData,
   });
+  const [sort, setSort] = useState<"match" | "added">("match");
   const candidatesKey = jobCandidatesQuery(accountId, job.id).queryKey;
   const refresh = () => queryClient.invalidateQueries({ queryKey: jobsQueryKey });
   const move = async (developerId: string, stage: JobStage) => {
@@ -295,52 +297,71 @@ function CandidateGrid({
       </div>
     );
   const byId = new Map(data.developers.map((developer) => [developer.id, developer]));
+  // Profiles deleted since they joined the job are left out.
+  const entries = candidates.flatMap((candidate) => {
+    const developer = byId.get(candidate.developerId);
+    return developer ? [{ candidate, developer, match: matchJob(job, developer).score }] : [];
+  });
+  // Array.sort is stable: equal scores keep the order they joined in.
+  if (sort === "match") entries.sort((a, b) => (b.match ?? -1) - (a.match ?? -1));
   return (
-    <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {candidates.map((candidate, index) => {
-        const developer = byId.get(candidate.developerId);
-        // A profile deleted since it joined the job.
-        if (!developer) return null;
-        return (
-          <div
-            key={candidate.developerId}
-            className="stagger-item flex flex-col gap-2"
-            style={{ "--stagger-index": index } as CSSProperties}
+    <>
+      <div className="mt-6 flex justify-end">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          {t.jobs.match.sortLabel}
+          <select
+            value={sort}
+            onChange={(event) => setSort(event.target.value as typeof sort)}
+            className="h-9 rounded-md border bg-card px-2 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <DeveloperCard developer={developer} compact jobId={job.id} />
-            <div className="flex items-center gap-2">
-              <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
-                {t.jobs.stage}
-                <select
-                  value={candidate.stage}
-                  onChange={(event) =>
-                    void move(candidate.developerId, event.target.value as JobStage)
-                  }
-                  aria-label={`${t.jobs.stage}: ${developer.name}`}
-                  className="h-8 min-w-0 flex-1 rounded-md border bg-card px-2 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <option value="match">{t.jobs.match.sortMatch}</option>
+            <option value="added">{t.jobs.match.sortAdded}</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {entries.map(({ candidate, developer, match }, index) => {
+          return (
+            <div
+              key={candidate.developerId}
+              className="stagger-item flex flex-col gap-2"
+              style={{ "--stagger-index": index } as CSSProperties}
+            >
+              <DeveloperCard developer={developer} compact jobId={job.id} match={match} />
+              <div className="flex items-center gap-2">
+                <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
+                  {t.jobs.stage}
+                  <select
+                    value={candidate.stage}
+                    onChange={(event) =>
+                      void move(candidate.developerId, event.target.value as JobStage)
+                    }
+                    aria-label={`${t.jobs.stage}: ${developer.name}`}
+                    className="h-8 min-w-0 flex-1 rounded-md border bg-card px-2 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {jobStages.map((stage) => (
+                      <option key={stage} value={stage}>
+                        {t.jobs.stages[stage]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8 text-muted-foreground hover:text-destructive"
+                  aria-label={`${t.jobs.removeFromJob} ${developer.name}`}
+                  title={t.jobs.removeFromJob}
+                  onClick={() => void remove(candidate.developerId, developer.name)}
                 >
-                  {jobStages.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {t.jobs.stages[stage]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8 text-muted-foreground hover:text-destructive"
-                aria-label={`${t.jobs.removeFromJob} ${developer.name}`}
-                title={t.jobs.removeFromJob}
-                onClick={() => void remove(candidate.developerId, developer.name)}
-              >
-                <UserMinus />
-              </Button>
+                  <UserMinus />
+                </Button>
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

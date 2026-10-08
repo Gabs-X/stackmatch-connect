@@ -1,6 +1,23 @@
-import { and, arrayOverlaps, asc, count, eq, gt, inArray, not, or, sql } from "drizzle-orm";
+import {
+  and,
+  arrayOverlaps,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  not,
+  or,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from "drizzle-orm";
+import { parseLocation } from "@/lib/cities";
 import type { Developer } from "@/lib/developers";
 import type { Filters } from "@/lib/filters";
+import { locationApplies, matchWeights } from "@/lib/job-match";
+import type { JobInput } from "@/lib/jobs";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
 import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
@@ -298,19 +315,60 @@ function matchingFilters(db: Db, filters: Filters) {
   );
 }
 
+/**
+ * How much of the job's criteria each profile meets, in the weights of matchJob
+ * (src/lib/job-match.ts), as a number to sort by. Each profile is compared with the same job, so
+ * the share matchJob shows sorts the same way as this sum.
+ */
+function rankedMatching(job: JobInput) {
+  const lowered = (names: string[]) => names.map((name) => name.trim().toLowerCase());
+  const skillShare = (names: string[], weight: number) =>
+    names.length
+      ? sql`(${weight}::float * (select count(*) from ${developerSkills} inner join ${skills} on ${developerSkills.skillId} = ${skills.id} where ${developerSkills.developerId} = ${developerProfiles.userId} and lower(${skills.name}) in (${sql.join(
+          lowered(names).map((name) => sql`${name}`),
+          sql`, `,
+        )})) / ${names.length})`
+      : sql`0`;
+  const option = (column: SQL | AnyColumn, accepted: readonly string[], weight: number) =>
+    accepted.length
+      ? sql`(case when ${inArray(column as AnyColumn, [...accepted])} then ${weight} else 0 end)`
+      : sql`0`;
+  const { uf } = parseLocation(job.location);
+  const parts = [
+    skillShare(job.requiredSkills, matchWeights.requiredSkills),
+    skillShare(job.desiredSkills, matchWeights.desiredSkills),
+    option(developerProfiles.seniority, job.seniority, matchWeights.seniority),
+    option(developerProfiles.workMode, job.workModes, matchWeights.workMode),
+    job.hiringTypes.length
+      ? sql`(case when ${arrayOverlaps(developerProfiles.hiringTypes, [...job.hiringTypes])} then ${matchWeights.hiringTypes} else 0 end)`
+      : sql`0`,
+    option(developerProfiles.availability, job.availability, matchWeights.availability),
+    locationApplies(job)
+      ? sql`(case when lower(trim(${developerProfiles.location})) = ${job.location.trim().toLowerCase()} then ${matchWeights.location}::float when upper(trim(substring(${developerProfiles.location} from ',([^,]*)$'))) = ${uf} then ${matchWeights.location / 2}::float else 0 end)`
+      : sql`0`,
+  ];
+  return sql<number>`(${sql.join(parts, sql` + `)})`;
+}
+
 export type ProfileSearch = {
   filters: Filters;
   /** Profiles to leave out: the ones the company had saved when the Discover round began. */
   exclude: string[];
   offset: number;
   limit: number;
+  /** A job to rank by: profiles that meet more of it come first (see rankedMatching). */
+  rankFor?: JobInput | null;
 };
 
 /**
- * A page of the profiles that match the Discover filters, in the order they were first published.
+ * A page of the profiles that match the Discover filters, in the order they were first published,
+ * or, for a job, best match first (ties in publication order).
  * `total` counts every match outside `exclude`; `hidden`, the matches `exclude` left out.
  */
-export async function searchProfiles(db: Db, { filters, exclude, offset, limit }: ProfileSearch) {
+export async function searchProfiles(
+  db: Db,
+  { filters, exclude, offset, limit, rankFor = null }: ProfileSearch,
+) {
   const matching = matchingFilters(db, filters);
   const excluded = exclude.length ? inArray(developerProfiles.userId, exclude) : sql`false`;
   const [counts] = await db
@@ -324,15 +382,25 @@ export async function searchProfiles(db: Db, { filters, exclude, offset, limit }
     .select({ id: developerProfiles.userId })
     .from(developerProfiles)
     .where(and(matching, not(excluded)))
-    .orderBy(asc(developerProfiles.createdAt), asc(developerProfiles.userId))
+    .orderBy(
+      ...(rankFor ? [desc(rankedMatching(rankFor))] : []),
+      asc(developerProfiles.createdAt),
+      asc(developerProfiles.userId),
+    )
     .offset(offset)
     .limit(limit);
   const hidden = counts?.hidden ?? 0;
   return {
+    // Loaded in publication order; put back in the page's, which may rank by a job.
     developers: page.length
-      ? await loadPublishedProfiles(
-          db,
-          page.map((row) => row.id),
+      ? (
+          await loadPublishedProfiles(
+            db,
+            page.map((row) => row.id),
+          )
+        ).sort(
+          (a, b) =>
+            page.findIndex((row) => row.id === a.id) - page.findIndex((row) => row.id === b.id),
         )
       : [],
     total: (counts?.matching ?? 0) - hidden,

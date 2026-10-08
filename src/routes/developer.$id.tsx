@@ -4,13 +4,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Bookmark, BriefcaseBusiness } from "lucide-react";
 import { toast } from "sonner";
 import { DeveloperProfileView } from "@/components/developer-profile";
+import { MatchBreakdown } from "@/components/job-match";
 import { ScheduleDialog } from "@/components/schedule-dialog";
 import { Button } from "@/components/ui/button";
 import type { Developer } from "@/lib/developers";
 import { fetchPublishedProfile } from "@/lib/profile-api";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
-import { jobCandidatesQuery } from "@/lib/jobs-api";
+import { matchJob } from "@/lib/job-match";
+import { jobCandidatesQuery, jobQuery } from "@/lib/jobs-api";
 
 export const Route = createFileRoute("/developer/$id")({
   // ?job=<id>: seen from one of the company's jobs, so saving and proposing a call count there.
@@ -58,14 +60,17 @@ function DeveloperProfile({ d }: { d: Developer }) {
         noProjects={t.profile.noProjects}
         top={
           jobId ? (
-            <Link
-              to="/jobs/$id"
-              params={{ id: jobId }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="size-4" />
-              {t.jobs.backToJob}
-            </Link>
+            <>
+              <Link
+                to="/jobs/$id"
+                params={{ id: jobId }}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="size-4" />
+                {t.jobs.backToJob}
+              </Link>
+              <JobMatchFor developer={d} jobId={jobId} />
+            </>
           ) : (
             <Link
               to="/discover"
@@ -155,4 +160,12 @@ function JobMembership({ developerId, jobId }: { developerId: string; jobId: str
       {t.jobs.addToJob}
     </Button>
   );
+}
+
+/** How much of the job the profile meets, criterion by criterion. */
+function JobMatchFor({ developer, jobId }: { developer: Developer; jobId: string }) {
+  const { user } = useAuth();
+  const { data: job } = useQuery({ ...jobQuery(user?.id ?? "", jobId), enabled: Boolean(user) });
+  if (!job) return null;
+  return <MatchBreakdown match={matchJob(job, developer)} className="mt-4 max-w-xl" />;
 }

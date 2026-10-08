@@ -37,6 +37,8 @@ test("a job searches Discover with its filters and keeps who the company reached
   const card = page.locator("main section article").first();
   await expect(card).toContainText("Marina Costa");
   await expect(page.getByText(/^1 de 1 perfil/)).toBeVisible();
+  // She has TypeScript, is senior and remote: everything the job asks for.
+  await expect(card).toContainText("100% compatível");
   await page.getByRole("button", { name: "Interessado" }).click();
   await expect(page.getByText("Você chegou ao fim da lista")).toBeVisible();
   // A new round leaves out who is already in the job.
@@ -47,6 +49,7 @@ test("a job searches Discover with its filters and keeps who the company reached
   await page.getByRole("link", { name: "Ver vaga" }).click();
   const stage = page.getByLabel("Etapa: Marina Costa");
   await expect(stage).toHaveValue("interest");
+  await expect(page.getByRole("main").getByRole("article")).toContainText("100% compatível");
   await stage.selectOption({ label: "Conversa agendada" });
   await page.reload();
   await expect(page.getByLabel("Etapa: Marina Costa")).toHaveValue("meeting");
@@ -95,6 +98,8 @@ test("a profile opened from a job is added to it and shows its stage", async ({ 
   const jobId = page.url().split("/").at(-1) ?? "";
 
   await page.goto(`/developer/rafael-lima?job=${jobId}`);
+  // A job without criteria has nothing to compare.
+  await expect(page.getByText("A vaga não define critérios para comparar.")).toBeVisible();
   await page.getByRole("button", { name: "Adicionar à vaga" }).click();
   await expect(page.getByRole("link", { name: "Na vaga · Salvos" })).toBeVisible();
   await page.getByRole("link", { name: "Voltar à vaga" }).click();

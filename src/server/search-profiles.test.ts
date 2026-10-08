@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defaultFilters, type Filters } from "@/lib/filters";
+import { matchJob } from "@/lib/job-match";
+import { emptyJob, type JobInput } from "@/lib/jobs";
 import { emptyProfile, type LocalProfile } from "@/lib/local-profile";
 import { createAccount } from "./auth";
 import type { Db } from "./db";
@@ -105,5 +107,53 @@ describe("searchProfiles", () => {
         limit: 10,
       }),
     ).toMatchObject({ total: 3, hidden: 1 });
+  });
+});
+
+describe("ranking for a job", () => {
+  it("puts the profiles that meet more of the job first, as matchJob scores them", async () => {
+    const job: JobInput = {
+      ...emptyJob,
+      title: "Backend",
+      requiredSkills: ["Node.js", "PostgreSQL"],
+      desiredSkills: ["Docker"],
+      seniority: ["Sênior"],
+      workModes: ["Híbrido"],
+      hiringTypes: ["CLT"],
+      availability: ["Em 15 dias"],
+      location: "São Paulo, SP",
+    };
+    await publish({
+      Ana: { skills: ["React"] },
+      Bia: {
+        skills: ["Node.js", "PostgreSQL", "Docker"],
+        seniority: "Sênior",
+        workMode: "Híbrido",
+        hiringTypes: ["CLT"],
+        availability: "Em 15 dias",
+        location: "São Paulo, SP",
+      },
+      Caio: { skills: ["node.js"], seniority: "Sênior", location: "Campinas, SP" },
+      Davi: { skills: ["Node.js", "PostgreSQL"], workMode: "Híbrido" },
+      Eva: { skills: ["React"], location: "Santos, SP" },
+    });
+    const page = await searchProfiles(db, {
+      filters: defaultFilters,
+      exclude: [],
+      offset: 0,
+      limit: 10,
+      rankFor: job,
+    });
+    const order = page.developers.map((developer) => developer.name);
+    expect(order).toEqual(["Bia", "Davi", "Caio", "Eva", "Ana"]);
+    // The same order the screen's score gives, ties kept in publication order.
+    const scored = page.developers
+      .map((developer, index) => ({
+        name: developer.name,
+        index,
+        score: matchJob(job, developer).score ?? 0,
+      }))
+      .sort((a, b) => b.score - a.score || a.index - b.index);
+    expect(scored.map((entry) => entry.name)).toEqual(order);
   });
 });

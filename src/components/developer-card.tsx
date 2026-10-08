@@ -11,12 +11,15 @@ export function DeveloperCard({
   compact = false,
   showProfile = compact,
   jobId,
+  match,
 }: {
   developer: Developer;
   compact?: boolean;
   showProfile?: boolean;
   /** The job the company is looking at it for; the profile page then acts inside it. */
   jobId?: string | undefined;
+  /** How much of that job the profile meets, 0 to 100 (see src/lib/job-match.ts). */
+  match?: number | null | undefined;
 }) {
   const { t, tv } = useI18n();
   const { user } = useAuth();
@@ -49,6 +52,9 @@ export function DeveloperCard({
             </span>
           )}
           {own && <span className="own-profile-badge">{t.card.yourProfile}</span>}
+          {match !== undefined && match !== null && (
+            <span className="match-badge">{t.jobs.match.score(match)}</span>
+          )}
         </div>
       </div>
       <div className={compact ? "p-5" : showProfile ? "p-4 sm:p-6" : "p-6"}>

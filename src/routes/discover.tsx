@@ -15,6 +15,7 @@ import { DeveloperCard } from "@/components/developer-card";
 import { DeveloperCardSkeleton } from "@/components/developer-card-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPanel } from "@/components/filter-panel";
+import { MatchBreakdown } from "@/components/job-match";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -28,6 +29,7 @@ import {
 import { defaultFilters, type FilterGroup, type Filters } from "@/lib/filters";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
+import { matchJob } from "@/lib/job-match";
 import { jobFilters, type Job } from "@/lib/jobs";
 import { jobCandidatesQuery, jobQuery } from "@/lib/jobs-api";
 import { discoverQuery } from "@/lib/profile-api";
@@ -148,7 +150,7 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
   // The server filters and sends the profiles a page at a time, leaving out the hidden ones.
   const { data, isPending, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
-      ...discoverQuery(filters, hiddenIds ?? noIds),
+      ...discoverQuery(filters, hiddenIds ?? noIds, job?.id),
       enabled: hiddenIds !== null,
     });
   const loaded = useMemo(
@@ -162,6 +164,7 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
     if (hasNextPage && !isFetchingNextPage && index >= loaded.length - 5) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, index, loaded.length, fetchNextPage]);
   const current = loaded[index];
+  const currentMatch = job && current ? matchJob(job, current) : null;
   const loading =
     (isPending && !isError) || hiddenIds === null || (!current && index < total && !isError);
   const startRound = () => {
@@ -434,7 +437,12 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
                     >
                       {t.discover.stampNo}
                     </motion.div>
-                    <DeveloperCard developer={current} showProfile jobId={job?.id} />
+                    <DeveloperCard
+                      developer={current}
+                      showProfile
+                      jobId={job?.id}
+                      match={currentMatch?.score}
+                    />
                   </motion.div>
                 </AnimatePresence>
               )}
@@ -479,7 +487,8 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
                 ))}
               </div>
             )}
-            {current && (
+            {currentMatch && <MatchBreakdown match={currentMatch} />}
+            {current && !currentMatch && (
               <>
                 <div className="rounded-lg border bg-card p-5">
                   <p className="text-xs font-bold uppercase text-muted-foreground">

@@ -388,6 +388,19 @@ a {
   font-weight: 700;
   box-shadow: var(--elevation-soft);
 }
+/* How much of a job the profile meets, on the photo opposite the availability. */
+@utility match-badge {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.65rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: var(--elevation-soft);
+}
 /* Always dark, so it keeps fixed colors instead of following the theme tokens. */
 @utility auth-panel {
   background:
