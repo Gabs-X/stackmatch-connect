@@ -162,9 +162,10 @@ function RootComponent() {
           <Toaster
             richColors
             theme={resolved}
-            position="bottom-right"
-            offset={{ bottom: 96, right: 24 }}
-            mobileOffset={{ bottom: raised ? 176 : 80 }}
+            // At the top, just below the header: clear of the assistant and the action bars.
+            position="top-center"
+            offset={{ top: 80 }}
+            mobileOffset={{ top: 72 }}
           />
           <AssistantWidget raised={raised} />
           {vercelAnalyticsEnabled && <Analytics />}
