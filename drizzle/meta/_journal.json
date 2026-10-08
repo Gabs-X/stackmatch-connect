@@ -197,6 +197,13 @@
       "when": 1791488340630,
       "tag": "0027_job_board",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791496284276,
+      "tag": "0028_publish_existing_jobs",
+      "breakpoints": true
     }
   ]
 }
