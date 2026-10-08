@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Check, ExternalLink, Github, Linkedin, MapPin } from "lucide-react";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { DeveloperPhoto } from "@/components/developer-photo";
@@ -18,7 +17,6 @@ export function DeveloperProfileView({
   developer: d,
   top,
   actions,
-  photoLayoutId,
   noProjects,
   note,
 }: {
@@ -27,8 +25,6 @@ export function DeveloperProfileView({
   top: ReactNode;
   /** Buttons beside the name. */
   actions?: ReactNode;
-  /** Lets the photo morph from the Discover card in the preview. */
-  photoLayoutId?: string;
   /** Shown when there are no projects. */
   noProjects: string;
   /** Under the bio, e.g. that some text isn't translated yet. */
@@ -40,28 +36,19 @@ export function DeveloperProfileView({
   const text = (value: string) => (original ? value : tv(value, d.translations));
   // Rate and experience are optional in the profile form.
   const place = [d.location, tv(d.workMode)].filter(Boolean).join(" · ");
-  const photo = (
-    <DeveloperPhoto
-      name={d.name}
-      image={d.image}
-      alt={d.name}
-      fallbackSize="lg"
-      className="size-36 shrink-0 overflow-hidden rounded-xl bg-muted shadow-soft"
-    />
-  );
   return (
     <>
       <section className="stagger-item border-b bg-card">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           {top}
           <div className="mt-8 flex flex-col gap-7 sm:flex-row sm:items-center">
-            {photoLayoutId ? (
-              <motion.div layoutId={photoLayoutId} className="w-fit shrink-0 rounded-xl">
-                {photo}
-              </motion.div>
-            ) : (
-              photo
-            )}
+            <DeveloperPhoto
+              name={d.name}
+              image={d.image}
+              alt={d.name}
+              fallbackSize="lg"
+              className="size-36 shrink-0 overflow-hidden rounded-xl bg-muted shadow-soft"
+            />
             <div className="min-w-0 flex-1 break-words">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-4xl font-extrabold">{d.name}</h1>

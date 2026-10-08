@@ -1,6 +1,5 @@
 import { useI18n } from "@/lib/i18n";
 import { Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
 import { ArrowUpRight, Briefcase, Clock3, MapPin } from "lucide-react";
 import type { Developer } from "@/lib/developers";
 import { DeveloperPhoto } from "@/components/developer-photo";
@@ -11,34 +10,19 @@ export function DeveloperCard({
   developer,
   compact = false,
   showProfile = compact,
-  layoutId,
 }: {
   developer: Developer;
   compact?: boolean;
   showProfile?: boolean;
-  /**
-   * Shares the frame and photo with another element using the same id (`<id>`, `<id>-photo`),
-   * so switching between them morphs one into the other; the text fades in once it settles.
-   */
-  layoutId?: string;
 }) {
   const { t, tv, formatCurrency } = useI18n();
   const { user } = useAuth();
   // Profiles created in the app are identified by their owner's account id.
   const own = developer.id === user?.id;
-  // Spread, not passed as undefined: motion props reject an explicit undefined layoutId.
-  const shared = (part?: string) =>
-    layoutId ? { layoutId: part ? `${layoutId}-${part}` : layoutId } : {};
 
   return (
-    <motion.article
-      {...shared()}
-      // Set inline so the corner radius stays round while the shared layout animation scales it.
-      {...(layoutId ? { style: { borderRadius: 12.8 } } : {})}
-      className={compact ? "talent-card" : "developer-card"}
-    >
-      <motion.div
-        {...shared("photo")}
+    <article className={compact ? "talent-card" : "developer-card"}>
+      <div
         className={
           compact
             ? "relative h-52 overflow-hidden bg-muted"
@@ -47,11 +31,7 @@ export function DeveloperCard({
               : "relative h-64 overflow-hidden bg-muted sm:h-72"
         }
       >
-        {/* While morphing, keeps its proportions so the photo isn't stretched. */}
-        <motion.div
-          {...(layoutId ? { layout: "preserve-aspect" as const } : {})}
-          className="absolute inset-0"
-        >
+        <div className="absolute inset-0">
           <DeveloperPhoto
             name={developer.name}
             image={developer.image}
@@ -66,18 +46,9 @@ export function DeveloperCard({
             </span>
           )}
           {own && <span className="own-profile-badge">{t.card.yourProfile}</span>}
-        </motion.div>
-      </motion.div>
-      <motion.div
-        {...(layoutId
-          ? {
-              initial: { opacity: 0, y: 6 },
-              animate: { opacity: 1, y: 0 },
-              transition: { duration: 0.45, delay: 0.35, ease: [0.16, 1, 0.3, 1] },
-            }
-          : {})}
-        className={compact ? "p-5" : showProfile ? "p-4 sm:p-6" : "p-6"}
-      >
+        </div>
+      </div>
+      <div className={compact ? "p-5" : showProfile ? "p-4 sm:p-6" : "p-6"}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 break-words">
             <h2 className={compact ? "text-lg font-bold" : "text-2xl font-bold"}>
@@ -162,7 +133,7 @@ export function DeveloperCard({
             )}
           </Button>
         )}
-      </motion.div>
-    </motion.article>
+      </div>
+    </article>
   );
 }

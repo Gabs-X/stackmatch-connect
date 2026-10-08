@@ -1,4 +1,4 @@
-import { LayoutGroup, motion, MotionConfig, type Transition } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useId, type ReactNode } from "react";
 import { DeveloperCard } from "@/components/developer-card";
@@ -8,21 +8,19 @@ import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile"
 import { myTranslationsQuery } from "@/lib/profile-api";
 import type { Translations } from "@/lib/translations";
 
-/** Photo shared by the full profile and the Discover card, so one morphs into the other. */
-const layoutId = "own-profile";
-// No bounce: a long, decelerating curve reads as one smooth resize instead of a springy jump.
-const morph: Transition = { duration: 0.6, ease: [0.32, 0.72, 0, 1] };
-/** Content that only exists in one view fades in as the frame settles. */
-const reveal = (delay: number) => ({
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.45, delay: 0.3 + delay, ease: [0.16, 1, 0.3, 1] as const },
-});
+/**
+ * Switching views: the current one fades out quickly, then the new one fades in rising a little.
+ * Both layouts differ too much for a morph between them to read well.
+ */
+const swap = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
+  exit: { opacity: 0, y: -6, transition: { duration: 0.15, ease: "easeIn" as const } },
+};
 
 /**
  * The developer's profile as companies will see it: the full profile, laid out like
- * /developer/$id, or the Discover card. Switching views morphs the photo between both, then fades
- * in the content of the new view.
+ * /developer/$id, or the Discover card.
  */
 export function ProfilePreview({
   profile,
@@ -74,37 +72,42 @@ export function ProfilePreview({
   };
 
   return (
-    <MotionConfig reducedMotion="user" transition={morph}>
-      <LayoutGroup id="profile-preview">
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence mode="wait" initial={false}>
         {showCard ? (
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              {back}
-              <div className="flex flex-wrap gap-2">{actions}</div>
-            </div>
-            {status}
-            <CardView developer={developer} />
-          </div>
-        ) : (
-          <DeveloperProfileView
-            developer={developer}
-            photoLayoutId={`${layoutId}-photo`}
-            noProjects={t.create.addProjectsHint}
-            top={
-              <>
-                {back}
+          <motion.div key="card" {...swap}>
+            <div className="border-b bg-card">
+              <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  {back}
+                  <div className="flex flex-wrap gap-2">{actions}</div>
+                </div>
                 {status}
-              </>
-            }
-            actions={actions}
-            note={
-              pending && (
-                <p className="mt-1 text-xs text-muted-foreground">{t.translation.pending}</p>
-              )
-            }
-          />
+              </div>
+            </div>
+            <CardView developer={developer} />
+          </motion.div>
+        ) : (
+          <motion.div key="full" {...swap}>
+            <DeveloperProfileView
+              developer={developer}
+              noProjects={t.create.addProjectsHint}
+              top={
+                <>
+                  {back}
+                  {status}
+                </>
+              }
+              actions={actions}
+              note={
+                pending && (
+                  <p className="mt-1 text-xs text-muted-foreground">{t.translation.pending}</p>
+                )
+              }
+            />
+          </motion.div>
         )}
-      </LayoutGroup>
+      </AnimatePresence>
     </MotionConfig>
   );
 }
@@ -115,18 +118,19 @@ function CardView({ developer }: { developer: PreviewDeveloper }) {
   const { t } = useI18n();
   const titleId = useId();
   return (
-    <section aria-labelledby={titleId} className="mt-10 text-center">
-      <motion.div {...reveal(0.15)}>
-        <h2 id={titleId} className="text-xl font-bold">
-          {t.create.cardPreviewTitle}
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          {t.create.cardPreviewSub}
-        </p>
-      </motion.div>
+    <section
+      aria-labelledby={titleId}
+      className="mx-auto max-w-6xl px-4 py-10 text-center sm:px-6 lg:px-8"
+    >
+      <h2 id={titleId} className="text-xl font-bold">
+        {t.create.cardPreviewTitle}
+      </h2>
+      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+        {t.create.cardPreviewSub}
+      </p>
       {/* The same card companies swipe through in Discover. */}
       <div className="mx-auto mt-7 max-w-sm text-left">
-        <DeveloperCard developer={developer} layoutId={layoutId} />
+        <DeveloperCard developer={developer} />
       </div>
     </section>
   );
