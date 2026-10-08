@@ -81,6 +81,12 @@ export type Job = JobInput & {
   updatedAt: string;
 };
 
+/**
+ * The job as it was when the company reached a developer from it, kept with the interest mark or
+ * the proposal: what the developer was told stays the same if the job changes or goes away.
+ */
+export type JobSnapshot = JobInput;
+
 /** A job in the company's list, with how many developers are at each stage. */
 export type JobSummary = Job & { counts: Record<JobStage, number> };
 

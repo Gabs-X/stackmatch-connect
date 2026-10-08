@@ -125,13 +125,14 @@ export function codeEmail(
 }
 
 /**
- * A message e-mail: paragraphs, then an optional quote (what someone wrote) and link button, then
- * a closing line; the text and HTML versions say the same.
+ * A message e-mail: paragraphs, then optional details (a titled list, such as a job), a quote (what
+ * someone wrote) and a link button, then a closing line; the text and HTML versions say the same.
  */
 export function messageEmail({
   to,
   subject,
   paragraphs,
+  details,
   quote,
   action,
   closing,
@@ -140,6 +141,7 @@ export function messageEmail({
   to: string;
   subject: string;
   paragraphs: string[];
+  details?: { title: string; rows: [label: string, value: string][] } | undefined;
   quote?: string;
   action?: { label: string; url: string };
   closing: string;
@@ -147,12 +149,25 @@ export function messageEmail({
 }): Email {
   const text = [
     ...paragraphs,
+    ...(details
+      ? [[details.title, ...details.rows.map(([label, value]) => `${label}: ${value}`)].join("\n")]
+      : []),
     ...(quote ? [quote.replace(/^/gm, "> ")] : []),
     ...(action ? [`${action.label}: ${action.url}`] : []),
     closing,
   ].join("\n\n");
   const blocks = [
     ...paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`),
+    ...(details
+      ? [
+          `<div style="margin:20px 0;padding:16px;border:1px solid #ddd;border-radius:8px"><p style="margin:0 0 8px;font-weight:bold">${escapeHtml(details.title)}</p>${details.rows
+            .map(
+              ([label, value]) =>
+                `<p style="margin:4px 0;white-space:pre-line"><span style="color:#666">${escapeHtml(label)}:</span> ${escapeHtml(value)}</p>`,
+            )
+            .join("")}</div>`,
+        ]
+      : []),
     ...(quote
       ? [
           `<p style="white-space:pre-line;border-left:3px solid #ddd;padding-left:12px;color:#555">${escapeHtml(quote)}</p>`,

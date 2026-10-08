@@ -1,4 +1,6 @@
+import type { JobSnapshot } from "./jobs";
 import type { MeetingRequest } from "./meeting-requests";
+import type { Translations } from "./translations";
 
 /** A company account marked a developer as interesting in Discover, signed with its contact. */
 export type ProfileInterest = {
@@ -11,6 +13,9 @@ export type ProfileInterest = {
   /** Company contact's e-mail; the developer replies to it. */
   email: string;
   at: string;
+  /** The job the mark came from, as it was then. */
+  job?: JobSnapshot;
+  jobTranslations?: Translations;
 };
 
 /**
@@ -25,6 +30,8 @@ export type InterestedCompany = {
   /** Most recent interaction, ISO date. */
   at: string;
   meeting?: MeetingRequest;
+  /** The job of the latest mark or proposal that came from one. */
+  job?: { snapshot: JobSnapshot; translations?: Translations | undefined; at: string };
 };
 
 /** Groups interest marks and meeting proposals by company account, most recent first. */
@@ -66,5 +73,15 @@ export function interestedCompanies(
         },
         item,
       );
+  const jobs = [
+    ...interests.map((item) => ({ ...item, sentAt: item.at })),
+    ...meetings.map((item) => ({ ...item, jobTranslations: item.jobTranslations })),
+  ];
+  for (const item of jobs) {
+    const entry = byCompany.get(item.companyId);
+    if (!entry || !item.job || item.developerId !== developerId) continue;
+    if (!entry.job || item.sentAt > entry.job.at)
+      entry.job = { snapshot: item.job, translations: item.jobTranslations, at: item.sentAt };
+  }
   return [...byCompany.values()].sort((a, b) => b.at.localeCompare(a.at));
 }

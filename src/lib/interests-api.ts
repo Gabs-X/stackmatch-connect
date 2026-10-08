@@ -4,7 +4,6 @@ import { z } from "zod";
 import { listInterestsBy, listInterestsFor, removeInterest } from "@/server/interests";
 import { getRequestUrl } from "@tanstack/react-start/server";
 import { markInterestAndNotify, type MarkResult } from "@/server/outreach";
-import { advanceCandidate } from "@/server/jobs";
 import { database, requireAccount } from "@/server/session";
 
 const developerId = z.string().min(1).max(200);
@@ -16,7 +15,8 @@ export const fetchMyInterests = createServerFn({ method: "GET" }).handler(async 
 
 /**
  * Stands for `POST /interests`. Within the daily limit, marks interest and e-mails the developer in
- * the language of the company's screen (see markInterestAndNotify); a refusal says which limit.
+ * the language of the company's screen (see markInterestAndNotify), about the job it came from
+ * when there was one; a refusal says which limit.
  */
 export const markInterestFn = createServerFn({ method: "POST" })
   .validator(
@@ -28,18 +28,15 @@ export const markInterestFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<MarkResult> => {
     const company = await requireAccount("company");
-    const db = await database();
-    const result = await markInterestAndNotify(
-      db,
+    return markInterestAndNotify(
+      await database(),
       company.id,
       data.developerId,
       data.language,
       getRequestUrl().origin,
+      Date.now(),
+      data.jobId,
     );
-    // From inside a job, the developer joins it as interesting once the mark went through.
-    if ("ok" in result && data.jobId)
-      await advanceCandidate(db, company.id, data.jobId, data.developerId, "interest");
-    return result;
   });
 
 /** Stands for `DELETE /interests/:developerId`, used to undo a mark. */

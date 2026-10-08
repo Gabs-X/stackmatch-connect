@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { JobSnapshot } from "./jobs";
+import type { Translations } from "./translations";
 
 /**
  * A company proposes one time for a call; the developer gets it by e-mail and replies straight to
@@ -19,6 +21,10 @@ export type MeetingRequest = {
   email: string;
   message: string;
   sentAt: string;
+  /** The job it was about, as it was then; absent when sent outside a job. */
+  job?: JobSnapshot;
+  /** Of the job's title and description, when they were translated. */
+  jobTranslations?: Translations;
 };
 
 export const meetingTimes = ["09:00", "10:30", "14:00", "15:30", "17:00"];

@@ -2,7 +2,10 @@ import { format } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import { eq } from "drizzle-orm";
 import { dictionaries, type Lang } from "@/lib/i18n";
+import { optionLabel } from "@/lib/option-labels";
+import { compensationLabel, type JobSnapshot } from "@/lib/jobs";
 import type { MeetingRequest } from "@/lib/meeting-requests";
+import type { Translations } from "@/lib/translations";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
@@ -21,13 +24,63 @@ async function account(db: Db, id: string) {
   return row;
 }
 
-/** Tells the developer a company marked interest, with a link to their interested companies. */
+/** The longest part of a job description an e-mail quotes; the rest is on the site. */
+const descriptionExcerpt = 400;
+
+/**
+ * The main points of a job, for the e-mails sent from it: options, place, pay, stack and the start
+ * of the description, in the e-mail's language (the company's text translated when it was).
+ */
+export function jobEmailDetails(job: JobSnapshot, language: Lang, translations: Translations = {}) {
+  const t = dictionaries[language].jobs;
+  const text = (value: string) => translations[value]?.[language] ?? value;
+  const list = (values: readonly string[]) =>
+    values.length ? values.map((value) => optionLabel(value, language)).join(", ") : t.any;
+  const money = (value: number) =>
+    new Intl.NumberFormat(language === "pt" ? "pt-BR" : "en-US", {
+      style: "currency",
+      currency: "BRL",
+      maximumFractionDigits: 0,
+    }).format(value);
+  const pay = compensationLabel(job, t, money);
+  const description = text(job.description);
+  const rows: [string, string][] = [
+    [t.form.seniority, list(job.seniority)],
+    [t.form.workModes, list(job.workModes) + (job.location ? ` · ${job.location}` : "")],
+    [t.form.hiringTypes, list(job.hiringTypes)],
+    [t.form.availability, list(job.availability)],
+    ...(pay ? [[t.form.compensation, pay] as [string, string]] : []),
+    ...(job.requiredSkills.length
+      ? [[t.form.requiredSkills, job.requiredSkills.join(", ")] as [string, string]]
+      : []),
+    ...(job.desiredSkills.length
+      ? [[t.form.desiredSkills, job.desiredSkills.join(", ")] as [string, string]]
+      : []),
+    ...(description
+      ? [
+          [
+            t.form.description,
+            description.length > descriptionExcerpt
+              ? `${description.slice(0, descriptionExcerpt).trimEnd()}…`
+              : description,
+          ] as [string, string],
+        ]
+      : []),
+  ];
+  return { title: t.emailTitle(text(job.title)), rows };
+}
+
+/**
+ * Tells the developer a company marked interest, with a link to their interested companies; with
+ * the job it came from, when there was one.
+ */
 export async function notifyInterest(
   db: Db,
   companyId: string,
   developerId: string,
   language: Lang,
   appUrl: string,
+  job: { snapshot: JobSnapshot; translations: Translations } | null = null,
 ) {
   const [developer, company] = await Promise.all([
     account(db, developerId),
@@ -44,6 +97,7 @@ export async function notifyInterest(
         t.greeting(firstName(developer.name)),
         t.intro(contact.contactName, companyName),
       ],
+      details: job ? jobEmailDetails(job.snapshot, language, job.translations) : undefined,
       action: { label: t.action, url: new URL("/interests", appUrl).href },
       closing: t.closing,
       replyTo: contact.contactEmail,
@@ -56,6 +110,8 @@ export function meetingEmail(
   request: MeetingRequest,
   developerEmail: string,
   language: Lang,
+  /** Of the job's texts, when the proposal is about one. */
+  translations: Translations = {},
 ): Email {
   const t = dictionaries[language].schedule;
   // Noon keeps the day the same in any server time zone.
@@ -70,6 +126,7 @@ export function meetingEmail(
       t.greeting(firstName(request.developerName)),
       t.intro(request.contactName, request.company, when),
     ],
+    details: request.job ? jobEmailDetails(request.job, language, translations) : undefined,
     ...(request.message ? { quote: request.message } : {}),
     closing: t.closing,
     replyTo: request.email,

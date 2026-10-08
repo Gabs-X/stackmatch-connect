@@ -10,6 +10,7 @@ import {
   moveCandidate,
   removeCandidate,
   setJobStatus,
+  translateCompanyTexts,
   updateJob,
 } from "@/server/jobs";
 import { database, requireAccount } from "@/server/session";
@@ -33,16 +34,24 @@ export const fetchJob = createServerFn({ method: "GET" })
 /** Stands for `POST /jobs`; refused once the company has as many as it may. */
 export const createJobFn = createServerFn({ method: "POST" })
   .validator(jobInputSchema)
-  .handler(async ({ data }) =>
-    createJob(await database(), (await requireAccount("company")).id, data),
-  );
+  .handler(async ({ data }) => {
+    const company = await requireAccount("company");
+    const db = await database();
+    const result = await createJob(db, company.id, data);
+    if ("job" in result) await translateCompanyTexts(db, company.id);
+    return result;
+  });
 
 /** Stands for `PUT /jobs/:id`; null when the company has no such job. */
 export const updateJobFn = createServerFn({ method: "POST" })
   .validator(z.object({ id: jobId, job: jobInputSchema }))
-  .handler(async ({ data }) =>
-    updateJob(await database(), (await requireAccount("company")).id, data.id, data.job),
-  );
+  .handler(async ({ data }) => {
+    const company = await requireAccount("company");
+    const db = await database();
+    const job = await updateJob(db, company.id, data.id, data.job);
+    if (job) await translateCompanyTexts(db, company.id);
+    return job;
+  });
 
 /** Stands for `POST /jobs/:id/close` and `/reopen`. */
 export const setJobStatusFn = createServerFn({ method: "POST" })
@@ -56,9 +65,13 @@ export const setJobStatusFn = createServerFn({ method: "POST" })
 /** Stands for `DELETE /jobs/:id`. */
 export const deleteJobFn = createServerFn({ method: "POST" })
   .validator(jobId)
-  .handler(async ({ data }) =>
-    deleteJob(await database(), (await requireAccount("company")).id, data),
-  );
+  .handler(async ({ data }) => {
+    const company = await requireAccount("company");
+    const db = await database();
+    await deleteJob(db, company.id, data);
+    // Drops the translations of texts only the job had.
+    await translateCompanyTexts(db, company.id);
+  });
 
 /** Stands for `GET /jobs/:id/candidates`; null when the company has no such job. */
 export const fetchJobCandidates = createServerFn({ method: "GET" })

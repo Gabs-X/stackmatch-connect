@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { optionLabel } from "./option-labels";
 import type { Translations } from "./translations";
 
 export type Lang = "pt" | "en";
@@ -787,6 +788,10 @@ const pt = {
     addedToJob: "Adicionado à vaga.",
     inJob: (stage: string) => `Na vaga · ${stage}`,
     searchingFor: "Buscando para a vaga",
+    emailTitle: (title: string) => `Vaga: ${title}`,
+    aboutJob: "Sobre a vaga",
+    showDetails: "Ver detalhes",
+    hideDetails: "Esconder detalhes",
     resetFilters: "Filtros da vaga",
     leaveJob: "Sair da vaga",
     hiddenInJob: (count: number) =>
@@ -1608,6 +1613,10 @@ const en: Dict = {
     addedToJob: "Added to the job.",
     inJob: (stage: string) => `In the job · ${stage}`,
     searchingFor: "Searching for",
+    emailTitle: (title: string) => `Job: ${title}`,
+    aboutJob: "About the job",
+    showDetails: "Show details",
+    hideDetails: "Hide details",
     resetFilters: "Job filters",
     leaveJob: "Leave job",
     hiddenInJob: (count: number) =>
@@ -1660,30 +1669,6 @@ const en: Dict = {
 /** Both languages, for text built outside React, such as the e-mails the server sends. */
 export const dictionaries = { pt, en } satisfies Record<Lang, Dict>;
 
-// English for values stored in Portuguese: the profile options, the seed profile's texts and the
-// example card on the home page.
-const dataEn: Record<string, string> = {
-  "Crio interfaces em React e TypeScript com foco em acessibilidade e design systems.":
-    "I build React and TypeScript interfaces with a focus on accessibility and design systems.",
-  "Desenvolvo aplicações full stack com React e Node.js, integrando interfaces, APIs e bancos relacionais.":
-    "I build full stack applications with React and Node.js, connecting interfaces, APIs and relational databases.",
-  Júnior: "Junior",
-  Pleno: "Mid-level",
-  Sênior: "Senior",
-  Remoto: "Remote",
-  Híbrido: "Hybrid",
-  Presencial: "On-site",
-  "Disponível agora": "Available now",
-  "Em 15 dias": "In 15 days",
-  "Em 30 dias": "In 30 days",
-  Contrato: "Contract",
-  "Checkout modular que reduziu o abandono em 24%.":
-    "Modular checkout that cut cart abandonment by 24%.",
-  "Plataforma comercial com automações e analytics.":
-    "Sales platform with automations and analytics.",
-  "APIs resilientes para operações financeiras.": "Resilient APIs for financial operations.",
-};
-
 type I18nState = {
   lang: Lang;
   setLang: (l: Lang) => void;
@@ -1728,10 +1713,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const tv = (value: string, translations?: Translations) => {
     const translated = translations?.[value]?.[lang];
     if (translated) return translated;
-    if (lang === "pt") return value;
-    const years = value.match(/^(\d+) anos?$/);
-    if (years) return years[1] === "1" ? "1 year" : `${years[1]} years`;
-    return dataEn[value] ?? value;
+    return optionLabel(value, lang);
   };
   return (
     <I18nContext.Provider value={{ lang, setLang, t: lang === "pt" ? pt : en, tv, formatCurrency }}>

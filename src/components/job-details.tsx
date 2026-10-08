@@ -102,3 +102,36 @@ function SkillRow({
     </div>
   );
 }
+
+/**
+ * The job a company reached a developer about: its title, and the details on demand. What the
+ * developer sees is the job as it was then.
+ */
+export function JobContext({
+  job,
+  translations,
+  className,
+}: {
+  job: JobInput;
+  translations?: Translations | undefined;
+  className?: string;
+}) {
+  const { t, tv } = useI18n();
+  return (
+    <details className={cn("group rounded-lg border bg-muted/40 p-4", className)}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-xs text-muted-foreground">{t.jobs.aboutJob}</span>
+          <span className="font-semibold">{tv(job.title, translations)}</span>
+        </span>
+        <span className="shrink-0 text-xs font-semibold text-primary group-open:hidden">
+          {t.jobs.showDetails}
+        </span>
+        <span className="hidden shrink-0 text-xs font-semibold text-primary group-open:inline">
+          {t.jobs.hideDetails}
+        </span>
+      </summary>
+      <JobDetails job={job} translations={translations} className="mt-4" />
+    </details>
+  );
+}

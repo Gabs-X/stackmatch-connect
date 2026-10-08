@@ -1,19 +1,24 @@
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import type { CompanySettings } from "@/lib/company-settings";
 import {
   jobStages,
   maxJobsPerCompany,
   stageRank,
   type Job,
   type JobCandidate,
+  jobTexts,
   type JobInput,
+  type JobSnapshot,
   type JobStage,
   type JobStatus,
   type JobSummary,
 } from "@/lib/jobs";
 import type { Db } from "./db";
-import { jobCandidates, jobSkills, jobs, skills } from "./db/schema";
+import { companyTexts, savedSettings } from "./companies";
+import { interests, jobCandidates, jobSkills, jobs, meetingRequests, skills } from "./db/schema";
 import { skillIds, uniqueIds, type Tx } from "./profiles";
 import { developerExists } from "./saved-talents";
+import { loadTranslations, updateTranslations } from "./translations";
 
 type JobRow = typeof jobs.$inferSelect;
 
@@ -269,4 +274,61 @@ export async function removeCandidate(
   await db
     .delete(jobCandidates)
     .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)));
+}
+
+/** The job as developers are told about it, with its translated texts; null if not the company's. */
+export async function jobSnapshot(db: Db, companyId: string, jobId: string) {
+  const job = await loadJob(db, companyId, jobId);
+  if (!job) return null;
+  const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...snapshot } = job;
+  return {
+    snapshot: snapshot satisfies JobSnapshot,
+    translations: await loadTranslations(db, [companyId], jobTexts(snapshot)),
+  };
+}
+
+/**
+ * Every text of the company that gets translated: its details, its jobs, and the jobs as they were
+ * sent to developers with a mark or proposal. Translations are kept per account and the ones of
+ * texts not passed are dropped, so all of them go together.
+ */
+export async function companyAccountTexts(
+  db: Db,
+  companyId: string,
+  settings?: Pick<CompanySettings, "about" | "contactRole"> | null,
+) {
+  const details = settings === undefined ? await savedSettings(db, companyId) : settings;
+  const current = await db
+    .select({ title: jobs.title, description: jobs.description })
+    .from(jobs)
+    .where(eq(jobs.companyId, companyId));
+  const sent = [
+    ...(await db
+      .select({ job: interests.job })
+      .from(interests)
+      .where(and(eq(interests.companyId, companyId), isNotNull(interests.job)))),
+    ...(await db
+      .select({ job: meetingRequests.job })
+      .from(meetingRequests)
+      .where(and(eq(meetingRequests.companyId, companyId), isNotNull(meetingRequests.job)))),
+  ].flatMap((row) => (row.job ? [row.job] : []));
+  return [
+    ...(details ? companyTexts(details) : []),
+    ...[...current, ...sent].flatMap((job) => jobTexts(job)),
+  ];
+}
+
+/** Translates whatever of the company's texts is new; see companyAccountTexts. */
+export async function translateCompanyTexts(
+  db: Db,
+  companyId: string,
+  settings?: Pick<CompanySettings, "about" | "contactRole"> | null,
+  options?: Parameters<typeof updateTranslations>[3],
+) {
+  await updateTranslations(
+    db,
+    companyId,
+    await companyAccountTexts(db, companyId, settings),
+    options,
+  );
 }

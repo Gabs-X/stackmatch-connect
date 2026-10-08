@@ -9,7 +9,7 @@ import type { Db } from "./db";
 import { companyProfiles } from "./db/schema";
 import { loadTranslations } from "./translations";
 
-async function savedSettings(db: Db, userId: string): Promise<CompanySettings | null> {
+export async function savedSettings(db: Db, userId: string): Promise<CompanySettings | null> {
   const [row] = await db
     .select()
     .from(companyProfiles)

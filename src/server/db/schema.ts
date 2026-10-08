@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   date,
   index,
@@ -13,7 +14,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { CompensationPeriod, JobStage, JobStatus } from "@/lib/jobs";
+import type { CompensationPeriod, JobSnapshot, JobStage, JobStatus } from "@/lib/jobs";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -173,6 +174,9 @@ export const interests = pgTable(
     developerId: text("developer_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** The job the latest mark came from, if any, and what it said then. */
+    jobId: text("job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
+    job: jsonb("job").$type<JobSnapshot>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -206,6 +210,9 @@ export const meetingRequests = pgTable(
     contactName: text("contact_name").notNull(),
     /** Reply-To of the e-mail the developer receives. */
     replyToEmail: text("reply_to_email").notNull(),
+    /** The job the proposal is about, if any, and what it said when sent. */
+    jobId: text("job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
+    job: jsonb("job").$type<JobSnapshot>(),
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

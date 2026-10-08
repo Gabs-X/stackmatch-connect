@@ -1,4 +1,4 @@
-import { expect, signInAs, test } from "./fixtures";
+import { expect, lastEmail, signInAs, test } from "./fixtures";
 
 test("a job searches Discover with its filters and keeps who the company reached", async ({
   page,
@@ -99,4 +99,44 @@ test("a profile opened from a job is added to it and shows its stage", async ({ 
   await expect(page.getByRole("link", { name: "Na vaga · Salvos" })).toBeVisible();
   await page.getByRole("link", { name: "Voltar à vaga" }).click();
   await expect(page.getByLabel("Etapa: Rafael Lima")).toHaveValue("saved");
+});
+
+test("a proposal from a job tells the developer what the job is about", async ({ page }) => {
+  // Thursday noon in Brasília, so Friday has every time open (see meeting.spec.ts).
+  await page.clock.setFixedTime(new Date("2030-10-03T12:00:00-03:00"));
+  await signInAs(page, "company");
+  await page.goto("/jobs/new");
+  await page.getByLabel("Título").fill("Full Stack Pleno");
+  await page.getByLabel("Skills obrigatórias").fill("Node.js");
+  await page.getByLabel("Skills obrigatórias").press("Enter");
+  await page.getByRole("button", { name: "Criar vaga" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Full Stack Pleno" })).toBeVisible();
+  const jobId = page.url().split("/").at(-1) ?? "";
+
+  await page.goto(`/developer/demo-developer?job=${jobId}`);
+  await page.getByRole("button", { name: "Propor reunião" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.locator('[data-day="04/10/2030"]').click();
+  await dialog.getByRole("button", { name: "10:30" }).click();
+  await dialog.getByRole("button", { name: "Continuar" }).click();
+  const preview = dialog.getByRole("region", { name: "Prévia do e-mail" });
+  await expect(preview).toContainText("Vaga: Full Stack Pleno");
+  await dialog.getByRole("button", { name: "Enviar proposta" }).click();
+  await expect(dialog.getByRole("heading", { name: "Proposta enviada" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Concluir" }).click();
+
+  const sent = await lastEmail(page, "teste.dev@example.com");
+  expect(sent.text).toContain("Vaga: Full Stack Pleno");
+  expect(sent.text).toContain("Skills obrigatórias: Node.js");
+  await page.goto(`/jobs/${jobId}`);
+  await expect(page.getByLabel("Etapa: Gabriel Botelho")).toHaveValue("contacted");
+
+  // The developer sees the job with the company that reached them.
+  await page.context().clearCookies();
+  await signInAs(page, "developer");
+  await page.goto("/interests");
+  const job = page.getByRole("main").getByText("Sobre a vaga").locator("..");
+  await expect(job).toContainText("Full Stack Pleno");
+  await page.getByText("Ver detalhes").click();
+  await expect(page.getByRole("main")).toContainText("Skills obrigatórias");
 });

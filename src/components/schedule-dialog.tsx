@@ -29,7 +29,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
-import { jobsQueryKey } from "@/lib/jobs-api";
+import { jobQuery, jobsQueryKey } from "@/lib/jobs-api";
+import { JobDetails } from "@/components/job-details";
 import { sendMeetingRequestFn, sentMeetingRequestsQuery } from "@/lib/meetings-api";
 import { outreachLimits } from "@/lib/outreach";
 import { useCompanySettings } from "@/lib/use-company-settings";
@@ -71,6 +72,11 @@ export function ScheduleDialog({
   const { data: meetingRequests = [] } = useQuery({
     ...sentQuery,
     enabled: user?.accountType === "company" && user.emailVerified,
+  });
+  // The e-mail tells what the job is about, as the server will.
+  const { data: job } = useQuery({
+    ...jobQuery(user?.id ?? "", jobId ?? ""),
+    enabled: Boolean(jobId && user),
   });
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"schedule" | "details" | "success">("schedule");
@@ -329,6 +335,12 @@ export function ScheduleDialog({
                 <div className="space-y-3 px-4 py-3 text-sm leading-6">
                   <p>{t.schedule.greeting(firstName)}</p>
                   <p>{t.schedule.intro(sender?.name ?? "", sender?.company ?? "", when)}</p>
+                  {job && (
+                    <div className="rounded-md border p-3">
+                      <p className="font-semibold">{t.jobs.emailTitle(job.title)}</p>
+                      <JobDetails job={job} className="mt-3 text-xs" />
+                    </div>
+                  )}
                   {message.trim() && (
                     <p className="whitespace-pre-line border-l-2 pl-3 text-muted-foreground">
                       {message.trim()}

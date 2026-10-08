@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type CSSProperties } from "react";
+import { JobContext } from "@/components/job-details";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { ProjectCover } from "@/components/project-cover";
 import { RequireAccount } from "@/components/require-account";
@@ -217,6 +218,13 @@ function InterestsList({ user }: { user: AuthUser }) {
                         </time>
                       </div>
                     </div>
+                    {item.job && (
+                      <JobContext
+                        job={item.job.snapshot}
+                        translations={item.job.translations}
+                        className="mt-4"
+                      />
+                    )}
                     {meeting && <MeetingProposal meeting={meeting} className="mt-4" />}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button asChild size="sm">

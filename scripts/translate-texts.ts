@@ -1,5 +1,5 @@
 /**
- * `npm run translations:backfill`: translates the free text of every developer profile and company
+ * `npm run translations:backfill`: translates the free text of every developer profile, company and job
  * already in the database, the ones saved before automatic translation existed (new saves are
  * translated on their own). Texts with a translation are skipped, so running it again only does
  * what's missing, and the per-account translation limit doesn't apply. Like db:migrate, it reads DATABASE_URL and DEEPL_API_KEY (and the optional Claude backup's settings) from
@@ -7,8 +7,8 @@
  */
 import { existsSync } from "node:fs";
 import { getDb } from "@/server/db";
-import { companyProfiles, developerProfiles } from "@/server/db/schema";
-import { companyTexts } from "@/server/companies";
+import { companyProfiles, developerProfiles, jobs } from "@/server/db/schema";
+import { translateCompanyTexts } from "@/server/jobs";
 import { loadProfile, profileTexts } from "@/server/profiles";
 import { defaultTranslator, updateTranslations } from "@/server/translations";
 
@@ -38,13 +38,20 @@ for (const [index, { id }] of developers.entries()) {
     });
   console.log(`Developers: ${index + 1}/${developers.length}`);
 }
-for (const [index, company] of companies.entries()) {
-  await updateTranslations(db, company.userId, companyTexts(company), {
+// Companies with saved details or jobs: their details and jobs are translated together.
+const companyIds = [
+  ...new Set([
+    ...companies.map((company) => company.userId),
+    ...(await db.select({ id: jobs.companyId }).from(jobs)).map((row) => row.id),
+  ]),
+];
+for (const [index, companyId] of companyIds.entries()) {
+  await translateCompanyTexts(db, companyId, undefined, {
     translator,
     signal: signal(),
     limited: false,
   });
-  console.log(`Companies: ${index + 1}/${companies.length}`);
+  console.log(`Companies: ${index + 1}/${companyIds.length}`);
 }
 console.log("Translations up to date.");
 // The Postgres client keeps its connection open; the work is done.
