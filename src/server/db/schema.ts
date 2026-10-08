@@ -15,6 +15,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { CompensationPeriod, JobSnapshot, JobStage, JobStatus } from "@/lib/jobs";
+import type { Lang } from "@/lib/i18n";
+import type { MeetingStatus } from "@/lib/meeting-requests";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -213,6 +215,11 @@ export const meetingRequests = pgTable(
     /** The job the proposal is about, if any, and what it said when sent. */
     jobId: text("job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
     job: jsonb("job").$type<JobSnapshot>(),
+    /** The developer's answer; pending until they accept or decline. */
+    status: text("status").$type<MeetingStatus>().notNull().default("pending"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    /** The language of the e-mail the developer got; the company hears back in it. */
+    language: text("language").$type<Lang>().notNull().default("pt"),
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

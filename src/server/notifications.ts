@@ -133,6 +133,41 @@ export function meetingEmail(
   });
 }
 
+/**
+ * Tells the company's contact that the developer accepted or declined the proposed time. Replies go
+ * to the developer, so they can arrange the call.
+ */
+export function meetingAnswerEmail(
+  request: MeetingRequest,
+  developerEmail: string,
+  language: Lang,
+): Email {
+  const t = dictionaries[language].meetingAnswerEmail;
+  const accepted = request.status === "accepted";
+  const day = format(
+    new Date(`${request.date}T12:00:00`),
+    dictionaries[language].schedule.dateFormat,
+    {
+      locale: language === "pt" ? ptBR : enUS,
+    },
+  );
+  const when = `${day}, ${dictionaries[language].schedule.at} ${request.time}`;
+  return messageEmail({
+    to: request.email,
+    subject: accepted
+      ? t.acceptedSubject(request.developerName)
+      : t.declinedSubject(request.developerName),
+    paragraphs: [
+      t.greeting(firstName(request.contactName)),
+      accepted ? t.accepted(request.developerName, when) : t.declined(request.developerName, when),
+      ...(request.job ? [t.job(request.job.title)] : []),
+      accepted ? t.acceptedNext(firstName(request.developerName)) : t.declinedNext,
+    ],
+    closing: t.closing,
+    replyTo: developerEmail,
+  });
+}
+
 /** The account e-mail of a developer, where their notifications go. */
 export async function developerEmail(db: Db, developerId: string) {
   return (await account(db, developerId)).email;

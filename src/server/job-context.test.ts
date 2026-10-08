@@ -15,7 +15,7 @@ import {
   translateCompanyTexts,
   updateJob,
 } from "./jobs";
-import { listReceivedBy, sendMeetingRequest } from "./meetings";
+import { answerMeetingRequest, listReceivedBy, sendMeetingRequest } from "./meetings";
 import { jobEmailDetails } from "./notifications";
 import { markInterestAndNotify } from "./outreach";
 import { createCompany, createDeveloper, createTestDb } from "./test-db";
@@ -171,5 +171,60 @@ describe("company translations", () => {
     const kept = await loadTranslations(db, [acme.id], ["Backend Sênior", "Backend Pleno"]);
     expect(Object.keys(kept)).toEqual(expect.arrayContaining(["Backend Sênior", "Backend Pleno"]));
     expect(await db.select().from(textTranslations)).not.toHaveLength(0);
+  });
+});
+
+describe("answering a proposal", () => {
+  async function propose(jobId?: string) {
+    const result = await sendMeetingRequest(
+      db,
+      acme,
+      {
+        developerId: marina,
+        date: "2026-10-02",
+        time: "10:30",
+        message: "",
+        ...(jobId ? { jobId } : {}),
+      },
+      now,
+      "en",
+    );
+    if (!("request" in result)) throw new Error("proposal not sent");
+    return result.request;
+  }
+
+  it("accepting tells the company, in the proposal's language, and schedules the call in the job", async () => {
+    const job = await newJob();
+    const request = await propose(job.id);
+    expect(request.status).toBe("pending");
+    const result = await answerMeetingRequest(db, marina, request.id, "accepted", now);
+    expect("request" in result && result.request.status).toBe("accepted");
+    const email = outbox().at(-1);
+    expect(email?.to).toBe(request.email);
+    expect(email?.replyTo).toBe("marina@example.com");
+    expect(email?.subject).toBe("Marina Costa accepted the call on StackMatch");
+    expect(email?.text).toContain("The proposal was about the job Backend Pleno.");
+    expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("meeting");
+  });
+
+  it("declining keeps the developer at contacted", async () => {
+    const job = await newJob();
+    const request = await propose(job.id);
+    await answerMeetingRequest(db, marina, request.id, "declined", now);
+    expect(outbox().at(-1)?.subject).toBe("Marina Costa declined the proposed time");
+    expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("contacted");
+    expect((await listReceivedBy(db, marina))[0]?.status).toBe("declined");
+  });
+
+  it("is answered once, and only by the developer it went to", async () => {
+    const request = await propose();
+    const rafael = await createDeveloper(db, "rafael@example.com", "Rafael Lima");
+    expect(await answerMeetingRequest(db, rafael, request.id, "accepted", now)).toEqual({
+      error: "unknown-meeting",
+    });
+    await answerMeetingRequest(db, marina, request.id, "declined", now);
+    expect(await answerMeetingRequest(db, marina, request.id, "accepted", now)).toEqual({
+      error: "already-answered",
+    });
   });
 });

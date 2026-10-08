@@ -242,7 +242,14 @@ export function ScheduleDialog({
             {previous && (
               <p className="mx-5 mt-5 flex gap-2 rounded-lg border bg-muted/60 p-3 text-sm text-muted-foreground sm:mx-7">
                 <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-                {t.schedule.alreadySent(previousWhen)}
+                {t.schedule.alreadySent(
+                  previousWhen,
+                  previous.status === "accepted"
+                    ? t.meetingAnswer.companyAccepted
+                    : previous.status === "declined"
+                      ? t.meetingAnswer.companyDeclined
+                      : t.meetingAnswer.companyPending,
+                )}
               </p>
             )}
             <div className="grid gap-0 md:grid-cols-[1fr_220px]">

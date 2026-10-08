@@ -1,7 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { listReceivedBy, listSentBy, sendMeetingRequest } from "@/server/meetings";
+import {
+  answerMeetingRequest,
+  listReceivedBy,
+  listSentBy,
+  sendMeetingRequest,
+} from "@/server/meetings";
 import { database, requireAccount } from "@/server/session";
 import type { Lang } from "./i18n";
 import { meetingRequestInputSchema, type MeetingRequestInput } from "./meeting-requests";
@@ -22,6 +27,21 @@ export const sendMeetingRequestFn = createServerFn({ method: "POST" })
       input,
       Date.now(),
       language,
+    ),
+  );
+
+/**
+ * Stands for `POST /meeting-requests/:id/answer`: the developer accepts or declines a proposal
+ * they received, once (see answerMeetingRequest).
+ */
+export const answerMeetingRequestFn = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string().min(1).max(200), answer: z.enum(["accepted", "declined"]) }))
+  .handler(async ({ data }) =>
+    answerMeetingRequest(
+      await database(),
+      (await requireAccount("developer")).id,
+      data.id,
+      data.answer,
     ),
   );
 

@@ -289,8 +289,8 @@ const pt = {
     companyOnlyTitle: "Disponível para contas de empresa",
     companyOnlyDesc:
       "Propostas de reunião são enviadas por empresas, e sua conta é de desenvolvedor.",
-    alreadySent: (when: string) =>
-      `Você já enviou uma proposta para este profissional (${when}). Se precisar, pode enviar outra.`,
+    alreadySent: (when: string, status: string) =>
+      `Você já enviou uma proposta para este profissional (${when}, ${status}). Se precisar, pode enviar outra.`,
     sender: "Enviando como",
     about: "Sobre a oportunidade",
     optional: "(opcional)",
@@ -858,6 +858,34 @@ const pt = {
       cancel: "Cancelar",
     },
   },
+  meetingAnswerEmail: {
+    acceptedSubject: (developer: string) => `${developer} aceitou a conversa pelo StackMatch`,
+    declinedSubject: (developer: string) => `${developer} recusou o horário proposto`,
+    greeting: (name: string) => `Olá, ${name}!`,
+    accepted: (developer: string, when: string) =>
+      `${developer} aceitou o horário que você propôs: ${when} (horário de Brasília).`,
+    declined: (developer: string, when: string) =>
+      `${developer} não pode no horário que você propôs (${when}).`,
+    job: (title: string) => `A proposta era sobre a vaga ${title}.`,
+    acceptedNext: (developer: string) =>
+      `Responda este e-mail para falar com ${developer} e enviar o link da conversa.`,
+    declinedNext:
+      "Você pode responder este e-mail para sugerir outro horário, ou enviar uma nova proposta pelo StackMatch.",
+    closing: "Equipe StackMatch",
+  },
+  meetingAnswer: {
+    accept: "Aceitar",
+    decline: "Recusar",
+    pending: "Aguardando sua resposta",
+    accepted: "Você aceitou este horário",
+    declined: "Você recusou este horário",
+    acceptedToast: "Conversa aceita. A empresa recebeu sua resposta por e-mail.",
+    declinedToast: "Horário recusado. A empresa recebeu sua resposta por e-mail.",
+    error: "Não foi possível enviar sua resposta. Tente novamente.",
+    companyPending: "aguardando resposta",
+    companyAccepted: "aceita",
+    companyDeclined: "recusada",
+  },
   footer: {
     support: "Suporte",
     terms: "Termos de uso e privacidade",
@@ -1142,8 +1170,8 @@ const en: Dict = {
     signUp: "Create a company account",
     companyOnlyTitle: "Available for company accounts",
     companyOnlyDesc: "Meeting proposals are sent by companies, and yours is a developer account.",
-    alreadySent: (when: string) =>
-      `You already sent this developer a proposal (${when}). You can send another one if needed.`,
+    alreadySent: (when: string, status: string) =>
+      `You already sent this developer a proposal (${when}, ${status}). You can send another one if needed.`,
     sender: "Sending as",
     about: "About the opportunity",
     optional: "(optional)",
@@ -1704,6 +1732,34 @@ const en: Dict = {
       save: "Save job",
       cancel: "Cancel",
     },
+  },
+  meetingAnswerEmail: {
+    acceptedSubject: (developer: string) => `${developer} accepted the call on StackMatch`,
+    declinedSubject: (developer: string) => `${developer} declined the proposed time`,
+    greeting: (name: string) => `Hi, ${name}!`,
+    accepted: (developer: string, when: string) =>
+      `${developer} accepted the time you proposed: ${when} (Brasília time).`,
+    declined: (developer: string, when: string) =>
+      `${developer} can't make the time you proposed (${when}).`,
+    job: (title: string) => `The proposal was about the job ${title}.`,
+    acceptedNext: (developer: string) =>
+      `Reply to this e-mail to talk to ${developer} and send the call link.`,
+    declinedNext:
+      "You can reply to this e-mail to suggest another time, or send a new proposal on StackMatch.",
+    closing: "The StackMatch team",
+  },
+  meetingAnswer: {
+    accept: "Accept",
+    decline: "Decline",
+    pending: "Waiting for your answer",
+    accepted: "You accepted this time",
+    declined: "You declined this time",
+    acceptedToast: "Call accepted. The company got your answer by e-mail.",
+    declinedToast: "Time declined. The company got your answer by e-mail.",
+    error: "Couldn't send your answer. Please try again.",
+    companyPending: "waiting for an answer",
+    companyAccepted: "accepted",
+    companyDeclined: "declined",
   },
   footer: {
     support: "Support",

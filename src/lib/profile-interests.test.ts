@@ -25,6 +25,7 @@ const meeting = (fields: Partial<MeetingRequest>): MeetingRequest => ({
   email: "bruno@acme.com",
   message: "",
   sentAt: "2026-10-02T10:00:00.000Z",
+  status: "pending",
   ...fields,
 });
 

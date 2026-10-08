@@ -144,4 +144,15 @@ test("a proposal from a job tells the developer what the job is about", async ({
   await expect(job).toContainText("Full Stack Pleno");
   await page.getByText("Ver detalhes").click();
   await expect(page.getByRole("main")).toContainText("Skills obrigatórias");
+
+  // Accepting tells the company and schedules the call in the job.
+  const company = page.getByRole("listitem").filter({ hasText: "Empresa Teste" });
+  await company.getByRole("button", { name: "Aceitar" }).click();
+  await expect(company.getByText("Você aceitou este horário")).toBeVisible();
+  const answer = await lastEmail(page, "teste.emp@example.com");
+  expect(answer.subject).toBe("Gabriel Botelho aceitou a conversa pelo StackMatch");
+  await page.context().clearCookies();
+  await signInAs(page, "company");
+  await page.goto(`/jobs/${jobId}`);
+  await expect(page.getByLabel("Etapa: Gabriel Botelho")).toHaveValue("meeting");
 });

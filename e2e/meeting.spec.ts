@@ -66,7 +66,7 @@ test("a company proposes one time and sees the e-mail the developer will get", a
   // The proposal is remembered, but another one can still be sent.
   await page.getByRole("button", { name: "Propor reunião" }).click();
   await expect(page.getByRole("dialog")).toContainText(
-    "Você já enviou uma proposta para este profissional (sexta-feira, 4 de outubro, às 10:30)",
+    "Você já enviou uma proposta para este profissional (sexta-feira, 4 de outubro, às 10:30, aguardando resposta)",
   );
 });
 

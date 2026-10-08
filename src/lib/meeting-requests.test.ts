@@ -21,6 +21,7 @@ const request = (overrides: Partial<MeetingRequest> = {}): MeetingRequest => ({
   email: "rh@acme.com",
   message: "",
   sentAt: "2026-10-01T15:00:00.000Z",
+  status: "pending",
   ...overrides,
 });
 

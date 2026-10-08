@@ -6,6 +6,10 @@ import type { Translations } from "./translations";
  * A company proposes one time for a call; the developer gets it by e-mail and replies straight to
  * the company. StackMatch doesn't manage the meeting, so there are no bookings or blocked slots.
  */
+/** Pending until the developer answers; accepting moves them to "call scheduled" in the job. */
+export const meetingStatuses = ["pending", "accepted", "declined"] as const;
+export type MeetingStatus = (typeof meetingStatuses)[number];
+
 export type MeetingRequest = {
   id: string;
   developerId: string;
@@ -25,6 +29,9 @@ export type MeetingRequest = {
   job?: JobSnapshot;
   /** Of the job's title and description, when they were translated. */
   jobTranslations?: Translations;
+  status: MeetingStatus;
+  /** When the developer answered, ISO date. */
+  respondedAt?: string;
 };
 
 export const meetingTimes = ["09:00", "10:30", "14:00", "15:30", "17:00"];
