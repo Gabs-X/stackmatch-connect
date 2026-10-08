@@ -1,6 +1,6 @@
 # StackMatch
 
-Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado em aproximadamente uma semana para um processo seletivo.
+Plataforma para empresas encontrarem desenvolvedores e freelancers, e para desenvolvedores apresentarem seu trabalho. Está no ar em [stackmatch.dev.br](https://stackmatch.dev.br), em português e inglês.
 
 **Backend com Postgres.** Todos os dados vêm do banco: contas, perfis, dados da empresa, talentos salvos, interesses e propostas de reunião. Não há dados fictícios no código, a não ser o card de exemplo da home, que ilustra o produto com uma pessoa fictícia; um banco novo começa com o seed (`npm run db:seed`). Os e-mails saem pelo Resend; o assistente de suporte responde com o Claude, da Anthropic, quando a chave da API está configurada.
 
@@ -8,7 +8,7 @@ Protótipo de front-end para descoberta de desenvolvedores e freelancers, criado
 
 Comparar profissionais exige reunir informações sobre tecnologias, experiência, projetos, disponibilidade e contratação. O StackMatch concentra esses dados em perfis e permite uma primeira seleção por cards, seguida de análise do perfil completo e organização de uma shortlist.
 
-A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplicada a um contexto profissional/B2B. O objetivo é facilitar a triagem inicial; o protótipo não avalia automaticamente a qualidade dos profissionais.
+A dinâmica de descoberta sequencial é inspirada em interfaces de swipe, aplicada a um contexto profissional/B2B. O objetivo é facilitar a triagem inicial; o StackMatch não avalia automaticamente a qualidade dos profissionais.
 
 ## Público inicial
 
