@@ -5,6 +5,7 @@ import {
   firstNameOf,
   parseAssistantRequest,
 } from "@/server/assistant";
+import { assistantBudgetWait, recordAssistantSpend } from "@/server/assistant-budget";
 import { assistantLimitFor, recordAssistantRequest } from "@/server/assistant-throttle";
 import { clientIp, currentUser, database } from "@/server/session";
 
@@ -59,6 +60,13 @@ export const Route = createFileRoute("/api/assistant")({
             status: 429,
             headers: { "Retry-After": String(wait) },
           });
+        // The month's spending cap: paused until the next month once it's reached.
+        const paused = await assistantBudgetWait(db);
+        if (paused > 0)
+          return new Response("Assistant paused", {
+            status: 503,
+            headers: { "Retry-After": String(paused) },
+          });
         await recordAssistantRequest(db, ip);
 
         const account = {
@@ -66,7 +74,9 @@ export const Route = createFileRoute("/api/assistant")({
           emailVerified: user.emailVerified,
           firstName: firstNameOf(user.name),
         };
-        const reply = assistantReply(client, body, account, request.signal);
+        const reply = assistantReply(client, body, account, request.signal, (usage) =>
+          recordAssistantSpend(db, usage),
+        );
         let first: IteratorResult<string>;
         try {
           first = await reply.next();

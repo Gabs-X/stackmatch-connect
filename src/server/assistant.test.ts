@@ -71,7 +71,12 @@ describe("parseAssistantRequest", () => {
   });
 });
 
-type Event = { type: string; delta?: { type: string; text?: string } };
+type Event = {
+  type: string;
+  delta?: { type: string; text?: string };
+  message?: { usage: Record<string, number | null> };
+  usage?: Record<string, number | null>;
+};
 
 function fakeClient(events: Event[]) {
   const stream = vi.fn((_params: unknown, _options: unknown) =>
@@ -111,7 +116,7 @@ describe("assistantGuide", () => {
 describe("assistantReply", () => {
   it("streams the text deltas and sends the guide, the context and the conversation", async () => {
     const { client, stream } = fakeClient([
-      { type: "message_start" },
+      { type: "message_start", message: { usage: { input_tokens: 0, output_tokens: 0 } } },
       { type: "content_block_delta", delta: { type: "thinking_delta" } },
       { type: "content_block_delta", delta: { type: "text_delta", text: "O Discover " } },
       { type: "content_block_delta", delta: { type: "text_delta", text: "mostra perfis." } },
@@ -159,6 +164,35 @@ describe("assistantReply", () => {
     expect(contexts[0]).toContain("a visitor who is not signed in");
     expect(contexts[1]).toContain("developer account whose e-mail is not confirmed yet");
     expect(contexts.join()).not.toContain("First name");
+  });
+
+  it("reports the tokens the call used, also when it stops early", async () => {
+    const { client } = fakeClient([
+      {
+        type: "message_start",
+        message: { usage: { input_tokens: 300, cache_read_input_tokens: 9000, output_tokens: 1 } },
+      },
+      { type: "content_block_delta", delta: { type: "text_delta", text: "Oi" } },
+      { type: "content_block_delta", delta: { type: "text_delta", text: "!" } },
+      { type: "message_delta", usage: { input_tokens: null, output_tokens: 120 } },
+    ]);
+    const onUsage = vi.fn(async () => {});
+    await collect(assistantReply(client, request, null, undefined, onUsage));
+    expect(onUsage).toHaveBeenCalledWith({
+      input_tokens: 300,
+      cache_read_input_tokens: 9000,
+      output_tokens: 120,
+    });
+
+    const stopped = vi.fn(async () => {});
+    const reply = assistantReply(client, request, null, undefined, stopped);
+    await reply.next();
+    await reply.return(undefined);
+    expect(stopped).toHaveBeenCalledWith({
+      input_tokens: 300,
+      cache_read_input_tokens: 9000,
+      output_tokens: 1,
+    });
   });
 
   it("answers something when the model returns no text", async () => {

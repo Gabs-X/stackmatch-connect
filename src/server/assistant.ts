@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AccountType } from "@/lib/auth";
 import type { AssistantRequest } from "@/lib/assistant";
 import { assistantPaths } from "@/lib/assistant-markdown";
+import type { AssistantUsage } from "./assistant-budget";
 
 /**
  * The support assistant: answers questions about StackMatch with Claude, streaming the reply. It
@@ -175,12 +176,16 @@ const emptyReply = {
   en: "I couldn't answer that. Can I help with another question about StackMatch?",
 };
 
-/** Streams the reply text. Stops calling the API when `signal` aborts. */
+/**
+ * Streams the reply text. Stops calling the API when `signal` aborts. When the call ends, finished
+ * or not, `onUsage` gets the tokens it used, for the spending cap.
+ */
 export async function* assistantReply(
   client: Anthropic,
   request: AssistantRequest,
   account: AssistantAccount,
   signal?: AbortSignal,
+  onUsage?: (usage: AssistantUsage) => Promise<void>,
 ): AsyncGenerator<string> {
   const stream = client.beta.messages.stream(
     {
@@ -200,11 +205,27 @@ export async function* assistantReply(
     { signal },
   );
   let wrote = false;
-  for await (const event of stream) {
-    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-      wrote = true;
-      yield event.delta.text;
+  // message_start brings the input; each message_delta, the totals so far.
+  const usage: AssistantUsage = {};
+  const addUsage = (counts: AssistantUsage) => {
+    for (const [key, value] of Object.entries(counts) as [keyof AssistantUsage, unknown][])
+      if (typeof value === "number") usage[key] = value;
+  };
+  try {
+    for await (const event of stream) {
+      if (event.type === "message_start") addUsage(event.message.usage);
+      else if (event.type === "message_delta") addUsage(event.usage);
+      else if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        wrote = true;
+        yield event.delta.text;
+      }
+    }
+    if (!wrote) yield emptyReply[request.locale];
+  } finally {
+    try {
+      await onUsage?.(usage);
+    } catch (error) {
+      console.error("Assistant usage not recorded:", error);
     }
   }
-  if (!wrote) yield emptyReply[request.locale];
 }

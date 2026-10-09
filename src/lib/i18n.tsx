@@ -359,6 +359,8 @@ const pt = {
     error: "Não foi possível obter uma resposta. Tente novamente.",
     limited: (minutes: number) =>
       `Você fez muitas perguntas em pouco tempo. Tente de novo em ${minutes === 1 ? "1 minuto" : `${minutes} minutos`}.`,
+    paused:
+      "A Ada está em pausa por enquanto. Se precisar de ajuda agora, abra um ticket no Suporte.",
     retry: "Tentar novamente",
     signInTitle: "Oi! Eu sou a Ada.",
     signInText:
@@ -1301,6 +1303,7 @@ const en: Dict = {
     error: "Couldn't get a reply. Please try again.",
     limited: (minutes: number) =>
       `You've asked a lot of questions in a short time. Try again in ${minutes === 1 ? "1 minute" : `${minutes} minutes`}.`,
+    paused: "Ada is paused for now. If you need help right away, open a ticket in Support.",
     retry: "Try again",
     signInTitle: "Hi! I'm Ada.",
     signInText: "To chat with me, sign in to your StackMatch account or create one in a few steps.",

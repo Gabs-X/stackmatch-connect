@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   date,
   index,
@@ -63,6 +64,14 @@ export const assistantRequests = pgTable(
   },
   (table) => [index("assistant_requests_ip_created_at_idx").on(table.ip, table.createdAt)],
 );
+
+/** What the assistant's replies cost each month, for the cap in src/server/assistant-budget.ts. */
+export const assistantSpend = pgTable("assistant_spend", {
+  /** Brasília time, as "2026-10". */
+  month: text("month").primaryKey(),
+  /** Millionths of a US dollar. */
+  costMicros: bigint("cost_micros", { mode: "number" }).notNull().default(0),
+});
 
 /** The assistant chat of each account, so it follows the account and leaves with it on sign-out. */
 export const assistantConversations = pgTable("assistant_conversations", {

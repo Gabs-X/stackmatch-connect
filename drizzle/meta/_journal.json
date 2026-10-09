@@ -204,6 +204,13 @@
       "when": 1791496284276,
       "tag": "0028_publish_existing_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791545832969,
+      "tag": "0029_assistant_spend",
+      "breakpoints": true
     }
   ]
 }

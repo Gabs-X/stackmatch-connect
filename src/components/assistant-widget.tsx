@@ -127,6 +127,7 @@ export function AssistantWidget({ raised = false }: { raised?: boolean }) {
     if (error.status === 401) return t.assistant.signInRequired;
     if (error.status === 429)
       return t.assistant.limited(Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)));
+    if (error.status === 503) return t.assistant.paused;
     return t.assistant.error;
   };
   const streaming = status === "streaming";
