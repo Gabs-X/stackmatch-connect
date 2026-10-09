@@ -11,7 +11,7 @@ import { messageEmail, sendEmail } from "./email";
  */
 
 /** ASSISTANT_MONTHLY_BUDGET_USD, or this when it isn't set to a positive number. */
-export const defaultAssistantBudgetUsd = 20;
+export const defaultAssistantBudgetUsd = 4;
 
 /** The share of the budget, in percent, that e-mails support when the month crosses it. */
 export const assistantBudgetAlerts = [80, 100];

@@ -176,7 +176,7 @@ A assistente se chama **Ada**, em homenagem a Ada Lovelace. A persona (simpátic
 - **Formatação e atalhos:** as respostas aceitam um pedaço de Markdown (parágrafos, listas, **negrito** e `código`), lido em `src/lib/assistant-markdown.ts` e mostrado sem HTML. Um link para uma tela do app, como `[Abrir o Discover](/discover)`, vira um botão que leva para lá (no celular, o chat fecha). Só as rotas de `assistantPaths` viram botão; qualquer outro link aparece como texto.
 - **Conversa por conta:** com login, a conversa fica no servidor (tabela `assistant_conversations`, até as 100 mensagens mais recentes), salva a cada resposta. Ela volta ao recarregar a página, entrar de novo ou usar outro aparelho, some da tela ao sair da conta e é apagada por "Nova conversa" ou ao excluir a conta. Para a IA vão só as 20 mensagens mais recentes. O guia fica em cache na API, então só a parte de cada conversa é cobrada inteira.
 - **Custo e abuso:** cada IP pode fazer até 30 perguntas por hora (`src/server/assistant-throttle.ts`, tabela `assistant_requests`, limpa pela limpeza diária). Passando disso, a rota responde 429 e o chat diz quantos minutos faltam. O esforço do modelo fica em `low`, suficiente para respostas curtas.
-- **Teto de gastos:** cada resposta soma o custo dos tokens que usou (entrada, saída e cache, pelos preços do Opus em `assistantPrices`) ao total do mês, no horário de Brasília (`src/server/assistant-budget.ts`, tabela `assistant_spend`). O teto é `ASSISTANT_MONTHLY_BUDGET_USD`, em dólares, com padrão de US$ 20. Quando o total chega ao teto, a rota responde 503 até o mês seguinte, e o chat diz que a Ada está em pausa e sugere abrir um ticket. O suporte (`SUPPORT_EMAIL`) recebe um e-mail quando o mês passa de 80% e de 100% do teto. O custo é uma estimativa do app; para um limite garantido, configure também o teto de gastos no Console da Anthropic.
+- **Teto de gastos:** cada resposta soma o custo dos tokens que usou (entrada, saída e cache, pelos preços do Opus em `assistantPrices`) ao total do mês, no horário de Brasília (`src/server/assistant-budget.ts`, tabela `assistant_spend`). O teto é `ASSISTANT_MONTHLY_BUDGET_USD`, em dólares, com padrão de US$ 4. Quando o total chega ao teto, a rota responde 503 até o mês seguinte, e o chat diz que a Ada está em pausa e sugere abrir um ticket. O suporte (`SUPPORT_EMAIL`) recebe um e-mail quando o mês passa de 80% e de 100% do teto. O custo é uma estimativa do app; para um limite garantido, configure também o teto de gastos no Console da Anthropic.
 - **Recusas:** a chamada usa o fallback do lado do servidor (`fallbacks: "default"`): se um classificador de segurança recusar, a API tenta outro modelo na mesma chamada. Se mesmo assim não vier texto, o chat mostra uma resposta padrão.
 
 Para ativar, defina na Vercel (ou no `.env.local`, no desenvolvimento):
@@ -186,7 +186,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 VITE_ASSISTANT_API_URL=/api/assistant
 ```
 
-Opcional: `ASSISTANT_MONTHLY_BUDGET_USD` muda o teto de gastos mensal (padrão: 20).
+Opcional: `ASSISTANT_MONTHLY_BUDGET_USD` muda o teto de gastos mensal (padrão: 4).
 
 `VITE_ASSISTANT_API_URL` entra no build do front, então mudar o valor pede um novo deploy. Sem ela, o chat usa as respostas simuladas e avisa que a IA não está conectada; com ela e sem a chave, a rota responde 503 e o chat mostra erro.
 
