@@ -155,6 +155,14 @@ test("a proposal from a job tells the developer what the job is about", async ({
   await signInAs(page, "company");
   await page.goto(`/jobs/${jobId}`);
   await expect(page.getByLabel("Etapa: Gabriel Botelho")).toHaveValue("meeting");
+
+  // The company sees the answer in its sent proposals.
+  await page.getByRole("banner").getByRole("link", { name: "Propostas" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Propostas enviadas" })).toBeVisible();
+  const proposal = page.getByRole("article", { name: "Gabriel Botelho" });
+  await expect(proposal).toContainText("Aceita");
+  await expect(proposal).toContainText("Full Stack Pleno");
+  await expect(page.getByRole("button", { name: "Aceitas · 1" })).toBeEnabled();
 });
 
 test("a developer the company reached offers themselves for one of its jobs", async ({ page }) => {

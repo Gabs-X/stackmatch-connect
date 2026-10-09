@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ptBR, enUS } from "react-day-picker/locale";
 import { useI18n } from "@/lib/i18n";
-import type { MeetingRequest } from "@/lib/meeting-requests";
+import { isMeetingExpired, type MeetingRequest } from "@/lib/meeting-requests";
 import { answerMeetingRequestFn, receivedMeetingRequestsQuery } from "@/lib/meetings-api";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +49,13 @@ export function MeetingAnswer({
   const texts = t.meetingAnswer;
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+  if (isMeetingExpired(meeting))
+    return (
+      <p className="mt-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <CalendarX className="size-4" aria-hidden="true" />
+        {texts.expired}
+      </p>
+    );
   if (meeting.status !== "pending")
     return (
       <p
@@ -69,6 +76,10 @@ export function MeetingAnswer({
     setBusy(true);
     try {
       const result = await answerMeetingRequestFn({ data: { id: meeting.id, answer: value } });
+      if ("error" in result && result.error === "expired") {
+        toast.error(texts.expired);
+        return;
+      }
       if ("error" in result && result.error !== "already-answered") throw new Error(result.error);
       toast.success(value === "accepted" ? texts.acceptedToast : texts.declinedToast);
     } catch {

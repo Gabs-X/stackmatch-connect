@@ -227,4 +227,18 @@ describe("answering a proposal", () => {
       error: "already-answered",
     });
   });
+  it("can't be answered once the proposed time comes", async () => {
+    const request = await propose();
+    const start = Date.parse("2026-10-02T10:30:00-03:00");
+    const sent = outbox().length;
+    expect(await answerMeetingRequest(db, marina, request.id, "accepted", start)).toEqual({
+      error: "expired",
+    });
+    expect(outbox()).toHaveLength(sent);
+    expect((await listReceivedBy(db, marina))[0]?.status).toBe("pending");
+    // A minute earlier it still could.
+    expect(
+      await answerMeetingRequest(db, marina, request.id, "accepted", start - 60_000),
+    ).toHaveProperty("request.status", "accepted");
+  });
 });

@@ -14,6 +14,7 @@ export const assistantPaths = [
   "/verify-email",
   "/discover",
   "/saved",
+  "/proposals",
   "/jobs",
   "/jobs/new",
   "/create-profile",

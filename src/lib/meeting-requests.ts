@@ -51,10 +51,21 @@ export const meetingRequestInputSchema = z.object({
 
 export type MeetingRequestInput = z.infer<typeof meetingRequestInputSchema>;
 
-/** Times are offered in Brasília time (GMT-3); a proposal must point to the future. */
+/** When the proposed call starts, in ms. Times are offered in Brasília time (GMT-3). */
+const meetingStart = (date: string, time: string) => Date.parse(`${date}T${time}:00-03:00`);
+
+/** A proposal must point to the future. */
 export function isProposedTimeValid(date: string, time: string, now = Date.now()) {
-  const timestamp = Date.parse(`${date}T${time}:00-03:00`);
+  const timestamp = meetingStart(date, time);
   return meetingTimes.includes(time) && Number.isFinite(timestamp) && timestamp > now;
+}
+
+/** A proposal still waiting when its time came: it can no longer be answered. */
+export function isMeetingExpired(
+  meeting: Pick<MeetingRequest, "date" | "time" | "status">,
+  now = Date.now(),
+) {
+  return meeting.status === "pending" && !(meetingStart(meeting.date, meeting.time) > now);
 }
 
 /** Latest proposal this company account already made to the developer, if any. */

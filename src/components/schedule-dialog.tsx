@@ -34,7 +34,12 @@ import { JobDetails } from "@/components/job-details";
 import { sendMeetingRequestFn, sentMeetingRequestsQuery } from "@/lib/meetings-api";
 import { outreachLimits } from "@/lib/outreach";
 import { useCompanySettings } from "@/lib/use-company-settings";
-import { isProposedTimeValid, lastRequestTo, meetingTimes } from "@/lib/meeting-requests";
+import {
+  isMeetingExpired,
+  isProposedTimeValid,
+  lastRequestTo,
+  meetingTimes,
+} from "@/lib/meeting-requests";
 
 type ScheduleDialogProps = {
   developerId: string;
@@ -248,7 +253,9 @@ export function ScheduleDialog({
                     ? t.meetingAnswer.companyAccepted
                     : previous.status === "declined"
                       ? t.meetingAnswer.companyDeclined
-                      : t.meetingAnswer.companyPending,
+                      : isMeetingExpired(previous)
+                        ? t.meetingAnswer.companyExpired
+                        : t.meetingAnswer.companyPending,
                 )}
               </p>
             )}

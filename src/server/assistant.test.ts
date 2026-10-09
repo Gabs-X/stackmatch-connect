@@ -104,7 +104,9 @@ describe("firstNameOf", () => {
 
 describe("assistantGuide", () => {
   it("lists every screen the chat can link to", () => {
-    expect(assistantGuide).toContain("/discover, /saved, /jobs, /jobs/new, /create-profile");
+    expect(assistantGuide).toContain(
+      "/discover, /saved, /proposals, /jobs, /jobs/new, /create-profile",
+    );
   });
 
   it("presents Ada as an AI", () => {

@@ -4,6 +4,7 @@ import {
   Bookmark,
   BriefcaseBusiness,
   Building2,
+  CalendarDays,
   Heart,
   LifeBuoy,
   LogOut,
@@ -124,6 +125,12 @@ export function AccountMenu() {
               <Link to="/saved">
                 <Bookmark />
                 {t.auth.menu.saved}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/proposals">
+                <CalendarDays />
+                {t.auth.menu.proposals}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

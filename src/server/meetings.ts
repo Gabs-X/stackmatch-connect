@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { AuthUser } from "@/lib/auth";
 import {
+  isMeetingExpired,
   isProposedTimeValid,
   type MeetingRequest,
   type MeetingRequestInput,
@@ -111,14 +112,14 @@ export async function sendMeetingRequest(
   return { request };
 }
 
-/** Proposals the company sent, oldest first. */
+/** Proposals the company sent, oldest first, with their jobs' texts translated. */
 export async function listSentBy(db: Db, companyId: string) {
   const rows = await db
     .select()
     .from(meetingRequests)
     .where(eq(meetingRequests.companyId, companyId))
     .orderBy(asc(meetingRequests.sentAt));
-  return rows.map(toMeetingRequest);
+  return withJobTranslations(db, rows.map(toMeetingRequest));
 }
 
 /** Proposals the developer received, oldest first, with their jobs' texts translated. */
@@ -174,13 +175,14 @@ export async function withJobTranslations<T extends { companyId: string; job?: J
 }
 
 export type AnswerResult =
-  { request: MeetingRequest } | { error: "unknown-meeting" | "already-answered" };
+  { request: MeetingRequest } | { error: "unknown-meeting" | "already-answered" | "expired" };
 
 /**
  * The developer accepts or declines a proposal they received; it can be answered once. The company
  * hears back by e-mail, in the language the proposal went out in, with Reply-To set to the
  * developer. Accepting a proposal sent from a job moves the developer to "call scheduled" there.
- * A failed e-mail doesn't undo the answer.
+ * Once the proposed time comes, a proposal still waiting can't be answered. A failed e-mail doesn't
+ * undo the answer.
  */
 export async function answerMeetingRequest(
   db: Db,
@@ -195,6 +197,7 @@ export async function answerMeetingRequest(
     .where(and(eq(meetingRequests.id, meetingId), eq(meetingRequests.developerId, developerId)))
     .limit(1);
   if (!current) return { error: "unknown-meeting" };
+  if (isMeetingExpired(current, now)) return { error: "expired" };
   const [row] = await db
     .update(meetingRequests)
     .set({ status: answer, respondedAt: new Date(now) })

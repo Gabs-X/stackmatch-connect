@@ -23,6 +23,7 @@ const pt = {
   nav: {
     discover: "Discover",
     saved: "Talentos salvos",
+    proposals: "Propostas",
     openMenu: "Abrir menu",
     language: "Idioma",
     theme: "Tema",
@@ -496,6 +497,7 @@ const pt = {
       discover: "Discover",
       saved: "Talentos salvos",
       jobs: "Vagas",
+      proposals: "Propostas enviadas",
       companySettings: "Dados da empresa",
       account: "Conta",
       interests: "Empresas interessadas",
@@ -898,6 +900,9 @@ const pt = {
     companyPending: "aguardando resposta",
     companyAccepted: "aceita",
     companyDeclined: "recusada",
+    companyExpired: "expirada sem resposta",
+    expired:
+      "O horário passou sem resposta. Se ainda quiser conversar, responda o e-mail da empresa.",
   },
   // The e-mail a company gets when a developer offers themselves for one of its jobs.
   applicationEmail: {
@@ -950,6 +955,32 @@ const pt = {
     noProfile: "Publique seu perfil para ver a compatibilidade e se oferecer para as vagas.",
     createProfile: "Criar perfil",
   },
+  proposals: {
+    kicker: "Suas conversas",
+    title: "Propostas enviadas",
+    sub: "Os horários que você propôs aos desenvolvedores e o que cada um respondeu.",
+    filterLabel: "Filtrar propostas",
+    filters: {
+      all: "Todas",
+      pending: "Aguardando",
+      accepted: "Aceitas",
+      declined: "Recusadas",
+      expired: "Expiradas",
+    },
+    status: {
+      pending: "Aguardando resposta",
+      accepted: "Aceita",
+      declined: "Recusada",
+      expired: "Expirada sem resposta",
+    },
+    sent: (when: string) => `Enviada ${when}`,
+    answered: (when: string) => `respondida em ${when}`,
+    viewProfile: "Ver perfil",
+    loadError: "Não foi possível carregar suas propostas.",
+    emptyTitle: "Você ainda não enviou nenhuma proposta.",
+    emptySub: "Abra um perfil no Discover e use “Propor reunião” para sugerir um horário.",
+    goDiscover: "Abrir o Discover",
+  },
   footer: {
     support: "Suporte",
     terms: "Termos de uso e privacidade",
@@ -973,6 +1004,7 @@ const en: Dict = {
   nav: {
     discover: "Discover",
     saved: "Saved talent",
+    proposals: "Proposals",
     openMenu: "Open menu",
     language: "Language",
     theme: "Theme",
@@ -1438,6 +1470,7 @@ const en: Dict = {
       discover: "Discover",
       saved: "Saved talent",
       jobs: "Jobs",
+      proposals: "Sent proposals",
       companySettings: "Company details",
       account: "Account",
       interests: "Interested companies",
@@ -1837,6 +1870,9 @@ const en: Dict = {
     companyPending: "waiting for an answer",
     companyAccepted: "accepted",
     companyDeclined: "declined",
+    companyExpired: "expired without an answer",
+    expired:
+      "The time passed without an answer. If you still want to talk, reply to the company's e-mail.",
   },
   applicationEmail: {
     subject: (developer: string, job: string) =>
@@ -1888,6 +1924,32 @@ const en: Dict = {
     loadError: "Couldn't load the jobs.",
     noProfile: "Publish your profile to see the match and offer yourself for jobs.",
     createProfile: "Create profile",
+  },
+  proposals: {
+    kicker: "Your conversations",
+    title: "Sent proposals",
+    sub: "The times you proposed to developers and what each one answered.",
+    filterLabel: "Filter proposals",
+    filters: {
+      all: "All",
+      pending: "Waiting",
+      accepted: "Accepted",
+      declined: "Declined",
+      expired: "Expired",
+    },
+    status: {
+      pending: "Waiting for an answer",
+      accepted: "Accepted",
+      declined: "Declined",
+      expired: "Expired without an answer",
+    },
+    sent: (when: string) => `Sent ${when}`,
+    answered: (when: string) => `answered on ${when}`,
+    viewProfile: "View profile",
+    loadError: "Couldn't load your proposals.",
+    emptyTitle: "You haven't sent any proposals yet.",
+    emptySub: "Open a profile in Discover and use “Propose a meeting” to suggest a time.",
+    goDiscover: "Open Discover",
   },
   footer: {
     support: "Support",

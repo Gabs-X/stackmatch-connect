@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import {
   Bookmark,
   BriefcaseBusiness,
+  CalendarDays,
   Heart,
   LogIn,
   Menu,
@@ -42,6 +43,7 @@ export function AppHeader() {
           { to: "/discover" as const, label: t.nav.discover, icon: Search },
           { to: "/jobs" as const, label: t.nav.jobs, icon: BriefcaseBusiness },
           { to: "/saved" as const, label: t.nav.saved, icon: Bookmark },
+          { to: "/proposals" as const, label: t.nav.proposals, icon: CalendarDays },
         ];
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">

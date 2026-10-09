@@ -18,6 +18,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as InterestsRouteImport } from './routes/interests'
 import { Route as JobBoardRouteImport } from './routes/job-board'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
 import { Route as SupportRouteImport } from './routes/support'
@@ -80,6 +81,11 @@ const JobBoardRoute = JobBoardRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProposalsRoute = ProposalsRouteImport.update({
+  id: '/proposals',
+  path: '/proposals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/interests': typeof InterestsRoute
   '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
+  '/proposals': typeof ProposalsRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/support': typeof SupportRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/interests': typeof InterestsRoute
   '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
+  '/proposals': typeof ProposalsRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/support': typeof SupportRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/interests': typeof InterestsRoute
   '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
+  '/proposals': typeof ProposalsRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
   '/support': typeof SupportRoute
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/interests'
     | '/job-board'
     | '/login'
+    | '/proposals'
     | '/register'
     | '/saved'
     | '/support'
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/interests'
     | '/job-board'
     | '/login'
+    | '/proposals'
     | '/register'
     | '/saved'
     | '/support'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/interests'
     | '/job-board'
     | '/login'
+    | '/proposals'
     | '/register'
     | '/saved'
     | '/support'
@@ -361,6 +373,7 @@ export interface RootRouteChildren {
   InterestsRoute: typeof InterestsRoute
   JobBoardRoute: typeof JobBoardRoute
   LoginRoute: typeof LoginRoute
+  ProposalsRoute: typeof ProposalsRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
   SupportRoute: typeof SupportRoute
@@ -444,6 +457,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proposals': {
+      id: '/proposals'
+      path: '/proposals'
+      fullPath: '/proposals'
+      preLoaderRoute: typeof ProposalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -585,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   InterestsRoute: InterestsRoute,
   JobBoardRoute: JobBoardRoute,
   LoginRoute: LoginRoute,
+  ProposalsRoute: ProposalsRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
   SupportRoute: SupportRoute,
