@@ -10,6 +10,8 @@ export type Email = {
   html: string;
   /** Where replies go instead of the sender: a company's contact, for messages it sends. */
   replyTo?: string;
+  /** Text files sent along, such as a calendar invite. */
+  attachments?: { filename: string; content: string; contentType: string }[];
 };
 
 const store = globalThis as unknown as { __stackmatchOutbox?: Email[] };
@@ -40,6 +42,15 @@ export async function sendEmail(email: Email) {
       text: email.text,
       html: email.html,
       ...(email.replyTo ? { reply_to: email.replyTo } : {}),
+      ...(email.attachments?.length
+        ? {
+            attachments: email.attachments.map((file) => ({
+              filename: file.filename,
+              content: Buffer.from(file.content).toString("base64"),
+              content_type: file.contentType,
+            })),
+          }
+        : {}),
     }),
   });
   if (!response.ok)

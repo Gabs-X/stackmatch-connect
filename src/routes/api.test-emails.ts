@@ -19,6 +19,7 @@ export const Route = createFileRoute("/api/test-emails")({
           subject: email?.subject ?? null,
           text: email?.text ?? null,
           replyTo: email?.replyTo ?? null,
+          attachments: email?.attachments?.map((file) => file.filename) ?? [],
           code,
         });
       },

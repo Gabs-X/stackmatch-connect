@@ -12,15 +12,17 @@ import {
   Clock,
   RotateCcw,
 } from "lucide-react";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { JobContext } from "@/components/job-details";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AuthUser } from "@/lib/auth";
+import { meetingEventFor } from "@/lib/calendar";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { isMeetingExpired, type MeetingRequest } from "@/lib/meeting-requests";
+import { isMeetingExpired, meetingStart, type MeetingRequest } from "@/lib/meeting-requests";
 import { sentMeetingRequestsQuery } from "@/lib/meetings-api";
 import { cn } from "@/lib/utils";
 
@@ -218,7 +220,10 @@ function ProposalItem({
           <JobContext job={meeting.job} translations={meeting.jobTranslations} className="mt-4" />
         )}
         <MeetingProposal meeting={meeting} className="mt-4" />
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
+          {status === "accepted" && meetingStart(meeting.date, meeting.time) > Date.now() && (
+            <AddToCalendar event={meetingEventFor(meeting, "company", lang)} />
+          )}
           <Button asChild size="sm" variant="outline">
             <Link to="/developer/$id" params={{ id: meeting.developerId }}>
               {t.proposals.viewProfile}

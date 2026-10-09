@@ -204,6 +204,16 @@ describe("answering a proposal", () => {
     expect(email?.replyTo).toBe("marina@example.com");
     expect(email?.subject).toBe("Marina Costa accepted the call on StackMatch");
     expect(email?.text).toContain("The proposal was about the job Backend Pleno.");
+    expect(email?.attachments?.[0]).toMatchObject({
+      filename: "conversa-stackmatch.ics",
+      contentType: "text/calendar; method=PUBLISH",
+    });
+    expect(email?.attachments?.[0]?.content).toContain(
+      "SUMMARY:Call with Marina Costa (StackMatch)",
+    );
+    expect(email?.attachments?.[0]?.content).toContain(
+      "Contact: Marina Costa <marina@example.com>",
+    );
     expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("meeting");
   });
 
@@ -212,6 +222,7 @@ describe("answering a proposal", () => {
     const request = await propose(job.id);
     await answerMeetingRequest(db, marina, request.id, "declined", now);
     expect(outbox().at(-1)?.subject).toBe("Marina Costa declined the proposed time");
+    expect(outbox().at(-1)?.attachments).toBeUndefined();
     expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("contacted");
     expect((await listReceivedBy(db, marina))[0]?.status).toBe("declined");
   });

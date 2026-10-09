@@ -51,8 +51,11 @@ export const meetingRequestInputSchema = z.object({
 
 export type MeetingRequestInput = z.infer<typeof meetingRequestInputSchema>;
 
+/** How long the proposed call is, as the dialog and the calendar entry say. */
+export const meetingDurationMinutes = 30;
+
 /** When the proposed call starts, in ms. Times are offered in Brasília time (GMT-3). */
-const meetingStart = (date: string, time: string) => Date.parse(`${date}T${time}:00-03:00`);
+export const meetingStart = (date: string, time: string) => Date.parse(`${date}T${time}:00-03:00`);
 
 /** A proposal must point to the future. */
 export function isProposedTimeValid(date: string, time: string, now = Date.now()) {

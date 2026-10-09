@@ -981,6 +981,17 @@ const pt = {
     emptySub: "Abra um perfil no Discover e use “Propor reunião” para sugerir um horário.",
     goDiscover: "Abrir o Discover",
   },
+  // Calendar entries for an accepted call (src/lib/calendar.ts).
+  calendar: {
+    title: (name: string) => `Conversa com ${name} (StackMatch)`,
+    intro: "Conversa combinada pelo StackMatch. O link da chamada é combinado por e-mail.",
+    job: (title: string) => `Vaga: ${title}`,
+    contact: (name: string, email: string) => `Contato: ${name} <${email}>`,
+    add: "Adicionar à agenda",
+    google: "Google Agenda",
+    ics: "Outra agenda (arquivo .ics)",
+    attached: "O convite de agenda vai anexo: abra o arquivo para salvar a conversa na sua agenda.",
+  },
   footer: {
     support: "Suporte",
     terms: "Termos de uso e privacidade",
@@ -1950,6 +1961,16 @@ const en: Dict = {
     emptyTitle: "You haven't sent any proposals yet.",
     emptySub: "Open a profile in Discover and use “Propose a meeting” to suggest a time.",
     goDiscover: "Open Discover",
+  },
+  calendar: {
+    title: (name: string) => `Call with ${name} (StackMatch)`,
+    intro: "Call arranged on StackMatch. The call link is arranged by e-mail.",
+    job: (title: string) => `Job: ${title}`,
+    contact: (name: string, email: string) => `Contact: ${name} <${email}>`,
+    add: "Add to calendar",
+    google: "Google Calendar",
+    ics: "Other calendar (.ics file)",
+    attached: "The calendar invite is attached: open the file to save the call in your calendar.",
   },
   footer: {
     support: "Support",

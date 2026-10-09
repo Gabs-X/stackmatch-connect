@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ptBR, enUS } from "react-day-picker/locale";
 import { useI18n } from "@/lib/i18n";
-import { isMeetingExpired, type MeetingRequest } from "@/lib/meeting-requests";
+import { AddToCalendar } from "@/components/add-to-calendar";
+import { meetingEventFor } from "@/lib/calendar";
+import { isMeetingExpired, meetingStart, type MeetingRequest } from "@/lib/meeting-requests";
 import { answerMeetingRequestFn, receivedMeetingRequestsQuery } from "@/lib/meetings-api";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +47,7 @@ export function MeetingAnswer({
   meeting: MeetingRequest;
   accountId: string;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const texts = t.meetingAnswer;
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -56,20 +58,29 @@ export function MeetingAnswer({
         {texts.expired}
       </p>
     );
-  if (meeting.status !== "pending")
+  if (meeting.status === "accepted")
     return (
-      <p
-        className={cn(
-          "mt-3 flex items-center gap-2 text-sm font-medium",
-          meeting.status === "accepted" ? "text-positive" : "text-muted-foreground",
-        )}
-      >
-        {meeting.status === "accepted" ? (
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <p className="mr-auto flex items-center gap-2 text-sm font-medium text-positive">
           <CalendarCheck className="size-4" aria-hidden="true" />
-        ) : (
-          <CalendarX className="size-4" aria-hidden="true" />
+          {texts.accepted}
+        </p>
+        {/* Until the call starts, it can still go in the calendar. */}
+        {meetingStart(meeting.date, meeting.time) > Date.now() && (
+          <AddToCalendar
+            event={meetingEventFor(meeting, "developer", lang, {
+              name: meeting.contactName,
+              email: meeting.email,
+            })}
+          />
         )}
-        {meeting.status === "accepted" ? texts.accepted : texts.declined}
+      </div>
+    );
+  if (meeting.status === "declined")
+    return (
+      <p className="mt-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <CalendarX className="size-4" aria-hidden="true" />
+        {texts.declined}
       </p>
     );
   const answer = async (value: "accepted" | "declined") => {

@@ -149,8 +149,16 @@ test("a proposal from a job tells the developer what the job is about", async ({
   const company = page.getByRole("listitem").filter({ hasText: "Empresa Teste" });
   await company.getByRole("button", { name: "Aceitar" }).click();
   await expect(company.getByText("Você aceitou este horário")).toBeVisible();
+  // The call goes in the calendar as an .ics file.
+  await company.getByRole("button", { name: "Adicionar à agenda" }).click();
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Outra agenda (arquivo .ics)" }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("conversa-stackmatch.ics");
+  await expect(page.getByRole("menuitem", { name: "Google Agenda" })).toBeHidden();
   const answer = await lastEmail(page, "teste.emp@example.com");
   expect(answer.subject).toBe("Gabriel Botelho aceitou a conversa pelo StackMatch");
+  expect(answer.attachments).toEqual(["conversa-stackmatch.ics"]);
   await page.context().clearCookies();
   await signInAs(page, "company");
   await page.goto(`/jobs/${jobId}`);
@@ -162,6 +170,7 @@ test("a proposal from a job tells the developer what the job is about", async ({
   const proposal = page.getByRole("article", { name: "Gabriel Botelho" });
   await expect(proposal).toContainText("Aceita");
   await expect(proposal).toContainText("Full Stack Pleno");
+  await expect(proposal.getByRole("button", { name: "Adicionar à agenda" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Aceitas · 1" })).toBeEnabled();
 });
 

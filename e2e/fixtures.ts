@@ -125,8 +125,13 @@ export async function confirmEmail(page: Page) {
 
 /** The last e-mail the server "sent" to the address, waiting for it to arrive. */
 export async function lastEmail(page: Page, to: string) {
-  type Sent = { subject: string | null; text: string | null; replyTo: string | null };
-  let email: Sent = { subject: null, text: null, replyTo: null };
+  type Sent = {
+    subject: string | null;
+    text: string | null;
+    replyTo: string | null;
+    attachments: string[];
+  };
+  let email: Sent = { subject: null, text: null, replyTo: null, attachments: [] };
   await expect
     .poll(async () => {
       const response = await page.request.get(`/api/test-emails?to=${encodeURIComponent(to)}`);

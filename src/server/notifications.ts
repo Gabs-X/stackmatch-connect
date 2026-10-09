@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import { eq } from "drizzle-orm";
+import { icsFileName, meetingEventFor, toIcs } from "@/lib/calendar";
 import { dictionaries, type Lang } from "@/lib/i18n";
 import { optionLabel } from "@/lib/option-labels";
 import { compensationLabel, type JobSnapshot } from "@/lib/jobs";
@@ -152,7 +153,7 @@ export function meetingAnswerEmail(
     },
   );
   const when = `${day}, ${dictionaries[language].schedule.at} ${request.time}`;
-  return messageEmail({
+  const email = messageEmail({
     to: request.email,
     subject: accepted
       ? t.acceptedSubject(request.developerName)
@@ -162,10 +163,27 @@ export function meetingAnswerEmail(
       accepted ? t.accepted(request.developerName, when) : t.declined(request.developerName, when),
       ...(request.job ? [t.job(request.job.title)] : []),
       accepted ? t.acceptedNext(firstName(request.developerName)) : t.declinedNext,
+      ...(accepted ? [dictionaries[language].calendar.attached] : []),
     ],
     closing: t.closing,
     replyTo: developerEmail,
   });
+  if (!accepted) return email;
+  // The call, ready for the company's calendar, with where to reach the developer.
+  const event = meetingEventFor(request, "company", language, {
+    name: request.developerName,
+    email: developerEmail,
+  });
+  return {
+    ...email,
+    attachments: [
+      {
+        filename: icsFileName,
+        content: toIcs(event),
+        contentType: "text/calendar; method=PUBLISH",
+      },
+    ],
+  };
 }
 
 /** The account e-mail of a developer, where their notifications go. */
