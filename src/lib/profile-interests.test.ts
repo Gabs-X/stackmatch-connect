@@ -26,6 +26,9 @@ const meeting = (fields: Partial<MeetingRequest>): MeetingRequest => ({
   message: "",
   sentAt: "2026-10-02T10:00:00.000Z",
   status: "pending",
+  proposedBy: "company",
+  reschedules: 0,
+  updateMessage: "",
   ...fields,
 });
 

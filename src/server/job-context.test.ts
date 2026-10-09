@@ -197,7 +197,13 @@ describe("answering a proposal", () => {
     const job = await newJob();
     const request = await propose(job.id);
     expect(request.status).toBe("pending");
-    const result = await answerMeetingRequest(db, marina, request.id, "accepted", now);
+    const result = await answerMeetingRequest(
+      db,
+      { side: "developer", accountId: marina },
+      request.id,
+      "accepted",
+      now,
+    );
     expect("request" in result && result.request.status).toBe("accepted");
     const email = outbox().at(-1);
     expect(email?.to).toBe(request.email);
@@ -220,7 +226,13 @@ describe("answering a proposal", () => {
   it("declining keeps the developer at contacted", async () => {
     const job = await newJob();
     const request = await propose(job.id);
-    await answerMeetingRequest(db, marina, request.id, "declined", now);
+    await answerMeetingRequest(
+      db,
+      { side: "developer", accountId: marina },
+      request.id,
+      "declined",
+      now,
+    );
     expect(outbox().at(-1)?.subject).toBe("Marina Costa declined the proposed time");
     expect(outbox().at(-1)?.attachments).toBeUndefined();
     expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("contacted");
@@ -230,11 +242,33 @@ describe("answering a proposal", () => {
   it("is answered once, and only by the developer it went to", async () => {
     const request = await propose();
     const rafael = await createDeveloper(db, "rafael@example.com", "Rafael Lima");
-    expect(await answerMeetingRequest(db, rafael, request.id, "accepted", now)).toEqual({
+    expect(
+      await answerMeetingRequest(
+        db,
+        { side: "developer", accountId: rafael },
+        request.id,
+        "accepted",
+        now,
+      ),
+    ).toEqual({
       error: "unknown-meeting",
     });
-    await answerMeetingRequest(db, marina, request.id, "declined", now);
-    expect(await answerMeetingRequest(db, marina, request.id, "accepted", now)).toEqual({
+    await answerMeetingRequest(
+      db,
+      { side: "developer", accountId: marina },
+      request.id,
+      "declined",
+      now,
+    );
+    expect(
+      await answerMeetingRequest(
+        db,
+        { side: "developer", accountId: marina },
+        request.id,
+        "accepted",
+        now,
+      ),
+    ).toEqual({
       error: "already-answered",
     });
   });
@@ -242,14 +276,28 @@ describe("answering a proposal", () => {
     const request = await propose();
     const start = Date.parse("2026-10-02T10:30:00-03:00");
     const sent = outbox().length;
-    expect(await answerMeetingRequest(db, marina, request.id, "accepted", start)).toEqual({
+    expect(
+      await answerMeetingRequest(
+        db,
+        { side: "developer", accountId: marina },
+        request.id,
+        "accepted",
+        start,
+      ),
+    ).toEqual({
       error: "expired",
     });
     expect(outbox()).toHaveLength(sent);
     expect((await listReceivedBy(db, marina))[0]?.status).toBe("pending");
     // A minute earlier it still could.
     expect(
-      await answerMeetingRequest(db, marina, request.id, "accepted", start - 60_000),
+      await answerMeetingRequest(
+        db,
+        { side: "developer", accountId: marina },
+        request.id,
+        "accepted",
+        start - 60_000,
+      ),
     ).toHaveProperty("request.status", "accepted");
   });
 });

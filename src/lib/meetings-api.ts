@@ -1,15 +1,23 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { getRequestUrl } from "@tanstack/react-start/server";
 import {
   answerMeetingRequest,
+  cancelMeeting,
   listReceivedBy,
   listSentBy,
+  rescheduleMeeting,
   sendMeetingRequest,
+  type MeetingActor,
 } from "@/server/meetings";
-import { database, requireAccount } from "@/server/session";
+import { AccessError, currentUser, database, requireAccount } from "@/server/session";
 import type { Lang } from "./i18n";
-import { meetingRequestInputSchema, type MeetingRequestInput } from "./meeting-requests";
+import {
+  meetingChangeSchema,
+  meetingRequestInputSchema,
+  type MeetingRequestInput,
+} from "./meeting-requests";
 
 /**
  * Stands for `POST /meeting-requests`: records the proposal and e-mails it to the developer, in
@@ -30,18 +38,57 @@ export const sendMeetingRequestFn = createServerFn({ method: "POST" })
     ),
   );
 
+/** The signed-in, confirmed account as a side of a call; refused otherwise. */
+async function meetingActor(): Promise<MeetingActor> {
+  const user = await currentUser();
+  if (!user?.emailVerified) throw new AccessError();
+  return { side: user.accountType, accountId: user.id };
+}
+
+const meetingId = z.string().min(1).max(200);
+
 /**
- * Stands for `POST /meeting-requests/:id/answer`: the developer accepts or declines a proposal
- * they received, once (see answerMeetingRequest).
+ * Stands for `POST /meeting-requests/:id/answer`: the side that didn't propose the current time
+ * accepts or declines it, once (see answerMeetingRequest).
  */
 export const answerMeetingRequestFn = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().min(1).max(200), answer: z.enum(["accepted", "declined"]) }))
+  .validator(z.object({ id: meetingId, answer: z.enum(["accepted", "declined"]) }))
   .handler(async ({ data }) =>
     answerMeetingRequest(
       await database(),
-      (await requireAccount("developer")).id,
+      await meetingActor(),
       data.id,
       data.answer,
+      Date.now(),
+      getRequestUrl().origin,
+    ),
+  );
+
+/** Stands for `POST /meeting-requests/:id/reschedule`: either side moves the call (see rescheduleMeeting). */
+export const rescheduleMeetingFn = createServerFn({ method: "POST" })
+  .validator(meetingChangeSchema.extend({ id: meetingId }))
+  .handler(async ({ data: { id, ...change } }) =>
+    rescheduleMeeting(
+      await database(),
+      await meetingActor(),
+      id,
+      change,
+      Date.now(),
+      getRequestUrl().origin,
+    ),
+  );
+
+/** Stands for `POST /meeting-requests/:id/cancel`: either side cancels the call (see cancelMeeting). */
+export const cancelMeetingFn = createServerFn({ method: "POST" })
+  .validator(z.object({ id: meetingId, message: meetingChangeSchema.shape.message }))
+  .handler(async ({ data }) =>
+    cancelMeeting(
+      await database(),
+      await meetingActor(),
+      data.id,
+      data.message,
+      Date.now(),
+      getRequestUrl().origin,
     ),
   );
 

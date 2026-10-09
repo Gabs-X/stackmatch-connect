@@ -211,6 +211,13 @@
       "when": 1791545832969,
       "tag": "0029_assistant_spend",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791554821236,
+      "tag": "0030_meeting_changes",
+      "breakpoints": true
     }
   ]
 }

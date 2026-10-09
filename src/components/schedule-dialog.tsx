@@ -253,9 +253,11 @@ export function ScheduleDialog({
                     ? t.meetingAnswer.companyAccepted
                     : previous.status === "declined"
                       ? t.meetingAnswer.companyDeclined
-                      : isMeetingExpired(previous)
-                        ? t.meetingAnswer.companyExpired
-                        : t.meetingAnswer.companyPending,
+                      : previous.status === "canceled"
+                        ? t.meetingAnswer.companyCanceled
+                        : isMeetingExpired(previous)
+                          ? t.meetingAnswer.companyExpired
+                          : t.meetingAnswer.companyPending,
                 )}
               </p>
             )}

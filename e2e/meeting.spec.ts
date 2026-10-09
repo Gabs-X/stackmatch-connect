@@ -114,3 +114,65 @@ test("a company can't flood the same developer with proposals", async ({ page })
   await expect(dialog.getByRole("heading", { name: "Proposta enviada" })).toBeHidden();
   expect((await lastEmail(page, "marina-costa@example.com")).text).toContain("às 14:00");
 });
+
+test("the developer suggests another time, the company accepts it and then cancels", async ({
+  page,
+}) => {
+  await signInAs(page, "company");
+  await page.goto("/developer/demo-developer");
+  await page.getByRole("button", { name: "Propor reunião" }).click();
+  const proposal = page.getByRole("dialog");
+  await proposal.locator('[data-day="04/10/2030"]').click();
+  await proposal.getByRole("button", { name: "10:30" }).click();
+  await proposal.getByRole("button", { name: "Continuar" }).click();
+  await proposal.getByRole("button", { name: "Enviar proposta" }).click();
+  await proposal.getByRole("button", { name: "Concluir" }).click();
+
+  // The developer can't make it and suggests Monday instead.
+  await page.context().clearCookies();
+  await signInAs(page, "developer");
+  await page.goto("/interests");
+  // The card, not the lists inside it.
+  const fromCompany = page.getByRole("listitem").filter({ hasText: "Empresa Teste" }).first();
+  await fromCompany.getByRole("button", { name: "Sugerir outro horário" }).click();
+  const reschedule = page.getByRole("dialog");
+  await reschedule.locator('[data-day="07/10/2030"]').click();
+  await reschedule.getByRole("button", { name: "14:00" }).click();
+  await reschedule.getByLabel("Mensagem (opcional)").fill("Na sexta estou viajando.");
+  await reschedule.getByRole("button", { name: "Enviar novo horário" }).click();
+  await expect(fromCompany.getByText("Aguardando resposta de Empresa Teste")).toBeVisible();
+  await expect(fromCompany.getByText("Novo horário sugerido por você")).toBeVisible();
+  await expect(fromCompany).toContainText("7 de outubro, às 14:00");
+  const suggested = await lastEmail(page, "teste.emp@example.com");
+  expect(suggested.subject).toBe("Gabriel Botelho sugeriu um novo horário para a conversa");
+  expect(suggested.text).toContain("> Na sexta estou viajando.");
+
+  // The company answers the new time in its sent proposals.
+  await page.context().clearCookies();
+  await signInAs(page, "company");
+  await page.goto("/proposals");
+  const sent = page.getByRole("article", { name: "Gabriel Botelho" });
+  await expect(sent).toContainText("Novo horário para você responder");
+  await expect(sent).toContainText("Na sexta estou viajando.");
+  await sent.getByRole("button", { name: "Aceitar" }).click();
+  await expect(sent.getByText("Você aceitou este horário")).toBeVisible();
+  const accepted = await lastEmail(page, "teste.dev@example.com");
+  expect(accepted.subject).toBe("Empresa Teste aceitou o horário que você sugeriu");
+  expect(accepted.attachments).toEqual(["conversa-stackmatch.ics"]);
+
+  // Then the company cancels it, saying why.
+  await sent.getByRole("button", { name: "Cancelar" }).click();
+  const cancel = page.getByRole("dialog");
+  await cancel.getByLabel("Mensagem (opcional)").fill("A vaga foi preenchida.");
+  await cancel.getByRole("button", { name: "Cancelar conversa" }).click();
+  await expect(sent.getByText("Você cancelou esta conversa")).toBeVisible();
+  await expect(sent.getByRole("button", { name: "Remarcar" })).toBeHidden();
+  const canceled = await lastEmail(page, "teste.dev@example.com");
+  expect(canceled.subject).toBe("Empresa Teste cancelou a conversa");
+
+  await page.context().clearCookies();
+  await signInAs(page, "developer");
+  await page.goto("/interests");
+  await expect(page.getByText("Conversa cancelada por Empresa Teste")).toBeVisible();
+  await expect(page.getByText("A vaga foi preenchida.")).toBeVisible();
+});

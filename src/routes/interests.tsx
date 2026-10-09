@@ -13,7 +13,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useState, type CSSProperties } from "react";
 import { JobContext } from "@/components/job-details";
-import { MeetingAnswer, MeetingProposal } from "@/components/meeting-proposal";
+import { MeetingControls } from "@/components/meeting-controls";
+import { MeetingProposal } from "@/components/meeting-proposal";
 import { ProjectCover } from "@/components/project-cover";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
@@ -228,7 +229,7 @@ function InterestsList({ user }: { user: AuthUser }) {
                     {meeting && (
                       <div className="mt-4">
                         <MeetingProposal meeting={meeting} />
-                        <MeetingAnswer meeting={meeting} accountId={user.id} />
+                        <MeetingControls meeting={meeting} side="developer" />
                       </div>
                     )}
                     <div className="mt-4 flex flex-wrap gap-2">

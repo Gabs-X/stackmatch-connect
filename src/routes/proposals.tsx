@@ -11,18 +11,18 @@ import {
   ChevronRight,
   Clock,
   RotateCcw,
+  X,
 } from "lucide-react";
-import { AddToCalendar } from "@/components/add-to-calendar";
 import { JobContext } from "@/components/job-details";
+import { MeetingControls } from "@/components/meeting-controls";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AuthUser } from "@/lib/auth";
-import { meetingEventFor } from "@/lib/calendar";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { isMeetingExpired, meetingStart, type MeetingRequest } from "@/lib/meeting-requests";
+import { isMeetingExpired, type MeetingRequest } from "@/lib/meeting-requests";
 import { sentMeetingRequestsQuery } from "@/lib/meetings-api";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +50,7 @@ function ProposalsPage() {
 }
 
 /** A proposal's status as the company sees it: waiting ones expire once their time comes. */
-type Status = "pending" | "accepted" | "declined" | "expired";
+type Status = "pending" | "accepted" | "declined" | "canceled" | "expired";
 type Filter = "all" | Status;
 
 const statusOf = (meeting: MeetingRequest): Status =>
@@ -60,6 +60,7 @@ const statusIcons = {
   pending: Clock,
   accepted: CalendarCheck,
   declined: CalendarX,
+  canceled: X,
   expired: CalendarClock,
 };
 
@@ -73,7 +74,7 @@ function ProposalList({ user }: { user: AuthUser }) {
   const count = (status: Status) => proposals.filter((item) => item.status === status).length;
   const filters: { id: Filter; label: string; count: number }[] = [
     { id: "all", label: t.proposals.filters.all, count: proposals.length },
-    ...(["pending", "accepted", "declined", "expired"] as const).map((id) => ({
+    ...(["pending", "accepted", "declined", "canceled", "expired"] as const).map((id) => ({
       id,
       label: t.proposals.filters[id],
       count: count(id),
@@ -213,17 +214,17 @@ function ProposalItem({
             )}
           >
             <Icon className="size-3.5" aria-hidden="true" />
-            {t.proposals.status[status]}
+            {status === "pending" && meeting.proposedBy === "developer"
+              ? t.proposals.status.yourTurn
+              : t.proposals.status[status]}
           </span>
         </div>
         {meeting.job && (
           <JobContext job={meeting.job} translations={meeting.jobTranslations} className="mt-4" />
         )}
         <MeetingProposal meeting={meeting} className="mt-4" />
-        <div className="mt-4 flex flex-wrap gap-2">
-          {status === "accepted" && meetingStart(meeting.date, meeting.time) > Date.now() && (
-            <AddToCalendar event={meetingEventFor(meeting, "company", lang)} />
-          )}
+        <MeetingControls meeting={meeting} side="company" />
+        <div className="mt-4">
           <Button asChild size="sm" variant="outline">
             <Link to="/developer/$id" params={{ id: meeting.developerId }}>
               {t.proposals.viewProfile}

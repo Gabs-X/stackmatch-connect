@@ -14,10 +14,12 @@ export type CalendarEvent = {
   /** UTC, in ms. */
   start: number;
   end: number;
+  /** Goes up each time the call moves, so calendars replace the older entry. */
+  sequence: number;
 };
 
 export function meetingEvent(
-  meeting: Pick<MeetingRequest, "id" | "date" | "time">,
+  meeting: Pick<MeetingRequest, "id" | "date" | "time"> & { reschedules?: number },
   title: string,
   description: string,
 ): CalendarEvent {
@@ -28,6 +30,7 @@ export function meetingEvent(
     description,
     start,
     end: start + meetingDurationMinutes * 60_000,
+    sequence: meeting.reschedules ?? 0,
   };
 }
 
@@ -38,6 +41,7 @@ export function meetingEvent(
 export function meetingEventFor(
   meeting: Pick<MeetingRequest, "id" | "date" | "time" | "developerName" | "company"> & {
     job?: { title: string } | undefined;
+    reschedules?: number;
   },
   side: "company" | "developer",
   language: Lang,
@@ -55,6 +59,20 @@ export function meetingEventFor(
   );
 }
 
+/**
+ * Where one side reaches the other, as its calendar entry says: the developer gets the company's
+ * contact; the company gets the developer's account e-mail, when it has it (an accepted call).
+ * The e-mailed .ics and the "Add to calendar" button both use it, so they say the same.
+ */
+export function meetingContact(
+  meeting: Pick<MeetingRequest, "developerName" | "contactName" | "email">,
+  side: "company" | "developer",
+  developerEmail: string | undefined,
+) {
+  if (side === "developer") return { name: meeting.contactName, email: meeting.email };
+  return developerEmail ? { name: meeting.developerName, email: developerEmail } : undefined;
+}
+
 /** 20261002T133000Z */
 const utcStamp = (ms: number) =>
   new Date(ms)
@@ -62,9 +80,20 @@ const utcStamp = (ms: number) =>
     .replace(/[-:]/g, "")
     .replace(/\.\d{3}/, "");
 
-/** Text values escape backslashes, semicolons, commas and line breaks (RFC 5545, 3.3.11). */
+/**
+ * Text values (RFC 5545, 3.3.11): any line break (CRLF, LF or a lone CR) becomes an escaped \n,
+ * other control characters, which TEXT doesn't allow, are dropped (tab stays), and backslashes,
+ * semicolons and commas are escaped.
+ */
 const escapeText = (text: string) =>
-  text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  text
+    .replace(/\r\n?/g, "\n")
+    // eslint-disable-next-line no-control-regex -- the control characters are what it removes
+    .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 
 /** Lines longer than 75 octets continue on the next one, after a space (RFC 5545, 3.1). */
 function fold(line: string) {
@@ -94,6 +123,7 @@ export function toIcs(event: CalendarEvent, now = Date.now()) {
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${utcStamp(now)}`,
+    `SEQUENCE:${event.sequence}`,
     `DTSTART:${utcStamp(event.start)}`,
     `DTEND:${utcStamp(event.end)}`,
     `SUMMARY:${escapeText(event.title)}`,

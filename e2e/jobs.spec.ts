@@ -1,4 +1,8 @@
+import { readFile } from "node:fs/promises";
 import { expect, lastEmail, signInAs, test } from "./fixtures";
+
+/** An .ics with its folded lines joined back, and LF line ends, to read properties from. */
+const unfold = (ics: string) => ics.replace(/\r\n /g, "").replace(/\r\n/g, "\n");
 
 test("a job searches Discover with its filters and keeps who the company reached", async ({
   page,
@@ -170,7 +174,17 @@ test("a proposal from a job tells the developer what the job is about", async ({
   const proposal = page.getByRole("article", { name: "Gabriel Botelho" });
   await expect(proposal).toContainText("Aceita");
   await expect(proposal).toContainText("Full Stack Pleno");
-  await expect(proposal.getByRole("button", { name: "Adicionar à agenda" })).toBeVisible();
+  // Its .ics is the event attached to the e-mail: the same call, with the developer's contact.
+  await proposal.getByRole("button", { name: "Adicionar à agenda" }).click();
+  const companyDownloading = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Outra agenda (arquivo .ics)" }).click();
+  const companyIcs = unfold(await readFile(await (await companyDownloading).path(), "utf8"));
+  const developerIcs = unfold(await readFile(await download.path(), "utf8"));
+  expect(companyIcs).toContain("Contato: Gabriel Botelho <teste.dev@example.com>");
+  for (const property of ["UID", "SEQUENCE", "DTSTART", "DTEND"])
+    expect(companyIcs.match(new RegExp(`^${property}:.*$`, "m"))?.[0]).toBe(
+      developerIcs.match(new RegExp(`^${property}:.*$`, "m"))?.[0],
+    );
   await expect(page.getByRole("button", { name: "Aceitas · 1" })).toBeEnabled();
 });
 

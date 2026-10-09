@@ -1,6 +1,7 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { optionLabel } from "./option-labels";
+import { maxReschedules } from "./meeting-requests";
 import type { Translations } from "./translations";
 
 export type Lang = "pt" | "en";
@@ -894,15 +895,48 @@ const pt = {
     pending: "Aguardando sua resposta",
     accepted: "Você aceitou este horário",
     declined: "Você recusou este horário",
-    acceptedToast: "Conversa aceita. A empresa recebeu sua resposta por e-mail.",
-    declinedToast: "Horário recusado. A empresa recebeu sua resposta por e-mail.",
-    error: "Não foi possível enviar sua resposta. Tente novamente.",
+    acceptedByOther: (name: string) => `${name} aceitou este horário`,
+    declinedByOther: (name: string) => `${name} recusou este horário`,
+    waitingFor: (name: string) => `Aguardando resposta de ${name}`,
+    you: "você",
+    rescheduledBy: (name: string) => `Novo horário sugerido por ${name}`,
+    canceledBy: (name: string) => `Conversa cancelada por ${name}`,
+    canceledByYou: "Você cancelou esta conversa",
+    acceptedToast: (name: string) => `Horário aceito. ${name} recebeu sua resposta por e-mail.`,
+    declinedToast: (name: string) => `Horário recusado. ${name} recebeu sua resposta por e-mail.`,
+    error: "Não foi possível concluir. Tente novamente.",
     companyPending: "aguardando resposta",
     companyAccepted: "aceita",
     companyDeclined: "recusada",
     companyExpired: "expirada sem resposta",
-    expired:
-      "O horário passou sem resposta. Se ainda quiser conversar, responda o e-mail da empresa.",
+    companyCanceled: "cancelada",
+    expired: "O horário passou sem resposta. Se ainda quiser conversar, sugira outro horário.",
+    suggest: "Sugerir outro horário",
+    reschedule: "Remarcar",
+    cancel: "Cancelar",
+    rescheduleTitle: "Sugerir outro horário",
+    rescheduleDesc: (name: string) =>
+      `${name} recebe o novo horário por e-mail e pode aceitar, recusar ou sugerir outro. Uma conversa pode ser remarcada até ${maxReschedules} vezes.`,
+    messageLabel: "Mensagem (opcional)",
+    rescheduleMessagePh: "Ex.: Tenho outro compromisso nesse horário. Pode ser neste?",
+    sendTime: "Enviar novo horário",
+    rescheduledToast: (name: string) => `Novo horário enviado para ${name}.`,
+    cancelTitle: "Cancelar a conversa?",
+    cancelDesc: (name: string) =>
+      `${name} recebe um e-mail avisando do cancelamento. Não é possível desfazer.`,
+    cancelMessagePh: "Ex.: A vaga foi preenchida.",
+    keep: "Voltar",
+    confirmCancel: "Cancelar conversa",
+    canceledToast: (name: string) => `Conversa cancelada. ${name} foi avisado por e-mail.`,
+    errors: {
+      "time-passed": "Esse horário já passou. Escolha outro.",
+      "same-time": "Escolha um horário diferente do atual.",
+      "reschedule-limit": `Esta conversa já foi remarcada ${maxReschedules} vezes. Combine por e-mail ou cancele.`,
+      started: "A conversa já começou.",
+      closed: "Esta conversa foi cancelada.",
+      expired: "O horário passou sem resposta. Sugira outro horário.",
+      changed: "A conversa mudou enquanto isso. Veja como ela está agora.",
+    },
   },
   // The e-mail a company gets when a developer offers themselves for one of its jobs.
   applicationEmail: {
@@ -965,13 +999,16 @@ const pt = {
       pending: "Aguardando",
       accepted: "Aceitas",
       declined: "Recusadas",
+      canceled: "Canceladas",
       expired: "Expiradas",
     },
     status: {
       pending: "Aguardando resposta",
       accepted: "Aceita",
       declined: "Recusada",
+      canceled: "Cancelada",
       expired: "Expirada sem resposta",
+      yourTurn: "Novo horário para você responder",
     },
     sent: (when: string) => `Enviada ${when}`,
     answered: (when: string) => `respondida em ${when}`,
@@ -991,6 +1028,31 @@ const pt = {
     google: "Google Agenda",
     ics: "Outra agenda (arquivo .ics)",
     attached: "O convite de agenda vai anexo: abra o arquivo para salvar a conversa na sua agenda.",
+  },
+  // E-mails when one side moves, cancels or answers a call (src/server/notifications.ts).
+  meetingUpdateEmail: {
+    subject: {
+      rescheduled: (name: string) => `${name} sugeriu um novo horário para a conversa`,
+      canceled: (name: string) => `${name} cancelou a conversa`,
+      accepted: (name: string) => `${name} aceitou o horário que você sugeriu`,
+      declined: (name: string) => `${name} recusou o horário que você sugeriu`,
+    },
+    greeting: (name: string) => `Olá, ${name}!`,
+    rescheduled: (name: string, from: string, to: string) =>
+      `${name} sugeriu mudar a conversa de ${from} para ${to} (horário de Brasília).`,
+    rescheduledNext: "Abra o StackMatch para aceitar o novo horário, recusar ou sugerir outro.",
+    canceled: (name: string, when: string) =>
+      `${name} cancelou a conversa de ${when} (horário de Brasília).`,
+    canceledNext: "Se quiser combinar outra data, responda este e-mail.",
+    accepted: (name: string, when: string) =>
+      `${name} aceitou o horário que você sugeriu: ${when} (horário de Brasília).`,
+    acceptedNext: "Responda este e-mail para combinar o link da conversa.",
+    declined: (name: string, when: string) =>
+      `${name} não pode no horário que você sugeriu (${when}).`,
+    declinedNext: "Você pode sugerir outro horário pelo StackMatch ou responder este e-mail.",
+    job: (title: string) => `A conversa é sobre a vaga ${title}.`,
+    action: "Abrir no StackMatch",
+    closing: "Equipe StackMatch",
   },
   footer: {
     support: "Suporte",
@@ -1875,15 +1937,48 @@ const en: Dict = {
     pending: "Waiting for your answer",
     accepted: "You accepted this time",
     declined: "You declined this time",
-    acceptedToast: "Call accepted. The company got your answer by e-mail.",
-    declinedToast: "Time declined. The company got your answer by e-mail.",
-    error: "Couldn't send your answer. Please try again.",
+    acceptedByOther: (name: string) => `${name} accepted this time`,
+    declinedByOther: (name: string) => `${name} declined this time`,
+    waitingFor: (name: string) => `Waiting for ${name} to answer`,
+    you: "you",
+    rescheduledBy: (name: string) => `New time suggested by ${name}`,
+    canceledBy: (name: string) => `Call canceled by ${name}`,
+    canceledByYou: "You canceled this call",
+    acceptedToast: (name: string) => `Time accepted. ${name} got your answer by e-mail.`,
+    declinedToast: (name: string) => `Time declined. ${name} got your answer by e-mail.`,
+    error: "Couldn't finish that. Please try again.",
     companyPending: "waiting for an answer",
     companyAccepted: "accepted",
     companyDeclined: "declined",
     companyExpired: "expired without an answer",
-    expired:
-      "The time passed without an answer. If you still want to talk, reply to the company's e-mail.",
+    companyCanceled: "canceled",
+    expired: "The time passed without an answer. If you still want to talk, suggest another time.",
+    suggest: "Suggest another time",
+    reschedule: "Reschedule",
+    cancel: "Cancel",
+    rescheduleTitle: "Suggest another time",
+    rescheduleDesc: (name: string) =>
+      `${name} gets the new time by e-mail and can accept it, decline it or suggest another. A call can be rescheduled up to ${maxReschedules} times.`,
+    messageLabel: "Message (optional)",
+    rescheduleMessagePh: "E.g.: I have another commitment then. Does this time work?",
+    sendTime: "Send new time",
+    rescheduledToast: (name: string) => `New time sent to ${name}.`,
+    cancelTitle: "Cancel the call?",
+    cancelDesc: (name: string) =>
+      `${name} gets an e-mail about the cancellation. This can't be undone.`,
+    cancelMessagePh: "E.g.: The position has been filled.",
+    keep: "Back",
+    confirmCancel: "Cancel call",
+    canceledToast: (name: string) => `Call canceled. ${name} was told by e-mail.`,
+    errors: {
+      "time-passed": "That time has passed. Pick another one.",
+      "same-time": "Pick a time different from the current one.",
+      "reschedule-limit": `This call was already rescheduled ${maxReschedules} times. Arrange it by e-mail or cancel it.`,
+      started: "The call has already started.",
+      closed: "This call was canceled.",
+      expired: "The time passed without an answer. Suggest another time.",
+      changed: "The call changed meanwhile. Here's how it stands now.",
+    },
   },
   applicationEmail: {
     subject: (developer: string, job: string) =>
@@ -1946,13 +2041,16 @@ const en: Dict = {
       pending: "Waiting",
       accepted: "Accepted",
       declined: "Declined",
+      canceled: "Canceled",
       expired: "Expired",
     },
     status: {
       pending: "Waiting for an answer",
       accepted: "Accepted",
       declined: "Declined",
+      canceled: "Canceled",
       expired: "Expired without an answer",
+      yourTurn: "New time for you to answer",
     },
     sent: (when: string) => `Sent ${when}`,
     answered: (when: string) => `answered on ${when}`,
@@ -1971,6 +2069,30 @@ const en: Dict = {
     google: "Google Calendar",
     ics: "Other calendar (.ics file)",
     attached: "The calendar invite is attached: open the file to save the call in your calendar.",
+  },
+  meetingUpdateEmail: {
+    subject: {
+      rescheduled: (name: string) => `${name} suggested a new time for the call`,
+      canceled: (name: string) => `${name} canceled the call`,
+      accepted: (name: string) => `${name} accepted the time you suggested`,
+      declined: (name: string) => `${name} declined the time you suggested`,
+    },
+    greeting: (name: string) => `Hi, ${name}!`,
+    rescheduled: (name: string, from: string, to: string) =>
+      `${name} suggested moving the call from ${from} to ${to} (Brasília time).`,
+    rescheduledNext: "Open StackMatch to accept the new time, decline it or suggest another.",
+    canceled: (name: string, when: string) =>
+      `${name} canceled the call on ${when} (Brasília time).`,
+    canceledNext: "If you'd like to find another date, reply to this e-mail.",
+    accepted: (name: string, when: string) =>
+      `${name} accepted the time you suggested: ${when} (Brasília time).`,
+    acceptedNext: "Reply to this e-mail to arrange the call link.",
+    declined: (name: string, when: string) =>
+      `${name} can't make the time you suggested (${when}).`,
+    declinedNext: "You can suggest another time on StackMatch or reply to this e-mail.",
+    job: (title: string) => `The call is about the job ${title}.`,
+    action: "Open StackMatch",
+    closing: "The StackMatch team",
   },
   footer: {
     support: "Support",

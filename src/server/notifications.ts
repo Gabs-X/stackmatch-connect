@@ -1,11 +1,11 @@
 import { format } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import { eq } from "drizzle-orm";
-import { icsFileName, meetingEventFor, toIcs } from "@/lib/calendar";
+import { icsFileName, meetingContact, meetingEventFor, toIcs } from "@/lib/calendar";
 import { dictionaries, type Lang } from "@/lib/i18n";
 import { optionLabel } from "@/lib/option-labels";
 import { compensationLabel, type JobSnapshot } from "@/lib/jobs";
-import type { MeetingRequest } from "@/lib/meeting-requests";
+import type { MeetingRequest, MeetingSide } from "@/lib/meeting-requests";
 import type { Translations } from "@/lib/translations";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
@@ -170,20 +170,106 @@ export function meetingAnswerEmail(
   });
   if (!accepted) return email;
   // The call, ready for the company's calendar, with where to reach the developer.
-  const event = meetingEventFor(request, "company", language, {
-    name: request.developerName,
-    email: developerEmail,
-  });
   return {
     ...email,
-    attachments: [
-      {
-        filename: icsFileName,
-        content: toIcs(event),
-        contentType: "text/calendar; method=PUBLISH",
-      },
-    ],
+    attachments: [calendarAttachment(request, "company", language, developerEmail)],
   };
+}
+
+/** "sexta-feira, 2 de outubro, às 10:30", as the proposal e-mails write a time. */
+function whenText(date: string, time: string, language: Lang) {
+  const t = dictionaries[language].schedule;
+  // Noon keeps the day the same in any server time zone.
+  const day = format(new Date(`${date}T12:00:00`), t.dateFormat, {
+    locale: language === "pt" ? ptBR : enUS,
+  });
+  return `${day}, ${t.at} ${time}`;
+}
+
+/**
+ * The calendar file of an accepted call, for the side that receives it, with where to reach the
+ * other side: the same contact as its "Add to calendar" button (see meetingContact).
+ */
+function calendarAttachment(
+  request: MeetingRequest,
+  side: MeetingSide,
+  language: Lang,
+  developerEmail: string,
+) {
+  return {
+    filename: icsFileName,
+    content: toIcs(
+      meetingEventFor(request, side, language, meetingContact(request, side, developerEmail)),
+    ),
+    contentType: "text/calendar; method=PUBLISH",
+  };
+}
+
+export type MeetingUpdate =
+  | { kind: "rescheduled"; from: { date: string; time: string } }
+  | { kind: "canceled" | "accepted" | "declined" };
+
+/**
+ * Tells one side what the other did to a call: moved it to another time, canceled it, or (the
+ * company, about a time the developer suggested) accepted or declined it. Replies go to the side
+ * that acted; the button opens the page where the recipient answers or sees the call.
+ */
+export function meetingUpdateEmail(
+  request: MeetingRequest,
+  update: MeetingUpdate,
+  /** The side that acted; the e-mail goes to the other one. */
+  actor: MeetingSide,
+  developerEmail: string,
+  language: Lang,
+  appUrl: string,
+): Email {
+  const t = dictionaries[language].meetingUpdateEmail;
+  const actorName = actor === "company" ? request.company : request.developerName;
+  const toCompany = actor === "developer";
+  const when = whenText(request.date, request.time, language);
+  const lines = {
+    rescheduled: () => [
+      t.rescheduled(
+        actorName,
+        update.kind === "rescheduled" ? whenText(update.from.date, update.from.time, language) : "",
+        when,
+      ),
+      t.rescheduledNext,
+    ],
+    canceled: () => [t.canceled(actorName, when), t.canceledNext],
+    accepted: () => [
+      t.accepted(actorName, when),
+      t.acceptedNext,
+      dictionaries[language].calendar.attached,
+    ],
+    declined: () => [t.declined(actorName, when), t.declinedNext],
+  }[update.kind]();
+  const email = messageEmail({
+    to: toCompany ? request.email : developerEmail,
+    subject: t.subject[update.kind](actorName),
+    paragraphs: [
+      t.greeting(firstName(toCompany ? request.contactName : request.developerName)),
+      lines[0] ?? "",
+      ...(request.job ? [t.job(request.job.title)] : []),
+      ...lines.slice(1),
+    ],
+    ...(request.updateMessage && (update.kind === "rescheduled" || update.kind === "canceled")
+      ? { quote: request.updateMessage }
+      : {}),
+    action: {
+      label: t.action,
+      url: new URL(toCompany ? "/proposals" : "/interests", appUrl).href,
+    },
+    closing: t.closing,
+    replyTo: toCompany ? developerEmail : request.email,
+  });
+  // Only the company accepts a time here: the developer's calendar gets the call.
+  return update.kind === "accepted"
+    ? {
+        ...email,
+        attachments: [calendarAttachment(request, "developer", language, developerEmail)],
+      }
+    : email;
 }
 
 /** The account e-mail of a developer, where their notifications go. */

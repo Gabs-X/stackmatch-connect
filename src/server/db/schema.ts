@@ -17,7 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CompensationPeriod, JobSnapshot, JobStage, JobStatus } from "@/lib/jobs";
 import type { Lang } from "@/lib/i18n";
-import type { MeetingStatus } from "@/lib/meeting-requests";
+import type { MeetingSide, MeetingStatus } from "@/lib/meeting-requests";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -224,9 +224,20 @@ export const meetingRequests = pgTable(
     /** The job the proposal is about, if any, and what it said when sent. */
     jobId: text("job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
     job: jsonb("job").$type<JobSnapshot>(),
-    /** The developer's answer; pending until they accept or decline. */
+    /**
+     * Pending until the side that didn't propose the current time accepts or declines it; either
+     * side can cancel it (see src/server/meetings.ts).
+     */
     status: text("status").$type<MeetingStatus>().notNull().default("pending"),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
+    /** Who proposed the current time: the company, or either side after a reschedule. */
+    proposedBy: text("proposed_by").$type<MeetingSide>().notNull().default("company"),
+    /** How many times the call was moved to another time. */
+    reschedules: integer("reschedules").notNull().default(0),
+    canceledBy: text("canceled_by").$type<MeetingSide>(),
+    canceledAt: timestamp("canceled_at", { withTimezone: true }),
+    /** What the side that rescheduled or canceled wrote, if anything; the latest one. */
+    updateMessage: text("update_message").notNull().default(""),
     /** The language of the e-mail the developer got; the company hears back in it. */
     language: text("language").$type<Lang>().notNull().default("pt"),
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
