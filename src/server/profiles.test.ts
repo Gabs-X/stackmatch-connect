@@ -74,7 +74,10 @@ describe("saveProfile and loadProfile", () => {
     expect(await loadProfile(db, id)).toBeNull();
 
     await saveProfile(db, id, ana);
-    expect(withoutProjectIds(await loadProfile(db, id))).toEqual(withoutProjectIds(ana));
+    expect(withoutProjectIds(await loadProfile(db, id))).toEqual({
+      ...withoutProjectIds(ana),
+      version: 1,
+    });
   });
 
   it("replace skills and projects on the next save", async () => {
@@ -143,9 +146,10 @@ describe("published profiles", () => {
 describe("seed", () => {
   it("gives teste.dev Gabriel's profile once, without overwriting its edits", async () => {
     await seedDatabase(db);
-    expect(withoutProjectIds(await loadProfile(db, seedDeveloperId))).toEqual(
-      withoutProjectIds(seedDeveloperProfile),
-    );
+    expect(withoutProjectIds(await loadProfile(db, seedDeveloperId))).toEqual({
+      ...withoutProjectIds(seedDeveloperProfile),
+      version: 1,
+    });
 
     await saveProfile(db, seedDeveloperId, { ...seedDeveloperProfile, name: "Gabriel B." });
     await seedDatabase(db);

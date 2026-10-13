@@ -6,9 +6,11 @@ import {
   loadProfile,
   loadPublishedProfile,
   loadPublishedProfiles,
+  profileStillAt,
   profileTexts,
   saveProfile,
   searchProfiles,
+  type SavedProfile,
 } from "@/server/profiles";
 import { loadJob } from "@/server/jobs";
 import { loadTranslations, updateTranslations } from "@/server/translations";
@@ -36,24 +38,45 @@ export const fetchMyTranslations = createServerFn({ method: "GET" }).handler(asy
   return profile ? loadTranslations(db, [user.id], profileTexts(profile)) : {};
 });
 
+export type { SavedProfile };
+
+const saveSchema = z.object({
+  profile: profileInputSchema,
+  /** The version the form started from, 0 for a profile not created yet (see saveProfile). */
+  version: z.number().int().min(0),
+});
+
+/**
+ * The profile as saved; or, when it was saved elsewhere since the form loaded it, `conflict` with
+ * that newer profile (null if it was deleted), and nothing changed.
+ */
+export type SaveProfileResult = { profile: SavedProfile } | { conflict: SavedProfile | null };
+
 /** Stands for `PUT /me/profile`. Only developer accounts have a profile. */
 export const saveMyProfile = createServerFn({ method: "POST" })
   // Typed as the form state; the schema checks the required fields and options on the server.
-  .validator((input: LocalProfile) => profileInputSchema.parse(input))
-  .handler(async ({ data }) => {
+  .validator((input: { profile: LocalProfile; version: number }) => saveSchema.parse(input))
+  .handler(async ({ data }): Promise<SaveProfileResult> => {
     const user = await requireAccount("developer");
     const db = await database();
+    let saved;
     try {
-      await saveProfile(db, user.id, data);
+      saved = await saveProfile(db, user.id, data.profile, data.version);
     } catch (error) {
       // The form only says it couldn't save; the reason goes to the server logs.
       console.error("Profile not saved:", error);
       throw error;
     }
+    if ("error" in saved) return { conflict: await loadProfile(db, user.id) };
+    const { version } = saved;
+    const profile = await loadProfile(db, user.id);
+    if (!profile) throw new Error("Profile not saved.");
     // Waits for the translation so the profile shows in both languages right away; a failure only
-    // leaves the texts as written.
-    await updateTranslations(db, user.id, profileTexts(data));
-    return loadProfile(db, user.id);
+    // leaves the texts as written. A later save takes over the translations of its own texts.
+    await updateTranslations(db, user.id, profileTexts(profile), {
+      stillCurrent: (tx) => profileStillAt(tx, user.id, version),
+    });
+    return { profile };
   });
 
 const ids = z.array(z.string().max(100)).max(2000);

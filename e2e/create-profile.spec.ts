@@ -297,3 +297,44 @@ test("skill suggestions include infrastructure and management, not only developm
   await input.press("Enter");
   await expect(page.getByRole("button", { name: "Scrum", exact: true })).toBeVisible();
 });
+
+test("a save from a tab that loaded an older profile asks before replacing the newer one", async ({
+  page,
+}) => {
+  await signInAs(page, "developer");
+  const other = await page.context().newPage();
+  await other.goto("/create-profile");
+  await other.waitForSelector("html[data-hydrated]", { state: "attached" });
+
+  /** From the preview, writes a new bio and saves it from the last step. */
+  const saveBio = async (tab: typeof page, bio: string) => {
+    await tab.getByRole("button", { name: "Voltar à edição" }).click();
+    // Back on the step it was left at; the bio is on the first one.
+    await tab.getByRole("button", { name: /Informações pessoais$/ }).click();
+    await tab.getByLabel("Bio profissional").fill(bio);
+    await tab.getByRole("button", { name: "4 Links" }).click();
+    await tab.getByRole("button", { name: "Concluir perfil" }).click();
+  };
+  const conflict = (tab: typeof page) =>
+    tab.getByRole("alert").filter({ hasText: "Seu perfil foi salvo em outra aba ou dispositivo" });
+
+  await saveBio(page, "Bio da primeira aba.");
+  await expect(page.getByText("Bio da primeira aba.")).toBeVisible();
+
+  // The other tab still started from the profile before that save.
+  await saveBio(other, "Bio da segunda aba.");
+  await expect(conflict(other)).toBeVisible();
+  await expect(other.getByRole("button", { name: "Concluir perfil" })).toBeDisabled();
+  await other.getByRole("button", { name: "Informações pessoais" }).click();
+  await expect(other.getByLabel("Bio profissional")).toHaveValue("Bio da segunda aba.");
+  await other.getByRole("button", { name: "Salvar minhas alterações" }).click();
+  await expect(other.getByText("Bio da segunda aba.")).toBeVisible();
+  await expect(conflict(other)).toBeHidden();
+
+  // Now the first tab is behind; it chooses the saved version over what it typed.
+  await saveBio(page, "Bio descartada.");
+  await expect(conflict(page)).toBeVisible();
+  await page.getByRole("button", { name: "Carregar a versão salva" }).click();
+  await expect(page.getByText("Bio da segunda aba.")).toBeVisible();
+  await expect(page.getByText("Bio descartada.")).toBeHidden();
+});

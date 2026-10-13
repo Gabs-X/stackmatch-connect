@@ -218,6 +218,13 @@
       "when": 1791554821236,
       "tag": "0030_meeting_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791577211619,
+      "tag": "0031_profile_version",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ import { locationApplies, matchWeights } from "@/lib/job-match";
 import type { JobInput } from "@/lib/jobs";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
+import { lockKeys } from "./db/locks";
 import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
 import { loadTranslations } from "./translations";
 import { developerProfiles, developerSkills, projectSkills, projects, skills } from "./db/schema";
@@ -59,8 +60,32 @@ export function uniqueIds(ids: Map<string, number>, names: string[]) {
   return [...new Set(names.flatMap((name) => ids.get(skillKey(name)) ?? []))];
 }
 
+/**
+ * Holds the developer's profile until the transaction ends: saves, the account's deletion and
+ * translation updates take turns on it. A lock by name, so it also covers a profile not created yet.
+ */
+export const lockProfile = (tx: Tx, userId: string) => lockKeys(tx, [`profile:${userId}`]);
+
+/** The saved profile's version, or 0 when there's none yet. */
+async function profileVersion(db: Db | Tx, userId: string) {
+  const [row] = await db
+    .select({ version: developerProfiles.version })
+    .from(developerProfiles)
+    .where(eq(developerProfiles.userId, userId));
+  return row?.version ?? 0;
+}
+
+/**
+ * Whether the saved profile is still at `version`, holding it there until the transaction ends;
+ * for work done for one version, like its translations, that must not land on a later one.
+ */
+export async function profileStillAt(tx: Tx, userId: string, version: number) {
+  await lockProfile(tx, userId);
+  return (await profileVersion(tx, userId)) === version;
+}
+
 /** URLs of the images the developer's saved profile uses: the photo and the project covers. */
-export async function storedImages(db: Db, userId: string) {
+export async function storedImages(db: Db | Tx, userId: string) {
   const [profile] = await db
     .select({ photo: developerProfiles.photo })
     .from(developerProfiles)
@@ -72,15 +97,27 @@ export async function storedImages(db: Db, userId: string) {
   return [profile?.photo ?? "", ...covers.map((cover) => cover.image)].filter(Boolean);
 }
 
+export type SaveResult = { version: number } | { error: "conflict" };
+
 /**
  * Creates or replaces the developer's profile, skills and projects. Expects validated input.
  *
+ * `baseVersion` is the version the form started from (0 for a profile not created yet): when the
+ * profile was saved since, from another tab or device, nothing changes and the answer is
+ * "conflict". Left out (seeds, scripts), the save always goes through.
+ *
  * Images arrive as data URLs when new and are moved to file storage; the database keeps their URL.
- * A URL is only kept when it's already one of this profile's images, and images the profile no
- * longer uses are deleted once the save went through. A new image must be a JPEG no larger than the
- * browser makes (see isStorableImage), or the save fails.
+ * A URL is only kept when it's one of the profile's images as saved at that moment, and images the
+ * profile no longer uses are deleted once the save went through. A new image must be a JPEG no
+ * larger than the browser makes (see isStorableImage), or the save fails. New images that end up
+ * unused, because the save failed or was refused, are deleted too.
  */
-export async function saveProfile(db: Db, userId: string, input: LocalProfile) {
+export async function saveProfile(
+  db: Db,
+  userId: string,
+  input: LocalProfile,
+  baseVersion?: number,
+): Promise<SaveResult> {
   // Checked before storing any, so a bad one doesn't leave the others behind.
   const images: [ImageFolder, string][] = [
     ["photos", input.photo],
@@ -88,97 +125,119 @@ export async function saveProfile(db: Db, userId: string, input: LocalProfile) {
   ];
   if (images.some(([folder, image]) => isDataUrl(image) && !isStorableImage(folder, image)))
     throw new Error("Invalid image: not a JPEG the form makes");
-  const previous = await storedImages(db, userId);
+  // New images go to file storage first, so the transaction never waits on it. Every upload is
+  // let finish, so none is left behind when another fails.
   const uploaded: string[] = [];
-  const resolve = async (folder: ImageFolder, image: string) => {
-    if (!image) return "";
-    if (!isDataUrl(image)) return previous.includes(image) ? image : "";
+  const upload = async ([folder, image]: [ImageFolder, string]) => {
+    if (!isDataUrl(image)) return image;
     const url = await storeImage(folder, userId, image);
     uploaded.push(url);
     return url;
   };
-  let profile: LocalProfile;
+  const settled = await Promise.allSettled(images.map(upload));
+  const failed = settled.find((result) => result.status === "rejected");
+  if (failed) {
+    await removeImages(uploaded);
+    throw failed.reason;
+  }
+  const [photo = "", ...covers] = settled.map((result) =>
+    result.status === "fulfilled" ? result.value : "",
+  );
+  let outcome: { version: number; unused: string[] } | { error: "conflict" };
   try {
-    profile = {
-      ...input,
-      photo: await resolve("photos", input.photo),
-      projects: await Promise.all(
-        input.projects.map(async (project) => ({
+    outcome = await db.transaction(async (tx) => {
+      await lockProfile(tx, userId);
+      const version = await profileVersion(tx, userId);
+      if (baseVersion !== undefined && version !== baseVersion) return { error: "conflict" };
+      const previous = await storedImages(tx, userId);
+      // A URL that isn't one of the saved profile's images (any more) is dropped.
+      const keep = (url: string) => (uploaded.includes(url) || previous.includes(url) ? url : "");
+      const profile = {
+        ...input,
+        photo: keep(photo),
+        projects: input.projects.map((project, index) => ({
           ...project,
-          image: await resolve("covers", project.image),
+          image: keep(covers[index] ?? ""),
         })),
-      ),
-    };
-    await writeProfile(db, userId, profile);
+      };
+      await writeProfile(tx, userId, profile, version + 1);
+      const kept = new Set([profile.photo, ...profile.projects.map((project) => project.image)]);
+      return { version: version + 1, unused: previous.filter((url) => !kept.has(url)) };
+    });
   } catch (error) {
     await removeImages(uploaded);
     throw error;
   }
-  const kept = new Set([profile.photo, ...profile.projects.map((project) => project.image)]);
-  await removeImages(previous.filter((url) => !kept.has(url)));
+  if ("error" in outcome) {
+    await removeImages(uploaded);
+    return outcome;
+  }
+  // No saved profile uses these now, and a later save can't take them back: it only keeps images
+  // of the profile as saved when it holds the lock.
+  await removeImages(outcome.unused);
+  return { version: outcome.version };
 }
 
-async function writeProfile(db: Db, userId: string, profile: LocalProfile) {
-  await db.transaction(async (tx) => {
-    const fields = {
-      name: profile.name,
-      role: profile.role,
-      location: profile.location,
-      seniority: profile.seniority,
-      workMode: profile.workMode,
-      availability: profile.availability,
-      hiringTypes: profile.hiringTypes,
-      experienceYears: profile.experienceYears,
-      bio: profile.bio,
-      photo: profile.photo,
-      githubUrl: profile.github,
-      linkedinUrl: profile.linkedin,
-      websiteUrl: profile.website,
-      updatedAt: new Date(),
-    };
+async function writeProfile(tx: Tx, userId: string, profile: LocalProfile, version: number) {
+  const fields = {
+    name: profile.name,
+    role: profile.role,
+    location: profile.location,
+    seniority: profile.seniority,
+    workMode: profile.workMode,
+    availability: profile.availability,
+    hiringTypes: profile.hiringTypes,
+    experienceYears: profile.experienceYears,
+    bio: profile.bio,
+    photo: profile.photo,
+    githubUrl: profile.github,
+    linkedinUrl: profile.linkedin,
+    websiteUrl: profile.website,
+    version,
+    updatedAt: new Date(),
+  };
+  await tx
+    .insert(developerProfiles)
+    .values({ userId, ...fields })
+    .onConflictDoUpdate({ target: developerProfiles.userId, set: fields });
+
+  // Skills and projects are saved as a whole list, like the form edits them.
+  await tx.delete(developerSkills).where(eq(developerSkills.developerId, userId));
+  await tx.delete(projects).where(eq(projects.developerId, userId));
+
+  const ids = await skillIds(tx, [
+    ...profile.skills,
+    ...profile.projects.flatMap((project) => project.tech),
+  ]);
+  const skillList = uniqueIds(ids, profile.skills);
+  if (skillList.length)
     await tx
-      .insert(developerProfiles)
-      .values({ userId, ...fields })
-      .onConflictDoUpdate({ target: developerProfiles.userId, set: fields });
+      .insert(developerSkills)
+      .values(skillList.map((skillId, position) => ({ developerId: userId, skillId, position })));
 
-    // Skills and projects are saved as a whole list, like the form edits them.
-    await tx.delete(developerSkills).where(eq(developerSkills.developerId, userId));
-    await tx.delete(projects).where(eq(projects.developerId, userId));
-
-    const ids = await skillIds(tx, [
-      ...profile.skills,
-      ...profile.projects.flatMap((project) => project.tech),
-    ]);
-    const skillList = uniqueIds(ids, profile.skills);
-    if (skillList.length)
+  for (const [position, project] of profile.projects.entries()) {
+    const [row] = await tx
+      .insert(projects)
+      .values({
+        developerId: userId,
+        name: project.name,
+        description: project.description,
+        coverImage: project.image,
+        githubUrl: project.github,
+        demoUrl: project.demo,
+        position,
+      })
+      .returning({ id: projects.id });
+    const tech = uniqueIds(ids, project.tech);
+    if (row && tech.length)
       await tx
-        .insert(developerSkills)
-        .values(skillList.map((skillId, position) => ({ developerId: userId, skillId, position })));
-
-    for (const [position, project] of profile.projects.entries()) {
-      const [row] = await tx
-        .insert(projects)
-        .values({
-          developerId: userId,
-          name: project.name,
-          description: project.description,
-          coverImage: project.image,
-          githubUrl: project.github,
-          demoUrl: project.demo,
-          position,
-        })
-        .returning({ id: projects.id });
-      const tech = uniqueIds(ids, project.tech);
-      if (row && tech.length)
-        await tx
-          .insert(projectSkills)
-          .values(tech.map((skillId, index) => ({ projectId: row.id, skillId, position: index })));
-    }
-  });
+        .insert(projectSkills)
+        .values(tech.map((skillId, index) => ({ projectId: row.id, skillId, position: index })));
+  }
 }
 
 /** Profiles keyed by account id, in the form's shape; every developer's when `userIds` is omitted. */
-async function loadProfiles(db: Db, userIds?: string[]): Promise<Map<string, LocalProfile>> {
+async function loadProfiles(db: Db | Tx, userIds?: string[]): Promise<Map<string, LocalProfile>> {
   if (userIds && !userIds.length) return new Map();
   const profileRows = await db
     .select()
@@ -257,8 +316,16 @@ async function loadProfiles(db: Db, userIds?: string[]): Promise<Map<string, Loc
   );
 }
 
-export async function loadProfile(db: Db, userId: string): Promise<LocalProfile | null> {
-  return (await loadProfiles(db, [userId])).get(userId) ?? null;
+/** The developer's own profile, with the version to send back when saving it (see saveProfile). */
+export type SavedProfile = LocalProfile & { version: number };
+
+/** Read under the profile's lock, so the version and the content come from the same save. */
+export function loadProfile(db: Db, userId: string): Promise<SavedProfile | null> {
+  return db.transaction(async (tx) => {
+    await lockProfile(tx, userId);
+    const profile = (await loadProfiles(tx, [userId])).get(userId);
+    return profile ? { ...profile, version: await profileVersion(tx, userId) } : null;
+  });
 }
 
 /** The free text of a profile, the part that gets machine-translated (see ./translations). */

@@ -7,7 +7,7 @@ import { codeEmail, emailChangedNotice, sendEmail, type EmailLanguage } from "./
 import { codeLifetimeMinutes, consumeCodeIn, issueCode } from "./email-codes";
 import { releaseEmailSend, reserveEmailSend } from "./email-throttle";
 import { releaseLoginAttempt, reserveLoginAttempt } from "./login-throttle";
-import { storedImages, type Tx } from "./profiles";
+import { lockProfile, storedImages, type Tx } from "./profiles";
 import { removeImages } from "./storage";
 
 /**
@@ -155,8 +155,14 @@ export async function deleteAccount(
 ): Promise<{ ok: true } | PasswordCheck> {
   const refused = await checkPassword(db, user, password, ip, now);
   if (refused) return refused;
-  const images = await storedImages(db, user.id);
-  await db.delete(users).where(eq(users.id, user.id));
+  // Under the profile's lock: a save finishing meanwhile either ends before (its images are
+  // listed here) or finds the account gone (and deletes its own new images).
+  const images = await db.transaction(async (tx) => {
+    await lockProfile(tx, user.id);
+    const stored = await storedImages(tx, user.id);
+    await tx.delete(users).where(eq(users.id, user.id));
+    return stored;
+  });
   // After the account is gone: a failure to delete an image leaves a file, never a broken profile.
   await removeImages(images);
   return { ok: true };

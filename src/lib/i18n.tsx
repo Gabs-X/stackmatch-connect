@@ -281,6 +281,11 @@ const pt = {
     loadError: "Não foi possível carregar seu perfil",
     loadErrorSub:
       "Para não substituir o que já está salvo, a edição fica bloqueada até o perfil carregar.",
+    conflictTitle: "Seu perfil foi salvo em outra aba ou dispositivo",
+    conflictSub:
+      "Nada foi substituído e o que você digitou continua aqui. Salve as suas alterações por cima da versão salva, ou descarte-as e carregue a versão salva.",
+    conflictKeepMine: "Salvar minhas alterações",
+    conflictUseSaved: "Carregar a versão salva",
   },
   schedule: {
     trigger: "Propor reunião",
@@ -1335,6 +1340,11 @@ const en: Dict = {
     saveError: "Couldn't save the profile. Your data is still in the form.",
     loadError: "Couldn't load your profile",
     loadErrorSub: "So nothing saved gets replaced, editing waits until the profile loads.",
+    conflictTitle: "Your profile was saved in another tab or device",
+    conflictSub:
+      "Nothing was replaced and what you typed is still here. Save your changes over the saved version, or discard them and load the saved version.",
+    conflictKeepMine: "Save my changes",
+    conflictUseSaved: "Load the saved version",
   },
   schedule: {
     trigger: "Propose a meeting",

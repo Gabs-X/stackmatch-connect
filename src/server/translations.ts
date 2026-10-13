@@ -7,6 +7,7 @@ import type { Translations } from "@/lib/translations";
 import { assistantClient, assistantModel } from "./assistant";
 import type { Db } from "./db";
 import { textTranslations } from "./db/schema";
+import type { Tx } from "./profiles";
 import { canTranslate, recordTranslationRequest } from "./translation-throttle";
 
 /**
@@ -215,6 +216,10 @@ export function defaultTranslator(): Translator | null {
  * translator counts against the account's limit (see ./translation-throttle) unless `limited` is
  * false; past it, new texts stay as written. Never throws: a failure goes to the log and the texts
  * stay as written.
+ *
+ * With `stillCurrent`, the texts belong to one version of what the account wrote (see
+ * profileStillAt): stored translations are only dropped, and new ones only saved, while that version
+ * is still the saved one, so a slow update never undoes or replaces the work of a later save.
  */
 export async function updateTranslations(
   db: Db,
@@ -224,20 +229,35 @@ export async function updateTranslations(
     translator = defaultTranslator(),
     signal = AbortSignal.timeout(30_000),
     limited = true,
-  }: { translator?: Translator | null; signal?: AbortSignal; limited?: boolean } = {},
+    stillCurrent,
+  }: {
+    translator?: Translator | null;
+    signal?: AbortSignal;
+    limited?: boolean;
+    stillCurrent?: (tx: Tx) => Promise<boolean>;
+  } = {},
 ) {
   const current = unique(texts);
   const hashes = current.map(hashText);
+  /** Runs `write` unless the texts are no longer current; false when they aren't. */
+  const whileCurrent = (write: (tx: Tx) => Promise<unknown>) =>
+    db.transaction(async (tx) => {
+      if (stillCurrent && !(await stillCurrent(tx))) return false;
+      await write(tx);
+      return true;
+    });
   try {
-    await db
-      .delete(textTranslations)
-      .where(
-        and(
-          eq(textTranslations.ownerId, ownerId),
-          hashes.length ? notInArray(textTranslations.hash, hashes) : undefined,
+    const dropped = await whileCurrent((tx) =>
+      tx
+        .delete(textTranslations)
+        .where(
+          and(
+            eq(textTranslations.ownerId, ownerId),
+            hashes.length ? notInArray(textTranslations.hash, hashes) : undefined,
+          ),
         ),
-      );
-    if (!translator || !current.length) return;
+    );
+    if (!dropped || !translator || !current.length) return;
     const stored = await loadTranslations(db, [ownerId], current);
     const missing = current.filter((text) => !stored[text]);
     if (!missing.length) return;
@@ -264,7 +284,8 @@ export async function updateTranslations(
         { ownerId, hash, language: "en" as const, text: result.en },
       ];
     });
-    if (rows.length) await db.insert(textTranslations).values(rows).onConflictDoNothing();
+    if (rows.length)
+      await whileCurrent((tx) => tx.insert(textTranslations).values(rows).onConflictDoNothing());
   } catch (error) {
     console.error(`Translations for ${ownerId} not updated:`, error);
   }

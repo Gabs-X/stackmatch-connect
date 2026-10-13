@@ -289,6 +289,11 @@ export const developerProfiles = pgTable("developer_profiles", {
   githubUrl: text("github_url").notNull().default(""),
   linkedinUrl: text("linkedin_url").notNull().default(""),
   websiteUrl: text("website_url").notNull().default(""),
+  /**
+   * Goes up by one with every save. A save names the version it started from and is refused when
+   * the profile changed since, so an edit made elsewhere is never overwritten unseen.
+   */
+  version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

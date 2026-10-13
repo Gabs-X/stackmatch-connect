@@ -47,6 +47,7 @@ import {
   saveMyProfile,
   skillCatalogQuery,
 } from "@/lib/profile-api";
+import type { SavedProfile } from "@/lib/profile-api";
 import { FieldError } from "@/components/auth-layout";
 import {
   availabilityOptions,
@@ -102,10 +103,21 @@ function CreateProfile() {
     enabled: !!accountId,
     staleTime: Infinity,
   });
+  /**
+   * The saved version the form started from, sent with the save (see saveProfile); 0 before the
+   * first save.
+   */
+  const [baseVersion, setBaseVersion] = useState(0);
+  /**
+   * Set when a save found the profile saved elsewhere since (another tab or device): the newer
+   * profile, or null if there's none. The form keeps what was typed until the developer chooses.
+   */
+  const [conflict, setConflict] = useState<{ latest: SavedProfile | null } | null>(null);
   useEffect(() => {
     // Each account edits its own profile; the demo developer starts from its ready-made one.
     if (stored.data) {
       setProfile(stored.data);
+      setBaseVersion(stored.data.version);
       setCompleted(true);
       setPreview(true);
     }
@@ -155,15 +167,21 @@ function CreateProfile() {
   const goToStep = (target: number) => {
     if (target <= step || requiredFilledBefore(target)) setStep(target);
   };
-  const finishProfile = async () => {
+  /** Saves the form; `version` replaces the one it started from, to save over a newer profile. */
+  const finishProfile = async (version = baseVersion) => {
     // A form that didn't start from the saved profile would replace it with what's on screen.
     if (!stored.isSuccess) return;
     if (!requiredFilledBefore(steps.length + 1)) return;
     setSaving(true);
     try {
       // The server stores the profile as it will show it; the form continues from that.
-      const saved = await saveMyProfile({ data: profile });
-      if (!saved) throw new Error("Profile not saved");
+      const result = await saveMyProfile({ data: { profile, version } });
+      if ("conflict" in result) {
+        setConflict({ latest: result.conflict });
+        return;
+      }
+      const saved = result.profile;
+      setConflict(null);
       queryClient.setQueryData(myProfileQuery(accountId).queryKey, saved);
       // The save translated new or changed texts; the preview shows them.
       void queryClient.invalidateQueries({ queryKey: myTranslationsQuery(accountId).queryKey });
@@ -171,6 +189,7 @@ function CreateProfile() {
       // New skills from this profile become suggestions for everyone.
       void queryClient.invalidateQueries({ queryKey: skillCatalogQuery.queryKey });
       setProfile(saved);
+      setBaseVersion(saved.version);
       setCompleted(true);
       setPreview(true);
       toast.success(t.create.finishToast, { description: t.create.finishDesc });
@@ -293,6 +312,33 @@ function CreateProfile() {
           {t.create.preview}
         </Button>
       </div>
+      {conflict && (
+        <div role="alert" className="mt-6 rounded-xl border border-destructive/40 bg-card p-5">
+          <h2 className="font-bold">{t.create.conflictTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t.create.conflictSub}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              disabled={saving}
+              onClick={() => void finishProfile(conflict.latest?.version ?? 0)}
+            >
+              {t.create.conflictKeepMine}
+            </Button>
+            {conflict.latest && (
+              <Button
+                variant="outline"
+                disabled={saving}
+                onClick={() => {
+                  // The saved profile replaces the form (see the effect on stored.data).
+                  queryClient.setQueryData(myProfileQuery(accountId).queryKey, conflict.latest);
+                  setConflict(null);
+                }}
+              >
+                {t.create.conflictUseSaved}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
       <div className="mt-9 grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
         <aside className="stagger-item">
           {/* A compact row of steps on phones; a vertical list beside the form on large screens. */}
@@ -582,7 +628,7 @@ function CreateProfile() {
                 <ChevronRight />
               </Button>
             ) : (
-              <Button onClick={() => void finishProfile()} disabled={saving}>
+              <Button onClick={() => void finishProfile()} disabled={saving || conflict !== null}>
                 {t.create.finish}
                 <Check />
               </Button>
