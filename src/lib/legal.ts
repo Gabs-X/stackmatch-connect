@@ -21,13 +21,13 @@ export type LegalText = {
   contactLink: string;
 };
 
-export const legalUpdatedAt = "2026-10-07";
+export const legalUpdatedAt = "2026-10-10";
 
 const pt: LegalText = {
   kicker: "Legal",
   title: "Termos de uso e privacidade",
   sub: "As regras para usar o StackMatch e como tratamos os seus dados, em linguagem direta.",
-  updated: "Atualizado em 7 de outubro de 2026.",
+  updated: "Atualizado em 10 de outubro de 2026.",
   contents: "Nesta página",
   termsTitle: "Termos de uso",
   privacyTitle: "Política de privacidade",
@@ -69,7 +69,7 @@ const pt: LegalText = {
       id: "terms-limits",
       title: "5. O que o StackMatch não faz",
       items: [
-        "Não avalia nem certifica profissionais e não calcula compatibilidade. As informações dos perfis são de responsabilidade de quem as escreveu.",
+        "Não avalia nem certifica profissionais. A compatibilidade mostrada nas vagas só compara o que a vaga pede (skills, senioridade, modelo de trabalho, tipo de contrato, disponibilidade e localização) com o que o perfil informa: não é uma avaliação da pessoa e não decide nada por ninguém. As informações dos perfis são de responsabilidade de quem as escreveu.",
         "Não intermedeia contratos, pagamentos nem reuniões. Propostas e respostas vão por e-mail entre as partes.",
         "Não garante contratação, resposta ou disponibilidade de ninguém.",
       ],
@@ -130,7 +130,7 @@ const pt: LegalText = {
       title: "4. Por quanto tempo guardamos",
       items: [
         "Os dados da conta ficam enquanto ela existir. Excluir a conta apaga perfil, projetos, imagens, dados da empresa, talentos salvos, interesses, propostas e a conversa com a Ada.",
-        "Registros de segurança ficam pouco tempo: falhas de login, 15 minutos; envios de e-mail com código e perguntas à Ada, 1 hora; o registro das marcações de interesse usado nos limites, 30 dias; sessões, até 30 dias ou até você sair.",
+        "Registros de segurança valem por pouco tempo: falhas de login, 15 minutos; envios de e-mail com código e perguntas à Ada, 1 hora; pedidos de tradução automática, 24 horas; o registro das marcações de interesse usado nos limites, 30 dias; sessões, até 30 dias ou até você sair. Passado esse prazo, o registro deixa de contar e é apagado na limpeza automática, que roda uma vez por dia; por isso ele pode ficar guardado até um dia a mais.",
         "Tickets ficam guardados como histórico do atendimento. Depois que a conta é excluída, eles deixam de estar ligados a ela; para apagá-los também, peça pelo Suporte.",
       ],
     },
@@ -157,7 +157,7 @@ const en: LegalText = {
   kicker: "Legal",
   title: "Terms of use and privacy",
   sub: "The rules for using StackMatch and how we handle your data, in plain language.",
-  updated: "Updated on October 7, 2026.",
+  updated: "Updated on October 10, 2026.",
   contents: "On this page",
   termsTitle: "Terms of use",
   privacyTitle: "Privacy policy",
@@ -199,7 +199,7 @@ const en: LegalText = {
       id: "terms-limits",
       title: "5. What StackMatch doesn't do",
       items: [
-        "It doesn't evaluate or certify professionals and doesn't compute any match. Profile information is the responsibility of whoever wrote it.",
+        "It doesn't evaluate or certify professionals. The match shown on jobs only compares what the job asks for (skills, seniority, work mode, contract type, availability and location) with what the profile states: it isn't an assessment of the person and decides nothing for anyone. Profile information is the responsibility of whoever wrote it.",
         "It doesn't broker contracts, payments or meetings. Proposals and replies go by e-mail between the parties.",
         "It doesn't guarantee hiring, replies or anyone's availability.",
       ],
@@ -260,7 +260,7 @@ const en: LegalText = {
       title: "4. How long we keep it",
       items: [
         "Account data stays while the account exists. Deleting the account erases the profile, projects, images, company details, saved talent, interests, proposals and the conversation with Ada.",
-        "Security records are short-lived: sign-in failures, 15 minutes; code e-mails and questions to Ada, 1 hour; the record of interest marks used by the limits, 30 days; sessions, up to 30 days or until you sign out.",
+        "Security records are valid for a short time: sign-in failures, 15 minutes; code e-mails and questions to Ada, 1 hour; automatic translation requests, 24 hours; the record of interest marks used by the limits, 30 days; sessions, up to 30 days or until you sign out. After that, a record no longer counts and is erased by the automatic cleanup, which runs once a day, so it may be kept for up to one more day.",
         "Tickets are kept as the support history. Once the account is deleted, they're no longer linked to it; to erase them too, ask through Support.",
       ],
     },

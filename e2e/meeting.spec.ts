@@ -176,3 +176,33 @@ test("the developer suggests another time, the company accepts it and then cance
   await expect(page.getByText("Conversa cancelada por Empresa Teste")).toBeVisible();
   await expect(page.getByText("A vaga foi preenchida.")).toBeVisible();
 });
+
+test("a call's page left open until it starts stops offering to schedule or change it", async ({
+  page,
+}) => {
+  await registerCompany(page, uniqueEmail("bia@acme.com"));
+  await page.goto("/developer/demo-developer");
+  await page.getByRole("button", { name: "Propor reunião" }).click();
+  const proposal = page.getByRole("dialog");
+  await proposal.locator('[data-day="04/10/2030"]').click();
+  await proposal.getByRole("button", { name: "10:30" }).click();
+  await proposal.getByRole("button", { name: "Continuar" }).click();
+  await proposal.getByRole("button", { name: "Enviar proposta" }).click();
+  await proposal.getByRole("button", { name: "Concluir" }).click();
+
+  // The developer opens the proposal five minutes before the time, with a clock that runs.
+  await page.context().clearCookies();
+  await page.clock.install({ time: new Date("2030-10-04T10:25:00-03:00") });
+  await signInAs(page, "developer");
+  await page.goto("/interests");
+  const fromAcme = page.getByRole("listitem").filter({ hasText: "Acme" }).first();
+  await fromAcme.getByRole("button", { name: "Aceitar" }).click();
+  await expect(fromAcme.getByRole("button", { name: "Adicionar à agenda" })).toBeVisible();
+  await expect(fromAcme.getByRole("button", { name: "Cancelar" })).toBeVisible();
+
+  // The page stays open past the start: the call can no longer be put in a calendar or changed.
+  await page.clock.fastForward("06:00");
+  await expect(fromAcme.getByRole("button", { name: "Adicionar à agenda" })).toBeHidden();
+  await expect(fromAcme.getByRole("button", { name: "Remarcar" })).toBeHidden();
+  await expect(fromAcme.getByRole("button", { name: "Cancelar" })).toBeHidden();
+});

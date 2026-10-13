@@ -11,7 +11,7 @@ import {
   Send,
   X,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { Button } from "@/components/ui/button";
@@ -65,8 +65,18 @@ export function MeetingControls({ meeting, side }: { meeting: MeetingRequest; si
   const [dialog, setDialog] = useState<"reschedule" | "cancel" | null>(null);
   const other = side === "company" ? meeting.developerName : meeting.company;
   const proposer = meeting.proposedBy === side ? texts.you : other;
+  const start = meetingStart(meeting.date, meeting.time);
+  // When the call starts, what can be done with it changes: render again then, for a page left open.
+  const [startTimer, setStartTimer] = useState(0);
+  useEffect(() => {
+    const wait = start - Date.now();
+    if (!(wait > 0)) return;
+    // Longer waits than setTimeout takes are made in steps.
+    const timer = window.setTimeout(() => setStartTimer((n) => n + 1), Math.min(wait, 2 ** 31 - 1));
+    return () => window.clearTimeout(timer);
+  }, [start, startTimer]);
   const expired = isMeetingExpired(meeting);
-  const started = meetingStart(meeting.date, meeting.time) <= Date.now();
+  const started = start <= Date.now();
   const myTurn = meeting.status === "pending" && meeting.proposedBy !== side && !expired;
   const canReschedule =
     meeting.status !== "canceled" &&
