@@ -18,16 +18,17 @@ export const fetchMyInterests = createServerFn({ method: "GET" })
   );
 
 /**
- * Stands for `POST /interests`. Within the daily limit, marks interest and e-mails the developer in
- * the language of the company's screen (see markInterestAndNotify), about the job it came from
- * when there was one; a refusal says which limit.
+ * Stands for `POST /interests`. Within the daily limit, marks interest and notifies the developer,
+ * by e-mail in their language (see markInterestAndNotify), about the job it came from when there was
+ * one; a refusal says which limit.
  */
 export const markInterestFn = createServerFn({ method: "POST" })
   .validator(
     z.object({
       accountId,
       developerId,
-      language: z.enum(["pt", "en"]).default("pt"),
+      // Sent by older screens; the e-mail now goes in the developer's language.
+      language: z.enum(["pt", "en"]).optional(),
       jobId: z.string().min(1).max(200).optional(),
     }),
   )
@@ -37,7 +38,6 @@ export const markInterestFn = createServerFn({ method: "POST" })
       await database(),
       company.id,
       data.developerId,
-      data.language,
       getRequestUrl().origin,
       Date.now(),
       data.jobId,

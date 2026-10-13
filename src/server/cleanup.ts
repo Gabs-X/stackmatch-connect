@@ -1,4 +1,4 @@
-import { and, eq, lte, notExists } from "drizzle-orm";
+import { and, eq, inArray, lte, notExists } from "drizzle-orm";
 import { outreachLimits } from "@/lib/outreach";
 import { assistantWindowMinutes } from "./assistant-throttle";
 import type { Db } from "./db";
@@ -6,10 +6,12 @@ import {
   assistantRequests,
   developerSkills,
   emailCodes,
+  emailOutbox,
   emailSends,
   interestEvents,
   jobSkills,
   loginFailures,
+  notifications,
   projectSkills,
   sessions,
   skills,
@@ -19,10 +21,17 @@ import { emailWindowMinutes } from "./email-throttle";
 import { loginWindowMinutes } from "./login-throttle";
 import { translationWindowHours } from "./translation-throttle";
 
+/** Days a notification stays in the center. */
+export const notificationRetentionDays = 180;
+/** Days the record of an e-mail that went out (or was given up) is kept. */
+export const outboxRetentionDays = 30;
+
 /**
  * Deletes what no longer matters: expired sessions and e-mail codes, sign-in failures, e-mail
- * sends, assistant questions and translations outside their limits' windows, interest marks older than the longest limit that reads them, and typed skills
- * no profile, project or job uses (the reference catalog stays). Run daily by Vercel Cron (/api/cron/cleanup).
+ * sends, assistant questions and translations outside their limits' windows, interest marks older than the longest limit that reads them, typed skills
+ * no profile, project or job uses (the reference catalog stays), notifications older than
+ * notificationRetentionDays and the e-mails that finished more than outboxRetentionDays ago. Run
+ * daily by Vercel Cron (/api/cron/cleanup).
  */
 export async function cleanup(db: Db, now = Date.now()) {
   const before = (ms: number) => new Date(now - ms);
@@ -89,6 +98,23 @@ export async function cleanup(db: Db, now = Date.now()) {
           ),
         )
         .returning({ id: skills.id })
+    ).length,
+    notifications: (
+      await db
+        .delete(notifications)
+        .where(lte(notifications.createdAt, before(notificationRetentionDays * 86_400_000)))
+        .returning({ id: notifications.id })
+    ).length,
+    emails: (
+      await db
+        .delete(emailOutbox)
+        .where(
+          and(
+            inArray(emailOutbox.status, ["sent", "skipped", "failed"]),
+            lte(emailOutbox.createdAt, before(outboxRetentionDays * 86_400_000)),
+          ),
+        )
+        .returning({ id: emailOutbox.id })
     ).length,
   };
   return deleted;

@@ -19,6 +19,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as InterestsRouteImport } from './routes/interests'
 import { Route as JobBoardRouteImport } from './routes/job-board'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SavedRouteImport } from './routes/saved'
@@ -36,6 +37,7 @@ import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsNewRouteImport } from './routes/jobs.new'
 import { Route as UploadsSplatRouteImport } from './routes/uploads.$'
 import { Route as ApiCronCleanupRouteImport } from './routes/api.cron.cleanup'
+import { Route as ApiCronNotificationsRouteImport } from './routes/api.cron.notifications'
 import { Route as JobsIdIndexRouteImport } from './routes/jobs.$id.index'
 import { Route as JobsIdEditRouteImport } from './routes/jobs.$id.edit'
 
@@ -87,6 +89,11 @@ const JobBoardRoute = JobBoardRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProposalsRoute = ProposalsRouteImport.update({
@@ -174,6 +181,11 @@ const ApiCronCleanupRoute = ApiCronCleanupRouteImport.update({
   path: '/api/cron/cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronNotificationsRoute = ApiCronNotificationsRouteImport.update({
+  id: '/api/cron/notifications',
+  path: '/api/cron/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsIdIndexRoute = JobsIdIndexRouteImport.update({
   id: '/jobs/$id/',
   path: '/jobs/$id/',
@@ -196,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/interests': typeof InterestsRoute
   '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/proposals': typeof ProposalsRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -213,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/uploads/$': typeof UploadsSplatRoute
   '/jobs/': typeof JobsIndexRoute
   '/api/cron/cleanup': typeof ApiCronCleanupRoute
+  '/api/cron/notifications': typeof ApiCronNotificationsRoute
   '/jobs/$id/edit': typeof JobsIdEditRoute
   '/jobs/$id/': typeof JobsIdIndexRoute
 }
@@ -227,6 +241,7 @@ export interface FileRoutesByTo {
   '/interests': typeof InterestsRoute
   '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/proposals': typeof ProposalsRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -244,6 +259,7 @@ export interface FileRoutesByTo {
   '/uploads/$': typeof UploadsSplatRoute
   '/jobs': typeof JobsIndexRoute
   '/api/cron/cleanup': typeof ApiCronCleanupRoute
+  '/api/cron/notifications': typeof ApiCronNotificationsRoute
   '/jobs/$id/edit': typeof JobsIdEditRoute
   '/jobs/$id': typeof JobsIdIndexRoute
 }
@@ -259,6 +275,7 @@ export interface FileRoutesById {
   '/interests': typeof InterestsRoute
   '/job-board': typeof JobBoardRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/proposals': typeof ProposalsRoute
   '/register': typeof RegisterRoute
   '/saved': typeof SavedRoute
@@ -276,6 +293,7 @@ export interface FileRoutesById {
   '/uploads/$': typeof UploadsSplatRoute
   '/jobs/': typeof JobsIndexRoute
   '/api/cron/cleanup': typeof ApiCronCleanupRoute
+  '/api/cron/notifications': typeof ApiCronNotificationsRoute
   '/jobs/$id/edit': typeof JobsIdEditRoute
   '/jobs/$id/': typeof JobsIdIndexRoute
 }
@@ -292,6 +310,7 @@ export interface FileRouteTypes {
     | '/interests'
     | '/job-board'
     | '/login'
+    | '/notifications'
     | '/proposals'
     | '/register'
     | '/saved'
@@ -309,6 +328,7 @@ export interface FileRouteTypes {
     | '/uploads/$'
     | '/jobs/'
     | '/api/cron/cleanup'
+    | '/api/cron/notifications'
     | '/jobs/$id/edit'
     | '/jobs/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -323,6 +343,7 @@ export interface FileRouteTypes {
     | '/interests'
     | '/job-board'
     | '/login'
+    | '/notifications'
     | '/proposals'
     | '/register'
     | '/saved'
@@ -340,6 +361,7 @@ export interface FileRouteTypes {
     | '/uploads/$'
     | '/jobs'
     | '/api/cron/cleanup'
+    | '/api/cron/notifications'
     | '/jobs/$id/edit'
     | '/jobs/$id'
   id:
@@ -354,6 +376,7 @@ export interface FileRouteTypes {
     | '/interests'
     | '/job-board'
     | '/login'
+    | '/notifications'
     | '/proposals'
     | '/register'
     | '/saved'
@@ -371,6 +394,7 @@ export interface FileRouteTypes {
     | '/uploads/$'
     | '/jobs/'
     | '/api/cron/cleanup'
+    | '/api/cron/notifications'
     | '/jobs/$id/edit'
     | '/jobs/$id/'
   fileRoutesById: FileRoutesById
@@ -386,6 +410,7 @@ export interface RootRouteChildren {
   InterestsRoute: typeof InterestsRoute
   JobBoardRoute: typeof JobBoardRoute
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   ProposalsRoute: typeof ProposalsRoute
   RegisterRoute: typeof RegisterRoute
   SavedRoute: typeof SavedRoute
@@ -403,6 +428,7 @@ export interface RootRouteChildren {
   UploadsSplatRoute: typeof UploadsSplatRoute
   JobsIndexRoute: typeof JobsIndexRoute
   ApiCronCleanupRoute: typeof ApiCronCleanupRoute
+  ApiCronNotificationsRoute: typeof ApiCronNotificationsRoute
   JobsIdEditRoute: typeof JobsIdEditRoute
   JobsIdIndexRoute: typeof JobsIdIndexRoute
 }
@@ -477,6 +503,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/proposals': {
@@ -598,6 +631,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/notifications': {
+      id: '/api/cron/notifications'
+      path: '/api/cron/notifications'
+      fullPath: '/api/cron/notifications'
+      preLoaderRoute: typeof ApiCronNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/$id/': {
       id: '/jobs/$id/'
       path: '/jobs/$id'
@@ -626,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   InterestsRoute: InterestsRoute,
   JobBoardRoute: JobBoardRoute,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   ProposalsRoute: ProposalsRoute,
   RegisterRoute: RegisterRoute,
   SavedRoute: SavedRoute,
@@ -643,6 +684,7 @@ const rootRouteChildren: RootRouteChildren = {
   UploadsSplatRoute: UploadsSplatRoute,
   JobsIndexRoute: JobsIndexRoute,
   ApiCronCleanupRoute: ApiCronCleanupRoute,
+  ApiCronNotificationsRoute: ApiCronNotificationsRoute,
   JobsIdEditRoute: JobsIdEditRoute,
   JobsIdIndexRoute: JobsIdIndexRoute,
 }

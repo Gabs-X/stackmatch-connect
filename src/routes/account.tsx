@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { KeyRound, Loader2, Mail, Trash2 } from "lucide-react";
+import { Bell, KeyRound, Loader2, Mail, RotateCcw, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -28,7 +29,9 @@ import {
   requestEmailChangeFn,
 } from "@/lib/account-api";
 import { useAuth } from "@/lib/auth-context";
-import { useI18n, useLocalizedMeta } from "@/lib/i18n";
+import { useI18n, useLocalizedMeta, type Lang } from "@/lib/i18n";
+import { categoriesFor, type EmailCategory, type Preferences } from "@/lib/notifications";
+import { preferencesQuery, savePreferencesFn } from "@/lib/notifications-api";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -70,10 +73,111 @@ function AccountPage() {
       <p className="mt-2 text-muted-foreground">{t.account.sub}</p>
       <div className="mt-8 space-y-6">
         <EmailSection user={user} />
+        <PreferencesSection user={user} />
         <PasswordSection />
         <DeleteSection user={user} />
       </div>
     </main>
+  );
+}
+
+/**
+ * The account's language and the e-mails it gets about activity; each change saves at once.
+ * Security e-mails can't be turned off.
+ */
+function PreferencesSection({ user }: { user: AuthUser }) {
+  const { t, setLang } = useI18n();
+  const queryClient = useQueryClient();
+  const preferences = useQuery(preferencesQuery(user.id));
+  const [saving, setSaving] = useState(false);
+  const languageId = useId();
+  const { queryKey } = preferencesQuery(user.id);
+  // Shows the change at once, and undoes it if saving fails.
+  const save = async (change: Partial<Preferences>) => {
+    const before = queryClient.getQueryData(queryKey);
+    if (before) queryClient.setQueryData(queryKey, { ...before, ...change });
+    setSaving(true);
+    try {
+      const saved = await savePreferencesFn({ data: { accountId: user.id, ...change } });
+      queryClient.setQueryData(queryKey, saved);
+      if (change.language) setLang(change.language);
+      toast.success(t.preferences.saved);
+    } catch {
+      queryClient.setQueryData(queryKey, before);
+      toast.error(t.preferences.saveError);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const current = preferences.data;
+  const toggle = (category: EmailCategory, on: boolean) =>
+    current &&
+    save({
+      emailOff: on
+        ? current.emailOff.filter((off) => off !== category)
+        : [...current.emailOff, category],
+    });
+  return (
+    <div id="preferences" className="scroll-mt-24">
+      <SettingsSection
+        icon={<Bell className="size-4" />}
+        title={t.preferences.section}
+        note={t.preferences.note}
+      >
+        {preferences.isError && !current ? (
+          <div role="alert">
+            <p className="text-sm text-muted-foreground">{t.preferences.loadError}</p>
+            <Button className="mt-3" variant="outline" onClick={() => void preferences.refetch()}>
+              <RotateCcw />
+              {t.common.retry}
+            </Button>
+          </div>
+        ) : !current ? (
+          <Loader2 className="size-4 animate-spin" aria-label={t.common.loading} />
+        ) : (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor={languageId}>{t.preferences.language}</Label>
+              <select
+                id={languageId}
+                value={current.language}
+                disabled={saving}
+                onChange={(event) => void save({ language: event.target.value as Lang })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="pt">Português (Brasil)</option>
+                <option value="en">English</option>
+              </select>
+              <p className="text-xs text-muted-foreground">{t.preferences.languageNote}</p>
+            </div>
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium">{t.preferences.emails}</legend>
+              {categoriesFor[user.accountType].map((category) => (
+                <label key={category} className="flex items-start gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-4 accent-primary"
+                    checked={!current.emailOff.includes(category)}
+                    disabled={saving}
+                    onChange={(event) => void toggle(category, event.target.checked)}
+                  />
+                  <span>
+                    {t.preferences.categories[category]}
+                    {category === "application" && (
+                      <span className="block text-xs text-muted-foreground">
+                        {user.accountType === "company"
+                          ? t.preferences.companyApplication
+                          : t.preferences.developerApplication}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          </>
+        )}
+      </SettingsSection>
+    </div>
   );
 }
 

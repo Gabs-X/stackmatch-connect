@@ -1,11 +1,11 @@
 import { and, desc, eq, gt } from "drizzle-orm";
-import type { Lang } from "@/lib/i18n";
 import { outreachLimits, type OutreachLimitError } from "@/lib/outreach";
 import type { Db } from "./db";
 import { interestEvents, interests, meetingRequests } from "./db/schema";
 import { markInterest, setInterestJob } from "./interests";
 import { advanceCandidate, jobSnapshot } from "./jobs";
-import { notifyInterest } from "./notifications";
+import { interestNotice } from "./notifications";
+import { deliverQueued, notify } from "./outbox";
 import type { Tx } from "./profiles";
 
 const hourMs = 60 * 60_000;
@@ -111,9 +111,10 @@ async function notifiedLately(db: Db, companyId: string, developerId: string, no
 export type MarkResult = { ok: true } | { error: "unknown-developer" } | OutreachLimitError;
 
 /**
- * Marks the company's interest in a developer, within the daily limit, and e-mails the developer
- * unless this company already did lately (marking, undoing and marking again doesn't e-mail twice).
- * Marking a profile it already marked changes nothing. A failed e-mail doesn't undo the mark.
+ * Marks the company's interest in a developer, within the daily limit, and notifies the developer
+ * unless this company already did lately (marking, undoing and marking again doesn't notify twice).
+ * Marking a profile it already marked changes nothing. The e-mail goes out in the developer's
+ * language, and a failed one stays queued (see src/server/outbox.ts).
  * From one of the company's jobs, the mark points to the job, the e-mail tells what it is about and
  * the developer moves to "interest" in it; a job that isn't the company's is ignored.
  */
@@ -121,7 +122,6 @@ export async function markInterestAndNotify(
   db: Db,
   companyId: string,
   developerId: string,
-  language: Lang,
   appUrl: string,
   now = Date.now(),
   jobId?: string,
@@ -151,16 +151,19 @@ export async function markInterestAndNotify(
   await joinJob();
   if (result === "existing") return { ok: true };
 
-  let notified = false;
-  if (!(await notifiedLately(db, companyId, developerId, now)))
-    try {
-      await notifyInterest(db, companyId, developerId, language, appUrl, job);
-      notified = true;
-    } catch (error) {
-      console.error("Interest not e-mailed:", error);
-    }
-  await db
-    .insert(interestEvents)
-    .values({ companyId, developerId, notified, createdAt: new Date(now) });
+  const notified = !(await notifiedLately(db, companyId, developerId, now));
+  const queued = await db.transaction(async (tx) => {
+    const [event] = await tx
+      .insert(interestEvents)
+      .values({ companyId, developerId, notified, createdAt: new Date(now) })
+      .returning({ id: interestEvents.id });
+    return notified && event
+      ? notify(
+          tx,
+          await interestNotice(tx, companyId, developerId, appUrl, job, `interest:${event.id}`),
+        )
+      : null;
+  });
+  await deliverQueued(db, [queued]);
   return { ok: true };
 }

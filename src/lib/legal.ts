@@ -21,13 +21,13 @@ export type LegalText = {
   contactLink: string;
 };
 
-export const legalUpdatedAt = "2026-10-10";
+export const legalUpdatedAt = "2026-10-13";
 
 const pt: LegalText = {
   kicker: "Legal",
   title: "Termos de uso e privacidade",
   sub: "As regras para usar o StackMatch e como tratamos os seus dados, em linguagem direta.",
-  updated: "Atualizado em 10 de outubro de 2026.",
+  updated: "Atualizado em 13 de outubro de 2026.",
   contents: "Nesta página",
   termsTitle: "Termos de uso",
   privacyTitle: "Política de privacidade",
@@ -100,6 +100,7 @@ const pt: LegalText = {
         "Vagas da empresa: título, descrição, skills, senioridade, modelo de trabalho, tipo de contrato, disponibilidade, cidade e faixa de remuneração, além de quais desenvolvedores você ligou a cada vaga e em que etapa estão. Só a sua empresa vê essa organização. Quando você contata um desenvolvedor a partir de uma vaga, os dados dela vão no e-mail e ficam visíveis para ele em Empresas interessadas, como estavam no contato. Os desenvolvedores que você já contatou também veem as vagas abertas da empresa na página dela. Se você publicar a vaga no mural de vagas, qualquer desenvolvedor com conta a vê enquanto ela estiver aberta, com o nome da empresa.",
         "Interações: talentos salvos, marcações de interesse, propostas de reunião, as mensagens enviadas nelas e se o desenvolvedor aceitou ou recusou o horário. A resposta vai por e-mail para o contato da empresa, junto com o e-mail do desenvolvedor, para os dois combinarem a conversa. Quando um desenvolvedor se oferece para uma vaga, guardamos a data e a mensagem dele, e a empresa recebe as duas por e-mail, com o e-mail do desenvolvedor para responder.",
         "Ada: as perguntas e respostas da conversa, que fica guardada na sua conta (a Ada só conversa com quem entrou em uma conta).",
+        "Notificações: o que aconteceu com seus interesses, propostas e candidaturas, se você já as leu, o idioma da conta e quais avisos por e-mail você desligou, além do registro de envio desses e-mails (endereço, conteúdo, situação e tentativas).",
         "Suporte: os tickets que você abre e, se você escolher, a conversa com a Ada anexada a eles.",
         "Dados técnicos: endereço IP, usado para limites de segurança (tentativas de login, e-mails, perguntas e tickets), e o cookie da sessão.",
       ],
@@ -130,7 +131,7 @@ const pt: LegalText = {
       title: "4. Por quanto tempo guardamos",
       items: [
         "Os dados da conta ficam enquanto ela existir. Excluir a conta apaga perfil, projetos, imagens, dados da empresa, talentos salvos, interesses, propostas, candidaturas e a conversa com a Ada.",
-        "Registros de segurança valem por pouco tempo: falhas de login, 15 minutos; envios de e-mail com código e perguntas à Ada, 1 hora; pedidos de tradução automática, 24 horas; o registro das marcações de interesse usado nos limites, 30 dias; sessões, até 30 dias ou até você sair. Passado esse prazo, o registro deixa de contar e é apagado na limpeza automática, que roda uma vez por dia; por isso ele pode ficar guardado até um dia a mais.",
+        "Registros de segurança valem por pouco tempo: falhas de login, 15 minutos; envios de e-mail com código e perguntas à Ada, 1 hora; pedidos de tradução automática, 24 horas; o registro das marcações de interesse usado nos limites, 30 dias; sessões, até 30 dias ou até você sair; notificações, 180 dias; o registro de um e-mail de notificação, 30 dias depois de enviado ou abandonado. Passado esse prazo, o registro deixa de contar e é apagado na limpeza automática, que roda uma vez por dia; por isso ele pode ficar guardado até um dia a mais.",
         "Tickets ficam guardados como histórico do atendimento. Depois que a conta é excluída, eles deixam de estar ligados a ela; para apagá-los também, peça pelo Suporte.",
       ],
     },
@@ -145,7 +146,7 @@ const pt: LegalText = {
       id: "privacy-security",
       title: "6. Segurança e cookies",
       paragraphs: [
-        "O site usa HTTPS, guarda senhas com hash, limita tentativas de login e mantém a sessão em um cookie protegido, que o JavaScript da página não lê. Esse é o único cookie, e ele é necessário para o login funcionar. O idioma e o tema escolhidos ficam salvos no seu navegador.",
+        "O site usa HTTPS, guarda senhas com hash, limita tentativas de login e mantém a sessão em um cookie protegido, que o JavaScript da página não lê. Esse é o único cookie, e ele é necessário para o login funcionar. O idioma e o tema escolhidos ficam salvos no seu navegador; com a conta aberta, o idioma também fica salvo nela, para os e-mails.",
       ],
     },
   ],
@@ -157,7 +158,7 @@ const en: LegalText = {
   kicker: "Legal",
   title: "Terms of use and privacy",
   sub: "The rules for using StackMatch and how we handle your data, in plain language.",
-  updated: "Updated on October 10, 2026.",
+  updated: "Updated on October 13, 2026.",
   contents: "On this page",
   termsTitle: "Terms of use",
   privacyTitle: "Privacy policy",
@@ -230,6 +231,7 @@ const en: LegalText = {
         "Company jobs: title, description, skills, seniority, work model, contract type, availability, city and pay range, plus which developers you tied to each job and at which stage. Only your company sees this organization. When you reach a developer from a job, its details go in the e-mail and they see them in Interested companies, as they were then. Developers you already reached also see the company's open jobs on its page. If you publish a job in the job board, any developer with an account sees it while it's open, with the company's name.",
         "Interactions: saved talent, interest marks, meeting proposals, the messages sent with them and whether the developer accepted or declined the time. The answer goes by e-mail to the company's contact, with the developer's e-mail, so they can arrange the call. When a developer offers themselves for a job, we keep the date and their message, and the company gets both by e-mail, with the developer's e-mail to reply to.",
         "Ada: the questions and answers of the conversation, kept in your account (Ada only chats with people signed in to an account).",
+        "Notifications: what happened to your interests, proposals and applications, whether you read it, the account's language and which e-mail updates you turned off, plus the record of sending those e-mails (address, content, status and tries).",
         "Support: the tickets you open and, if you choose, the conversation with Ada attached to them.",
         "Technical data: IP address, used for security limits (sign-in attempts, e-mails, questions and tickets), and the session cookie.",
       ],
@@ -260,7 +262,7 @@ const en: LegalText = {
       title: "4. How long we keep it",
       items: [
         "Account data stays while the account exists. Deleting the account erases the profile, projects, images, company details, saved talent, interests, proposals, applications and the conversation with Ada.",
-        "Security records are valid for a short time: sign-in failures, 15 minutes; code e-mails and questions to Ada, 1 hour; automatic translation requests, 24 hours; the record of interest marks used by the limits, 30 days; sessions, up to 30 days or until you sign out. After that, a record no longer counts and is erased by the automatic cleanup, which runs once a day, so it may be kept for up to one more day.",
+        "Security records are valid for a short time: sign-in failures, 15 minutes; code e-mails and questions to Ada, 1 hour; automatic translation requests, 24 hours; the record of interest marks used by the limits, 30 days; sessions, up to 30 days or until you sign out; notifications, 180 days; the record of a notification e-mail, 30 days after it was sent or given up. After that, a record no longer counts and is erased by the automatic cleanup, which runs once a day, so it may be kept for up to one more day.",
         "Tickets are kept as the support history. Once the account is deleted, they're no longer linked to it; to erase them too, ask through Support.",
       ],
     },
@@ -275,7 +277,7 @@ const en: LegalText = {
       id: "privacy-security",
       title: "6. Security and cookies",
       paragraphs: [
-        "The site uses HTTPS, stores passwords as hashes, limits sign-in attempts and keeps the session in a protected cookie that the page's JavaScript can't read. That is the only cookie, and sign-in needs it. Your language and theme choices are saved in your browser.",
+        "The site uses HTTPS, stores passwords as hashes, limits sign-in attempts and keeps the session in a protected cookie that the page's JavaScript can't read. That is the only cookie, and sign-in needs it. Your language and theme choices are saved in your browser; while signed in, the language is also saved in your account, for the e-mails.",
       ],
     },
   ],

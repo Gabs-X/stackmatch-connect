@@ -38,7 +38,7 @@ beforeEach(async () => {
 });
 
 const mark = (developerId: string, at = now) =>
-  markInterestAndNotify(db, acme.id, developerId, "pt", appUrl, at);
+  markInterestAndNotify(db, acme.id, developerId, appUrl, at);
 
 const interestEmails = () => outbox().filter((email) => email.subject.includes("interesse"));
 

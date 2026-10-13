@@ -1,37 +1,44 @@
-import { and, desc, eq } from "drizzle-orm";
-import { dictionaries, type Lang } from "@/lib/i18n";
+import { eq } from "drizzle-orm";
+import { dictionaries } from "@/lib/i18n";
 import { jobTexts } from "@/lib/jobs";
+import type { ApplicationUpdate } from "@/lib/notifications";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
-import type { Db } from "./db";
-import { jobApplications, meetingRequests, users } from "./db/schema";
-import { messageEmail, sendEmail } from "./email";
+import { jobApplications, users } from "./db/schema";
+import { messageEmail } from "./email";
+import { notify, recipient, type Conn } from "./outbox";
 import { loadTranslations } from "./translations";
 
 /**
- * E-mails about applications once they change: the developer hears when theirs ends without them
- * (not advanced, process closed, job closed or deleted), and the company when one is withdrawn.
- * Being hired, the other stages and the company's notes send nothing: those are agreed directly, or
- * the developer already heard of them (contacts and calls have their own e-mails).
+ * Notifications about applications once they change: the developer hears when theirs ends without
+ * them (not advanced, process closed, job closed or deleted), and the company when one is withdrawn.
+ * Being hired, the other stages and the company's notes notify nothing: those are agreed directly,
+ * or the developer already heard of them (contacts and calls have their own notifications).
  */
 
-export type ApplicationNoticeKind = "not_advanced" | "closed" | "job_closed" | "job_deleted";
+export type ApplicationNoticeKind = ApplicationUpdate;
 export type ApplicationNotice = { applicationId: string; kind: ApplicationNoticeKind };
 
-/** Sends each notice after the change was saved; a failed e-mail doesn't undo the change. */
-export async function sendApplicationNotices(db: Db, notices: ApplicationNotice[], appUrl: string) {
-  for (const notice of notices)
-    try {
-      await sendApplicationNotice(db, notice, appUrl);
-    } catch (error) {
-      console.error("Application notice not e-mailed:", error);
-    }
+/**
+ * Records each notice and queues its e-mail, in the transaction that made the change; returns the
+ * e-mails for deliverQueued, once it's saved. `now` tells apart a job closed again after reopening.
+ */
+export async function queueApplicationNotices(
+  db: Conn,
+  notices: ApplicationNotice[],
+  appUrl: string,
+  now = Date.now(),
+) {
+  const queued: (string | null)[] = [];
+  for (const notice of notices) queued.push(await queueApplicationNotice(db, notice, appUrl, now));
+  return queued;
 }
 
-async function sendApplicationNotice(
-  db: Db,
+async function queueApplicationNotice(
+  db: Conn,
   { applicationId, kind }: ApplicationNotice,
   appUrl: string,
+  now: number,
 ) {
   const [row] = await db
     .select({ application: jobApplications, developer: users })
@@ -39,14 +46,14 @@ async function sendApplicationNotice(
     .innerJoin(users, eq(users.id, jobApplications.developerId))
     .where(eq(jobApplications.id, applicationId))
     .limit(1);
-  if (!row) return;
+  if (!row) return null;
   const { application, developer } = row;
   const [company] = await db
     .select({ name: users.companyName })
     .from(users)
     .where(eq(users.id, application.companyId))
     .limit(1);
-  const language = application.language;
+  const language = developer.language;
   const translations = await loadTranslations(
     db,
     [application.companyId],
@@ -54,8 +61,17 @@ async function sendApplicationNotice(
   );
   const title = translations[application.job.title]?.[language] ?? application.job.title;
   const t = dictionaries[language].applicationNotice;
-  await sendEmail(
-    messageEmail({
+  return notify(db, {
+    userId: developer.id,
+    kind: "application_update",
+    data: {
+      actor: company?.name ?? "",
+      job: application.job.title,
+      update: kind,
+      path: "/applications",
+    },
+    dedupeKey: `application:${applicationId}:${kind}:${now}`,
+    email: messageEmail({
       to: developer.email,
       subject: t.subject(title),
       paragraphs: [
@@ -65,77 +81,63 @@ async function sendApplicationNotice(
       action: { label: t.action, url: new URL("/applications", appUrl).href },
       closing: t.closing,
     }),
-  );
-}
-
-/** Tells the company's contact the developer withdrew their application; replies go to them. */
-export async function sendWithdrawalNotice(db: Db, applicationId: string, appUrl: string) {
-  try {
-    const [row] = await db
-      .select({ application: jobApplications, developer: users })
-      .from(jobApplications)
-      .innerJoin(users, eq(users.id, jobApplications.developerId))
-      .where(eq(jobApplications.id, applicationId))
-      .limit(1);
-    if (!row) return;
-    const { application, developer } = row;
-    const [company] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, application.companyId))
-      .limit(1);
-    if (!company) return;
-    const language = await companyLanguage(db, application.companyId, application.developerId);
-    const contact = await loadCompanySettings(db, toAuthUser(company));
-    const translations = await loadTranslations(
-      db,
-      [application.companyId],
-      jobTexts(application.job),
-    );
-    const title = translations[application.job.title]?.[language] ?? application.job.title;
-    const t = dictionaries[language].withdrawalEmail;
-    await sendEmail(
-      messageEmail({
-        to: contact.contactEmail,
-        subject: t.subject(developer.name, title),
-        paragraphs: [
-          t.greeting(contact.contactName.split(/\s+/)[0] || contact.contactName),
-          t.intro(developer.name, title),
-        ],
-        ...(application.jobId
-          ? {
-              action: {
-                label: t.action,
-                url: new URL(`/jobs/${application.jobId}`, appUrl).href,
-              },
-            }
-          : {}),
-        closing: t.closing,
-        replyTo: developer.email,
-      }),
-    );
-  } catch (error) {
-    // The withdrawal stands; the company still sees it on the job's page.
-    console.error("Withdrawal not e-mailed:", error);
-  }
+  });
 }
 
 /**
- * The language the company last wrote to the developer in (its latest proposal), else Portuguese:
- * the company hears back in it.
+ * Tells the company's contact the developer withdrew their application, in the company's language;
+ * replies go to the developer. Withdrawing is final, so it notifies once.
  */
-export async function companyLanguage(
-  db: Db,
-  companyId: string,
-  developerId: string,
-): Promise<Lang> {
-  const [latest] = await db
-    .select({ language: meetingRequests.language })
-    .from(meetingRequests)
-    .where(
-      and(eq(meetingRequests.companyId, companyId), eq(meetingRequests.developerId, developerId)),
-    )
-    .orderBy(desc(meetingRequests.sentAt))
+export async function queueWithdrawalNotice(db: Conn, applicationId: string, appUrl: string) {
+  const [row] = await db
+    .select({ application: jobApplications, developer: users })
+    .from(jobApplications)
+    .innerJoin(users, eq(users.id, jobApplications.developerId))
+    .where(eq(jobApplications.id, applicationId))
     .limit(1);
-  return latest?.language ?? "pt";
+  if (!row) return null;
+  const { application, developer } = row;
+  const [company] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, application.companyId))
+    .limit(1);
+  if (!company) return null;
+  const language = (await recipient(db, company.id)).language;
+  const contact = await loadCompanySettings(db, toAuthUser(company));
+  const translations = await loadTranslations(
+    db,
+    [application.companyId],
+    jobTexts(application.job),
+  );
+  const title = translations[application.job.title]?.[language] ?? application.job.title;
+  const t = dictionaries[language].withdrawalEmail;
+  return notify(db, {
+    userId: company.id,
+    kind: "application_withdrawn",
+    data: {
+      actor: developer.name,
+      job: application.job.title,
+      path: application.jobId ? `/jobs/${application.jobId}` : "/jobs",
+    },
+    dedupeKey: `application:${applicationId}:withdrawn`,
+    email: messageEmail({
+      to: contact.contactEmail,
+      subject: t.subject(developer.name, title),
+      paragraphs: [
+        t.greeting(contact.contactName.split(/\s+/)[0] || contact.contactName),
+        t.intro(developer.name, title),
+      ],
+      ...(application.jobId
+        ? {
+            action: {
+              label: t.action,
+              url: new URL(`/jobs/${application.jobId}`, appUrl).href,
+            },
+          }
+        : {}),
+      closing: t.closing,
+      replyTo: developer.email,
+    }),
+  });
 }

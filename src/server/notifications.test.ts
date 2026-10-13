@@ -6,7 +6,8 @@ import { saveCompanySettings } from "./companies";
 import type { Db } from "./db";
 import { outbox } from "./email";
 import { listSentBy, sendMeetingRequest } from "./meetings";
-import { notifyInterest } from "./notifications";
+import { interestNotice } from "./notifications";
+import { deliverEmails, notify, saveLanguage } from "./outbox";
 import { createDeveloper, createTestDb } from "./test-db";
 
 let db: Db;
@@ -36,9 +37,15 @@ beforeEach(async () => {
   });
 });
 
+/** Notifies the developer of Acme's interest and sends the e-mail. */
+async function notifyInterest() {
+  const notice = await interestNotice(db, acme.id, marina, "https://stackmatch.example", null, "t");
+  await deliverEmails(db, { ids: [(await notify(db, notice)) ?? ""] });
+}
+
 describe("interest e-mail", () => {
   it("tells the developer who marked them, with replies going to the company", async () => {
-    await notifyInterest(db, acme.id, marina, "pt", "https://stackmatch.example");
+    await notifyInterest();
     expect(outbox().at(-1)).toMatchObject({
       to: "marina@example.com",
       subject: "Acme tem interesse no seu perfil no StackMatch",
@@ -51,8 +58,9 @@ describe("interest e-mail", () => {
     expect(html).toContain('href="https://stackmatch.example/interests"');
   });
 
-  it("goes out in the company's screen language", async () => {
-    await notifyInterest(db, acme.id, marina, "en", "https://stackmatch.example");
+  it("goes out in the developer's language", async () => {
+    await saveLanguage(db, marina, "en");
+    await notifyInterest();
     expect(outbox().at(-1)?.subject).toBe("Acme is interested in your StackMatch profile");
   });
 });
@@ -84,22 +92,28 @@ describe("meeting request e-mail", () => {
     expect(email?.html).toContain("Projeto de &#60;dashboard&#62; em React.");
   });
 
-  it("goes out in the company's screen language", async () => {
-    await sendMeetingRequest(db, acme, proposal(), now, "en");
+  it("goes out in the developer's language, whatever the company's screen", async () => {
+    await saveLanguage(db, marina, "en");
+    await sendMeetingRequest(db, acme, proposal(), now, "pt");
     expect(outbox().at(-1)?.subject).toBe("Acme wants to talk with you on StackMatch");
   });
 
   describe("when the e-mail can't be sent", () => {
     afterEach(() => vi.unstubAllEnvs());
 
-    it("drops the proposal, so the company doesn't count on it", async () => {
+    it("keeps the proposal and sends the e-mail on a later try", async () => {
       // In production without RESEND_API_KEY, sending fails.
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("RESEND_API_KEY", "");
-      expect(await sendMeetingRequest(db, acme, proposal(), now, "pt")).toEqual({
-        error: "not-sent",
+      expect(await sendMeetingRequest(db, acme, proposal(), now, "pt")).toHaveProperty("request");
+      expect(await listSentBy(db, acme.id)).toHaveLength(1);
+      expect(outbox()).toEqual([]);
+      vi.unstubAllEnvs();
+      // Due a minute after the failure.
+      expect(await deliverEmails(db, { others: 10, now: Date.now() + 60_000 })).toMatchObject({
+        sent: 1,
       });
-      expect(await listSentBy(db, acme.id)).toEqual([]);
+      expect(outbox().at(-1)?.subject).toBe("Acme quer conversar com você pelo StackMatch");
     });
   });
 });

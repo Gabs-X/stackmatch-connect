@@ -26,6 +26,7 @@ import type {
 } from "@/lib/jobs";
 import type { Lang } from "@/lib/i18n";
 import type { MeetingSide, MeetingStatus } from "@/lib/meeting-requests";
+import type { EmailCategory, NotificationData, NotificationKind } from "@/lib/notifications";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -48,6 +49,14 @@ export const users = pgTable("users", {
   cnpj: text("cnpj"),
   /** When the account confirmed its e-mail with a code; null until then, and it can't act. */
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  /** The account's language: its notifications' e-mails go out in it. */
+  language: text("language").$type<Lang>().notNull().default("pt"),
+  /** The e-mail categories the account turned off (see src/lib/notifications.ts). */
+  emailOff: text("email_off")
+    .array()
+    .$type<EmailCategory[]>()
+    .notNull()
+    .default(sql`'{}'`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -246,7 +255,10 @@ export const meetingRequests = pgTable(
     canceledAt: timestamp("canceled_at", { withTimezone: true }),
     /** What the side that rescheduled or canceled wrote, if anything; the latest one. */
     updateMessage: text("update_message").notNull().default(""),
-    /** The language of the e-mail the developer got; the company hears back in it. */
+    /**
+     * The company's screen language when it proposed. Unused since e-mails go out in each
+     * recipient's account language (users.language).
+     */
     language: text("language").$type<Lang>().notNull().default("pt"),
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -545,7 +557,10 @@ export const jobApplications = pgTable(
     job: jsonb("job").$type<JobSnapshot>().notNull(),
     message: text("message").notNull().default(""),
     status: text("status").$type<ApplicationStatus>().notNull().default("submitted"),
-    /** The developer's screen language when applying: what they're e-mailed about it in. */
+    /**
+     * The developer's screen language when applying. Unused since e-mails go out in each
+     * recipient's account language (users.language).
+     */
     language: text("language").$type<Lang>().notNull().default("pt"),
     appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -599,4 +614,66 @@ export const jobCandidateEvents = pgTable(
     ),
     index("job_candidate_events_application_idx").on(table.applicationId),
   ],
+);
+
+/**
+ * The notification center: what happened to an account, once per event (the dedupe key). The data
+ * is worded on the screen, in its language.
+ */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<NotificationKind>().notNull(),
+    data: jsonb("data").$type<NotificationData>().notNull(),
+    /** One notification per event, such as "meeting:<id>:proposed". */
+    dedupeKey: text("dedupe_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("notifications_user_dedupe_idx").on(table.userId, table.dedupeKey),
+    index("notifications_user_created_idx").on(table.userId, table.createdAt, table.id),
+  ],
+);
+
+/**
+ * E-mails of notifications waiting to go out, and how it went: written with the event, sent right
+ * after it and, when that fails, again by the next requests and the cron (src/server/outbox.ts).
+ */
+export const emailOutbox = pgTable(
+  "email_outbox",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    /** The account it's for: its preferences decide whether it goes out. */
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    notificationId: text("notification_id").references(() => notifications.id, {
+      onDelete: "cascade",
+    }),
+    category: text("category").$type<EmailCategory>().notNull(),
+    /** The e-mail, ready to send (see Email in src/server/email.ts). */
+    email: jsonb("email").$type<Record<string, unknown>>().notNull(),
+    dedupeKey: text("dedupe_key").notNull().unique(),
+    status: text("status")
+      .$type<"pending" | "sending" | "sent" | "skipped" | "failed">()
+      .notNull()
+      .default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    /** While "sending": when another delivery may take it over, if this one never finished. */
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+  },
+  (table) => [index("email_outbox_status_next_idx").on(table.status, table.nextAttemptAt)],
 );

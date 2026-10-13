@@ -1,6 +1,7 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { and, eq, lte, ne } from "drizzle-orm";
 import { onlyDigits, type AccountType, type AuthUser, type SignUpInput } from "@/lib/auth";
+import type { Lang } from "@/lib/i18n";
 import type { Db } from "./db";
 import { sessions, users, type UserRow } from "./db/schema";
 import type { Tx } from "./profiles";
@@ -49,8 +50,14 @@ export function toAuthUser(row: UserRow): AuthUser {
   };
 }
 
-/** Creates the account, or returns null when the e-mail is taken. Expects validated input. */
-export async function createAccount(db: Db, input: SignUpInput): Promise<AuthUser | null> {
+/**
+ * Creates the account, or returns null when the e-mail is taken. Expects validated input; the
+ * language is the sign-up screen's, the account's until it picks another.
+ */
+export async function createAccount(
+  db: Db,
+  input: SignUpInput & { language?: Lang },
+): Promise<AuthUser | null> {
   const company = input.accountType === "company";
   // The unique e-mail settles concurrent sign-ups: the second insert does nothing.
   const [row] = await db
@@ -63,6 +70,7 @@ export async function createAccount(db: Db, input: SignUpInput): Promise<AuthUse
       jobTitle: input.jobTitle.trim(),
       companyName: company ? input.company.trim() : null,
       cnpj: company ? onlyDigits(input.cnpj) : null,
+      language: input.language ?? "pt",
     })
     .onConflictDoNothing({ target: users.email })
     .returning();

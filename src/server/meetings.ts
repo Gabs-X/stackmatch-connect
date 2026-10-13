@@ -16,16 +16,10 @@ import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
 import { lockKeys } from "./db/locks";
 import { developerProfiles, interests, meetingRequests, users } from "./db/schema";
-import { sendEmail } from "./email";
 import { advanceCandidate, jobSnapshot } from "./jobs";
 import type { Tx } from "./profiles";
-import {
-  developerEmail,
-  meetingAnswerEmail,
-  meetingEmail,
-  meetingUpdateEmail,
-  type MeetingUpdate,
-} from "./notifications";
+import { meetingNotice, type MeetingUpdate } from "./notifications";
+import { deliverQueued, notify } from "./outbox";
 import { meetingLimit } from "./outreach";
 import { loadTranslations } from "./translations";
 
@@ -63,15 +57,13 @@ async function developerName(db: Db, developerId: string) {
 }
 
 export type SendResult =
-  | { request: MeetingRequest }
-  | { error: "time-passed" | "unknown-developer" | "not-sent" }
-  | OutreachLimitError;
+  { request: MeetingRequest } | { error: "time-passed" | "unknown-developer" } | OutreachLimitError;
 
 /**
- * Records the proposal, signed with the company's current contact, and e-mails it to the developer
- * with Reply-To set to that contact. If the e-mail can't be sent, the proposal is dropped, so the
- * company never counts on one the developer didn't get. Sent from inside a job, it moves the developer
- * there to "contacted".
+ * Records the proposal, signed with the company's current contact, and notifies the developer with
+ * it, by e-mail in their language with Reply-To set to that contact. The proposal and its e-mail are
+ * saved together; an e-mail that fails stays queued and is sent again (see src/server/outbox.ts).
+ * Sent from inside a job, it moves the developer there to "contacted".
  */
 export async function sendMeetingRequest(
   db: Db,
@@ -111,25 +103,20 @@ export async function sendMeetingRequest(
       })
       .returning();
     if (!row) throw new Error("Meeting request not saved.");
-    return { row };
+    const notice = await meetingNotice(
+      tx,
+      toMeetingRequest(row),
+      { kind: "proposed" },
+      "company",
+      "",
+      job?.translations,
+    );
+    return { row, queued: await notify(tx, notice) };
   });
   if (!("row" in saved)) return saved;
-  const { row } = saved;
+  const { row, queued } = saved;
   const request = toMeetingRequest(row);
-  try {
-    await sendEmail(
-      meetingEmail(
-        request,
-        await developerEmail(db, input.developerId),
-        language,
-        job?.translations,
-      ),
-    );
-  } catch (error) {
-    console.error("Meeting request not e-mailed:", error);
-    await db.delete(meetingRequests).where(eq(meetingRequests.id, row.id));
-    return { error: "not-sent" };
-  }
+  await deliverQueued(db, [queued]);
   if (job && input.jobId)
     await advanceCandidate(db, company.id, input.jobId, input.developerId, "contacted", now);
   return { request };
@@ -231,28 +218,26 @@ async function ownMeeting(db: Db, actor: MeetingActor, meetingId: string) {
 
 const hasStarted = (row: MeetingRow, now: number) => meetingStart(row.date, row.time) <= now;
 
-/** E-mails the other side; a failure is logged, and what was done stands. */
-async function tellOtherSide(
+/**
+ * Changes the call and notifies the other side in one transaction; the e-mail goes out after. Null
+ * when the change didn't apply (the call changed meanwhile).
+ */
+async function changeAndTell(
   db: Db,
-  row: MeetingRow,
-  update: MeetingUpdate,
+  change: (tx: Tx) => Promise<MeetingRow | undefined>,
+  update: (row: MeetingRow) => MeetingUpdate,
   actor: MeetingSide,
   appUrl: string,
 ) {
-  try {
-    await sendEmail(
-      meetingUpdateEmail(
-        toMeetingRequest(row),
-        update,
-        actor,
-        await developerEmail(db, row.developerId),
-        row.language,
-        appUrl,
-      ),
-    );
-  } catch (error) {
-    console.error(`Meeting ${update.kind} not e-mailed:`, error);
-  }
+  const saved = await db.transaction(async (tx) => {
+    const row = await change(tx);
+    if (!row) return null;
+    const notice = await meetingNotice(tx, toMeetingRequest(row), update(row), actor, appUrl);
+    return { row, queued: await notify(tx, notice) };
+  });
+  if (!saved) return null;
+  await deliverQueued(db, [saved.queued]);
+  return saved.row;
 }
 
 export type AnswerResult =
@@ -261,10 +246,10 @@ export type AnswerResult =
 
 /**
  * Accepts or declines the current time of a call, once: the side that didn't propose it answers.
- * The other side hears back by e-mail, in the language the proposal went out in, with Reply-To set
- * to whoever answered; an accepted time comes with a calendar file. Accepting a call about a job
- * moves the developer to "call scheduled" there. Once the time comes, a call still waiting can't be
- * answered. A failed e-mail doesn't undo the answer.
+ * The other side is notified, by e-mail in their language with Reply-To set to whoever answered;
+ * an accepted time comes with a calendar file. Accepting a call about a job moves the developer to
+ * "call scheduled" there. Once the time comes, a call still waiting can't be answered. A failed
+ * e-mail doesn't undo the answer: it stays queued.
  */
 export async function answerMeetingRequest(
   db: Db,
@@ -279,32 +264,31 @@ export async function answerMeetingRequest(
   if (current.status !== "pending") return { error: "already-answered" };
   if (current.proposedBy === actor.side) return { error: "own-proposal" };
   if (isMeetingExpired(current, now)) return { error: "expired" };
-  const [row] = await db
-    .update(meetingRequests)
-    .set({ status: answer, respondedAt: new Date(now) })
-    .where(
-      and(
-        eq(meetingRequests.id, meetingId),
-        eq(meetingRequests.status, "pending"),
-        // Moved meanwhile: this answer was about another time.
-        eq(meetingRequests.reschedules, current.reschedules),
-      ),
-    )
-    .returning();
+  const row = await changeAndTell(
+    db,
+    async (tx) =>
+      (
+        await tx
+          .update(meetingRequests)
+          .set({ status: answer, respondedAt: new Date(now) })
+          .where(
+            and(
+              eq(meetingRequests.id, meetingId),
+              eq(meetingRequests.status, "pending"),
+              // Moved meanwhile: this answer was about another time.
+              eq(meetingRequests.reschedules, current.reschedules),
+            ),
+          )
+          .returning()
+      )[0],
+    () => ({ kind: answer }),
+    actor.side,
+    appUrl,
+  );
   if (!row) return { error: "already-answered" };
-  const request = toMeetingRequest(row);
   if (answer === "accepted" && row.jobId)
     await advanceCandidate(db, row.companyId, row.jobId, row.developerId, "meeting", now);
-  if (actor.side === "company") await tellOtherSide(db, row, { kind: answer }, "company", appUrl);
-  else
-    try {
-      await sendEmail(
-        meetingAnswerEmail(request, await developerEmail(db, row.developerId), row.language),
-      );
-    } catch (error) {
-      console.error("Meeting answer not e-mailed:", error);
-    }
-  return { request };
+  return { request: toMeetingRequest(row) };
 }
 
 export type ChangeResult =
@@ -341,33 +325,35 @@ export async function rescheduleMeeting(
   if (current.date === date && current.time === time && current.status !== "declined")
     return { error: "same-time" };
   if (current.reschedules >= maxReschedules) return { error: "reschedule-limit" };
-  const [row] = await db
-    .update(meetingRequests)
-    .set({
-      date,
-      time,
-      status: "pending",
-      respondedAt: null,
-      proposedBy: actor.side,
-      reschedules: current.reschedules + 1,
-      updateMessage: message,
-    })
-    .where(
-      and(
-        eq(meetingRequests.id, meetingId),
-        eq(meetingRequests.reschedules, current.reschedules),
-        eq(meetingRequests.status, current.status),
-      ),
-    )
-    .returning();
-  if (!row) return { error: "changed" };
-  await tellOtherSide(
+  const row = await changeAndTell(
     db,
-    row,
-    { kind: "rescheduled", from: { date: current.date, time: current.time } },
+    async (tx) =>
+      (
+        await tx
+          .update(meetingRequests)
+          .set({
+            date,
+            time,
+            status: "pending",
+            respondedAt: null,
+            proposedBy: actor.side,
+            reschedules: current.reschedules + 1,
+            updateMessage: message,
+          })
+          .where(
+            and(
+              eq(meetingRequests.id, meetingId),
+              eq(meetingRequests.reschedules, current.reschedules),
+              eq(meetingRequests.status, current.status),
+            ),
+          )
+          .returning()
+      )[0],
+    () => ({ kind: "rescheduled", from: { date: current.date, time: current.time } }),
     actor.side,
     appUrl,
   );
+  if (!row) return { error: "changed" };
   return { request: toMeetingRequest(row) };
 }
 
@@ -387,23 +373,31 @@ export async function cancelMeeting(
   if (!current) return { error: "unknown-meeting" };
   if (current.status !== "pending" && current.status !== "accepted") return { error: "closed" };
   if (hasStarted(current, now)) return { error: "started" };
-  const [row] = await db
-    .update(meetingRequests)
-    .set({
-      status: "canceled",
-      canceledBy: actor.side,
-      canceledAt: new Date(now),
-      updateMessage: message,
-    })
-    .where(
-      and(
-        eq(meetingRequests.id, meetingId),
-        eq(meetingRequests.reschedules, current.reschedules),
-        eq(meetingRequests.status, current.status),
-      ),
-    )
-    .returning();
+  const row = await changeAndTell(
+    db,
+    async (tx) =>
+      (
+        await tx
+          .update(meetingRequests)
+          .set({
+            status: "canceled",
+            canceledBy: actor.side,
+            canceledAt: new Date(now),
+            updateMessage: message,
+          })
+          .where(
+            and(
+              eq(meetingRequests.id, meetingId),
+              eq(meetingRequests.reschedules, current.reschedules),
+              eq(meetingRequests.status, current.status),
+            ),
+          )
+          .returning()
+      )[0],
+    () => ({ kind: "canceled" }),
+    actor.side,
+    appUrl,
+  );
   if (!row) return { error: "changed" };
-  await tellOtherSide(db, row, { kind: "canceled" }, actor.side, appUrl);
   return { request: toMeetingRequest(row) };
 }

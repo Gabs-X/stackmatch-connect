@@ -4,7 +4,15 @@ import { recordAssistantRequest } from "./assistant-throttle";
 import { createAccount, createSession, sessionDurationMs } from "./auth";
 import { cleanup } from "./cleanup";
 import type { Db } from "./db";
-import { emailCodes, interestEvents, loginFailures, sessions, skills } from "./db/schema";
+import {
+  emailCodes,
+  emailOutbox,
+  interestEvents,
+  loginFailures,
+  notifications,
+  sessions,
+  skills,
+} from "./db/schema";
 import { issueCode } from "./email-codes";
 import { recordEmailSend } from "./email-throttle";
 import { recordLoginFailure } from "./login-throttle";
@@ -64,6 +72,49 @@ describe("cleanup", () => {
       },
       { companyId: ana.id, developerId: marina, notified: true, createdAt: new Date(now - day) },
     ]);
+    // Notifications past their 180 days, and e-mails finished more than 30 days ago.
+    await db.insert(notifications).values([
+      {
+        userId: marina,
+        kind: "interest",
+        data: { actor: "Acme", path: "/interests" },
+        dedupeKey: "old",
+        createdAt: new Date(now - 181 * day),
+      },
+      {
+        userId: marina,
+        kind: "interest",
+        data: { actor: "Acme", path: "/interests" },
+        dedupeKey: "new",
+        createdAt: new Date(now - 179 * day),
+      },
+    ]);
+    const email = { to: "marina@example.com", subject: "s", text: "t", html: "h" };
+    await db.insert(emailOutbox).values([
+      {
+        userId: marina,
+        category: "interest",
+        email,
+        dedupeKey: "old-sent",
+        status: "sent",
+        createdAt: new Date(now - 31 * day),
+      },
+      {
+        userId: marina,
+        category: "interest",
+        email,
+        dedupeKey: "old-pending",
+        createdAt: new Date(now - 31 * day),
+      },
+      {
+        userId: marina,
+        category: "interest",
+        email,
+        dedupeKey: "new",
+        status: "failed",
+        createdAt: new Date(now - 29 * day),
+      },
+    ]);
     // A typed skill that a profile dropped; another still in use; catalog skills stay.
     const profile = {
       ...emptyProfile,
@@ -88,7 +139,14 @@ describe("cleanup", () => {
       translationRequests: 1,
       interestEvents: 1,
       unusedSkills: 1,
+      notifications: 1,
+      emails: 1,
     });
+    expect((await db.select().from(notifications)).map((row) => row.dedupeKey)).toEqual(["new"]);
+    expect((await db.select().from(emailOutbox)).map((row) => row.dedupeKey).sort()).toEqual([
+      "new",
+      "old-pending",
+    ]);
     expect(await db.select().from(sessions)).toHaveLength(1);
     expect((await db.select().from(emailCodes)).map((code) => code.purpose)).toEqual([
       "RESET_PASSWORD",

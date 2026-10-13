@@ -25,7 +25,7 @@ const unique = (texts: string[]) => [...new Set(texts.map((text) => text.trim())
 
 /** The stored translations of `texts`, for the accounts that wrote them. */
 export async function loadTranslations(
-  db: Db,
+  db: Db | Tx,
   ownerIds: string[],
   texts: string[],
 ): Promise<Translations> {

@@ -16,12 +16,13 @@ import type { Translations } from "@/lib/translations";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
-import { companyLanguage, sendWithdrawalNotice } from "./application-notices";
+import { queueWithdrawalNotice } from "./application-notices";
 import { jobApplications, jobCandidateEvents, jobCandidates, jobs, users } from "./db/schema";
-import { messageEmail, sendEmail } from "./email";
+import { messageEmail } from "./email";
 import { loadJob, lockJob, recordEvents, toJobs } from "./jobs";
 import { companyReachedDeveloper } from "./meetings";
 import { developerEmail, jobEmailDetails } from "./notifications";
+import { deliverQueued, notify, recipient, type Conn } from "./outbox";
 import { developerExists } from "./saved-talents";
 import { loadTranslations } from "./translations";
 
@@ -98,7 +99,7 @@ export async function applyToJob(
 ): Promise<ApplicationResult> {
   if (!(await developerExists(db, developerId))) return { error: "no-profile" };
   const at = new Date(now);
-  type Outcome = { companyId: string } | { error: "unknown-job" | "already-applied" };
+  type Outcome = { queued: string | null } | { error: "unknown-job" | "already-applied" };
   const outcome = await db.transaction(async (tx): Promise<Outcome> => {
     const job = await lockJob(tx, jobId);
     if (
@@ -157,38 +158,51 @@ export async function applyToJob(
         createdAt: at,
       },
     ]);
-    return { companyId: job.companyId };
+    return {
+      queued: await queueApplication(
+        tx,
+        job.companyId,
+        developerId,
+        jobId,
+        application.id,
+        message,
+        appUrl,
+      ),
+    };
   });
   if ("error" in outcome) return { error: outcome.error };
-  try {
-    await notifyApplication(db, outcome.companyId, developerId, jobId, message, appUrl);
-  } catch (error) {
-    // The offer stands; the company still sees it on the job's page.
-    console.error("Job application not e-mailed:", error);
-  }
+  await deliverQueued(db, [outcome.queued]);
   return { appliedAt: at.toISOString() };
 }
 
-/** Tells the company's contact the developer offered themselves; replies go to the developer. */
-async function notifyApplication(
-  db: Db,
+/**
+ * Tells the company the developer offered themselves, by e-mail to its contact in the company's
+ * language; replies go to the developer.
+ */
+async function queueApplication(
+  db: Conn,
   companyId: string,
   developerId: string,
   jobId: string,
+  applicationId: string,
   message: string,
   appUrl: string,
 ) {
   const job = await loadJob(db, companyId, jobId);
   const [company] = await db.select().from(users).where(eq(users.id, companyId)).limit(1);
   const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
-  if (!job || !company || !developer) return;
-  const language = await companyLanguage(db, companyId, developerId);
+  if (!job || !company || !developer) return null;
+  const language = (await recipient(db, companyId)).language;
   const contact = await loadCompanySettings(db, toAuthUser(company));
   const translations = await loadTranslations(db, [companyId], jobTexts(job));
   const t = dictionaries[language].applicationEmail;
   const title = translations[job.title]?.[language] ?? job.title;
-  await sendEmail(
-    messageEmail({
+  return notify(db, {
+    userId: companyId,
+    kind: "application_received",
+    data: { actor: developer.name, job: job.title, path: `/jobs/${jobId}` },
+    dedupeKey: `application:${applicationId}:received`,
+    email: messageEmail({
       to: contact.contactEmail,
       subject: t.subject(developer.name, title),
       paragraphs: [
@@ -201,14 +215,14 @@ async function notifyApplication(
       closing: t.closing(developer.name.split(/\s+/)[0] || developer.name),
       replyTo: await developerEmail(db, developerId),
     }),
-  );
+  });
 }
 
 export type WithdrawResult = { ok: true } | { error: "unknown-application" | "not-active" };
 
 /**
  * Withdraws the developer's application, for good, while it waits on the company and the job is
- * open; the company hears by e-mail and keeps them in the job, marked as withdrawn. Takes turns with
+ * open; the company is notified and keeps them in the job, marked as withdrawn. Takes turns with
  * the company's changes to the job and to them in it: whichever comes second sees the first.
  */
 export async function withdrawApplication(
@@ -228,33 +242,38 @@ export async function withdrawApplication(
     .where(own);
   if (!found) return { error: "unknown-application" };
   const at = new Date(now);
-  const result = await db.transaction(async (tx): Promise<WithdrawResult> => {
-    // The job first, as the company's changes take it.
-    const job = found.jobId ? await lockJob(tx, found.jobId) : null;
-    const [application] = await tx.select().from(jobApplications).where(own).for("update");
-    if (!application) return { error: "unknown-application" };
-    if (!isActiveApplication(application.status) || job?.status !== "open")
-      return { error: "not-active" };
-    await tx
-      .update(jobApplications)
-      .set({ status: "withdrawn", withdrawnAt: at, updatedAt: at })
-      .where(eq(jobApplications.id, applicationId));
-    await recordEvents(tx, [
-      {
-        jobId: application.jobId,
-        companyId: application.companyId,
-        developerId,
-        applicationId,
-        kind: "withdrawn",
-        actor: "developer",
-        visibleToDeveloper: true,
-        createdAt: at,
-      },
-    ]);
-    return { ok: true };
-  });
-  if ("ok" in result) await sendWithdrawalNotice(db, applicationId, appUrl);
-  return result;
+  const result = await db.transaction(
+    async (
+      tx,
+    ): Promise<{ ok: true; queued: string | null } | Exclude<WithdrawResult, { ok: true }>> => {
+      // The job first, as the company's changes take it.
+      const job = found.jobId ? await lockJob(tx, found.jobId) : null;
+      const [application] = await tx.select().from(jobApplications).where(own).for("update");
+      if (!application) return { error: "unknown-application" };
+      if (!isActiveApplication(application.status) || job?.status !== "open")
+        return { error: "not-active" };
+      await tx
+        .update(jobApplications)
+        .set({ status: "withdrawn", withdrawnAt: at, updatedAt: at })
+        .where(eq(jobApplications.id, applicationId));
+      await recordEvents(tx, [
+        {
+          jobId: application.jobId,
+          companyId: application.companyId,
+          developerId,
+          applicationId,
+          kind: "withdrawn",
+          actor: "developer",
+          visibleToDeveloper: true,
+          createdAt: at,
+        },
+      ]);
+      return { ok: true, queued: await queueWithdrawalNotice(tx, applicationId, appUrl) };
+    },
+  );
+  if (!("ok" in result)) return result;
+  await deliverQueued(db, [result.queued]);
+  return { ok: true };
 }
 
 /** What the developer sees of an event of their application; null for those they don't. */

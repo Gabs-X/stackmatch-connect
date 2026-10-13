@@ -232,6 +232,13 @@
       "when": 1791604585364,
       "tag": "0032_job_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791896005008,
+      "tag": "0033_notifications",
+      "breakpoints": true
     }
   ]
 }

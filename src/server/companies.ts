@@ -6,10 +6,11 @@ import {
   type CompanySettings,
 } from "@/lib/company-settings";
 import type { Db } from "./db";
+import type { Tx } from "./profiles";
 import { companyProfiles } from "./db/schema";
 import { loadTranslations } from "./translations";
 
-export async function savedSettings(db: Db, userId: string): Promise<CompanySettings | null> {
+export async function savedSettings(db: Db | Tx, userId: string): Promise<CompanySettings | null> {
   const [row] = await db
     .select()
     .from(companyProfiles)
@@ -21,7 +22,7 @@ export async function savedSettings(db: Db, userId: string): Promise<CompanySett
 }
 
 /** What the company saved, or its sign-up details until it saves anything. */
-export async function loadCompanySettings(db: Db, user: AuthUser): Promise<CompanySettings> {
+export async function loadCompanySettings(db: Db | Tx, user: AuthUser): Promise<CompanySettings> {
   return (await savedSettings(db, user.id)) ?? defaultCompanySettings(user);
 }
 

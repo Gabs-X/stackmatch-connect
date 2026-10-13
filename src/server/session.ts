@@ -58,3 +58,10 @@ export async function requireAccount(type: AccountType, accountId?: string) {
   if (accountId !== undefined && user.id !== accountId) throw new AccessError();
   return user;
 }
+
+/** The signed-in, confirmed account of either type, refused as requireAccount does otherwise. */
+export async function requireConfirmedAccount(accountId: string) {
+  const user = await currentUser();
+  if (!user?.emailVerified || user.id !== accountId) throw new AccessError();
+  return user;
+}

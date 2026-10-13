@@ -67,7 +67,7 @@ const lists = {
   },
   interests: {
     fetch: (accountId: string) => fetchMyInterests({ data: { accountId } }),
-    // The developer gets an e-mail about the first mark, in this screen's language.
+    // The developer is notified of the first mark, by e-mail in their own language.
     add: ({ accountId, developerId, language, jobId }: AddRequest) =>
       markInterestFn({
         data: { accountId, developerId, language, ...(jobId ? { jobId } : {}) },

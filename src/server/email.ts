@@ -22,7 +22,14 @@ export const outbox = () => (store.__stackmatchOutbox ??= []);
 /** Sender shown in the inbox; Resend only accepts addresses of a domain verified there. */
 const defaultFrom = "StackMatch <onboarding@resend.dev>";
 
-export async function sendEmail(email: Email) {
+/**
+ * With an idempotency key, Resend sends the e-mail once however many times it is asked to within
+ * 24 hours: a retry after a lost answer doesn't send it twice.
+ */
+export async function sendEmail(
+  email: Email,
+  { idempotencyKey }: { idempotencyKey?: string } = {},
+) {
   const key = process.env["RESEND_API_KEY"]?.trim();
   if (!key) {
     if (process.env["NODE_ENV"] === "production")
@@ -34,7 +41,11 @@ export async function sendEmail(email: Email) {
   }
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+    headers: {
+      authorization: `Bearer ${key}`,
+      "content-type": "application/json",
+      ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
+    },
     body: JSON.stringify({
       from: process.env["EMAIL_FROM"]?.trim() || defaultFrom,
       to: [email.to],

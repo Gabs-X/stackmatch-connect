@@ -13,3 +13,12 @@ test("the daily cleanup only runs for Vercel Cron's secret", async ({ page }) =>
   expect(run.status()).toBe(200);
   expect(await run.json()).toMatchObject({ deleted: { sessions: expect.any(Number) } });
 });
+
+test("the notification e-mails' retries only run for Vercel Cron's secret", async ({ page }) => {
+  expect((await page.request.get("/api/cron/notifications")).status()).toBe(401);
+  const run = await page.request.get("/api/cron/notifications", {
+    headers: { authorization: "Bearer e2e-cron-secret" },
+  });
+  expect(run.status()).toBe(200);
+  expect(await run.json()).toMatchObject({ delivery: { sent: expect.any(Number) } });
+});

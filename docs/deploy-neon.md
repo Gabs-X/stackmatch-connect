@@ -86,14 +86,14 @@ E-mail confirmation and password recovery codes go out through [Resend](https://
 
 The key gives access to sending e-mail on behalf of your domain: the same rules as the connection string apply to it.
 
-## 6. Turn on the daily cleanup
+## 6. Turn on the daily cleanup and the e-mail retries
 
-Every day, at 03:00 Brasília time, a Vercel Cron calls `/api/cron/cleanup`, which deletes expired sessions, expired e-mail codes, old sign-in failures, e-mail sends, old assistant questions and translation requests, interest marks older than 30 days and typed skills nobody uses anymore. The schedule already comes with the deploy; what's missing is the secret that protects the route:
+Every day, at 03:00 Brasília time, a Vercel Cron calls `/api/cron/cleanup`, which deletes expired sessions, expired e-mail codes, old sign-in failures, e-mail sends, old assistant questions and translation requests, interest marks older than 30 days, typed skills nobody uses anymore, old notifications and the records of finished notification e-mails. At 03:30, another one calls `/api/cron/notifications`, which sends the notification e-mails that failed and are due again (on a Pro plan, set `NOTIFICATIONS_CRON`, such as `*/10 * * * *`, in the build's environment to run it more often). The schedules already come with the deploy; what's missing is the secret that protects the routes:
 
 1. Generate a long random string (for example, with `openssl rand -hex 32`).
 2. Under **Settings → Environment Variables**, create `CRON_SECRET` with it, in the **Production** environment.
 
-Vercel sends that secret on every Cron call. Without the variable, the route refuses everyone and the cleanup doesn't run; the app works the same, it just piles up expired records. Runs show under **Settings → Cron Jobs**.
+Vercel sends that secret on every Cron call. Without the variable, the routes refuse everyone: the cleanup doesn't run and failed e-mails are only retried by the site's own requests; the app works the same, it just piles up expired records. Runs show under **Settings → Cron Jobs**.
 
 ## 7. Deploy again
 

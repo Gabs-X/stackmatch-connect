@@ -18,6 +18,7 @@ import {
 import { answerMeetingRequest, listReceivedBy, sendMeetingRequest } from "./meetings";
 import { jobEmailDetails } from "./notifications";
 import { markInterestAndNotify } from "./outreach";
+import { saveLanguage } from "./outbox";
 import { createCompany, createDeveloper, createTestDb } from "./test-db";
 import { loadTranslations, type Translator } from "./translations";
 
@@ -92,7 +93,7 @@ describe("jobEmailDetails", () => {
 describe("reaching a developer from a job", () => {
   it("tells them about the job with the interest e-mail, and keeps it with the mark", async () => {
     const job = await newJob();
-    expect(await markInterestAndNotify(db, acme.id, marina, "pt", appUrl, now, job.id)).toEqual({
+    expect(await markInterestAndNotify(db, acme.id, marina, appUrl, now, job.id)).toEqual({
       ok: true,
     });
     expect(outbox().at(-1)?.text).toContain("Vaga: Backend Pleno");
@@ -105,10 +106,10 @@ describe("reaching a developer from a job", () => {
   });
 
   it("points an earlier mark to the job, without e-mailing again", async () => {
-    await markInterestAndNotify(db, acme.id, marina, "pt", appUrl, now);
+    await markInterestAndNotify(db, acme.id, marina, appUrl, now);
     const sent = outbox().length;
     const job = await newJob();
-    await markInterestAndNotify(db, acme.id, marina, "pt", appUrl, now, job.id);
+    await markInterestAndNotify(db, acme.id, marina, appUrl, now, job.id);
     expect(outbox()).toHaveLength(sent);
     expect((await listInterestsFor(db, marina))[0]?.job?.title).toBe("Backend Pleno");
     expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("interest");
@@ -118,7 +119,7 @@ describe("reaching a developer from a job", () => {
     const globex = await createCompany(db, "caio@globex.com", "Globex");
     const result = await createJob(db, globex.id, backend);
     if (!("job" in result)) throw new Error("job not created");
-    await markInterestAndNotify(db, acme.id, marina, "pt", appUrl, now, result.job.id);
+    await markInterestAndNotify(db, acme.id, marina, appUrl, now, result.job.id);
     expect(outbox().at(-1)?.text).not.toContain("Vaga:");
     expect((await listInterestsFor(db, marina))[0]?.job).toBeUndefined();
   });
@@ -189,11 +190,13 @@ describe("answering a proposal", () => {
       now,
       "en",
     );
+    // The company hears back in its own language.
+    await saveLanguage(db, acme.id, "en");
     if (!("request" in result)) throw new Error("proposal not sent");
     return result.request;
   }
 
-  it("accepting tells the company, in the proposal's language, and schedules the call in the job", async () => {
+  it("accepting tells the company, in its language, and schedules the call in the job", async () => {
     const job = await newJob();
     const request = await propose(job.id);
     expect(request.status).toBe("pending");

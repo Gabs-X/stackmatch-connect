@@ -9,17 +9,18 @@ import type { MeetingRequest, MeetingSide } from "@/lib/meeting-requests";
 import type { Translations } from "@/lib/translations";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
-import type { Db } from "./db";
 import { users } from "./db/schema";
-import { messageEmail, sendEmail, type Email } from "./email";
+import { messageEmail, type Email } from "./email";
+import { recipient, type Conn, type NotificationInput } from "./outbox";
 
 /**
- * E-mails developers get when a company reaches them. They go out in the language of the company's
- * screen, the one its preview showed, and replies go to the company's contact.
+ * The notifications of companies reaching developers and of the calls between them, with their
+ * e-mails. Each e-mail goes out in its recipient's language (the account's, see
+ * src/server/outbox.ts), and replies go to the side that acted.
  */
 const firstName = (name: string) => name.split(/\s+/)[0] || name;
 
-async function account(db: Db, id: string) {
+async function account(db: Conn, id: string) {
   const [row] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!row) throw new Error(`No account ${id}`);
   return row;
@@ -73,25 +74,29 @@ export function jobEmailDetails(job: JobSnapshot, language: Lang, translations: 
 
 /**
  * Tells the developer a company marked interest, with a link to their interested companies; with
- * the job it came from, when there was one.
+ * the job it came from, when there was one. `dedupeKey` names the mark.
  */
-export async function notifyInterest(
-  db: Db,
+export async function interestNotice(
+  db: Conn,
   companyId: string,
   developerId: string,
-  language: Lang,
   appUrl: string,
-  job: { snapshot: JobSnapshot; translations: Translations } | null = null,
-) {
-  const [developer, company] = await Promise.all([
-    account(db, developerId),
-    account(db, companyId),
-  ]);
+  job: { snapshot: JobSnapshot; translations: Translations } | null,
+  dedupeKey: string,
+): Promise<NotificationInput> {
+  // Reads one after the other: `db` may be a transaction.
+  const developer = await account(db, developerId);
+  const company = await account(db, companyId);
   const contact = await loadCompanySettings(db, toAuthUser(company));
+  const language = developer.language;
   const t = dictionaries[language].interestEmail;
   const companyName = company.companyName ?? "";
-  await sendEmail(
-    messageEmail({
+  return {
+    userId: developerId,
+    kind: "interest",
+    data: { actor: companyName, ...(job ? { job: job.snapshot.title } : {}), path: "/interests" },
+    dedupeKey,
+    email: messageEmail({
       to: developer.email,
       subject: t.subject(companyName),
       paragraphs: [
@@ -103,7 +108,59 @@ export async function notifyInterest(
       closing: t.closing,
       replyTo: contact.contactEmail,
     }),
-  );
+  };
+}
+
+const meetingKinds = {
+  proposed: "proposal",
+  rescheduled: "meeting_rescheduled",
+  canceled: "meeting_canceled",
+  accepted: "meeting_accepted",
+  declined: "meeting_declined",
+} as const;
+
+/**
+ * The notification of a call for the side that didn't act: a new proposal (to the developer), a
+ * time moved or canceled, or the answer to a time proposed. The company's e-mails go to its
+ * contact on the call.
+ */
+export async function meetingNotice(
+  db: Conn,
+  request: MeetingRequest,
+  event: MeetingUpdate | { kind: "proposed" },
+  /** The side that acted. */
+  actor: MeetingSide,
+  appUrl: string,
+  /** Of the job's texts, for a new proposal about one. */
+  translations: Translations = {},
+): Promise<NotificationInput> {
+  const developer = await account(db, request.developerId);
+  const toCompany = actor === "developer";
+  const language = toCompany
+    ? (await recipient(db, request.companyId)).language
+    : developer.language;
+  const email =
+    event.kind === "proposed"
+      ? meetingEmail(request, developer.email, language, translations)
+      : toCompany && (event.kind === "accepted" || event.kind === "declined")
+        ? meetingAnswerEmail(request, developer.email, language)
+        : meetingUpdateEmail(request, event, actor, developer.email, language, appUrl);
+  return {
+    userId: toCompany ? request.companyId : request.developerId,
+    kind: meetingKinds[event.kind],
+    data: {
+      actor: toCompany ? request.developerName : request.company,
+      ...(request.job ? { job: request.job.title } : {}),
+      date: request.date,
+      time: request.time,
+      path: toCompany ? "/proposals" : "/interests",
+    },
+    dedupeKey:
+      event.kind === "proposed" || event.kind === "canceled"
+        ? `meeting:${request.id}:${event.kind}`
+        : `meeting:${request.id}:${event.kind}:${request.reschedules}`,
+    email,
+  };
 }
 
 /** The meeting proposal, worded like the preview the company saw before sending. */
@@ -273,6 +330,6 @@ export function meetingUpdateEmail(
 }
 
 /** The account e-mail of a developer, where their notifications go. */
-export async function developerEmail(db: Db, developerId: string) {
+export async function developerEmail(db: Conn, developerId: string) {
   return (await account(db, developerId)).email;
 }

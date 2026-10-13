@@ -90,7 +90,8 @@ Screens (pt-BR name / en name, path):
 - Discover (/discover), Talentos salvos / Saved talent (/saved) and Propostas enviadas / Sent proposals (/proposals, "Propostas" / "Proposals" in the header): company accounts only.
 - Meu perfil / My profile (/create-profile), Vagas / Jobs (/job-board), Minhas candidaturas / My applications (/applications) and Empresas interessadas / Interested companies (/interests): developer accounts only.
 - Dados da empresa / Company details (/company-settings): company accounts, in the account menu.
-- Conta / Account (/account): any account, in the account menu (top right).
+- Conta / Account (/account): any account, in the account menu (top right). It also has the account's language and which e-mail updates to get (Notificações e idioma / Notifications and language); codes and security e-mails can't be turned off.
+- Notificações / Notifications (/notifications, the bell in the header): any confirmed account; what happened to its interests, proposals and applications, with "Marcar todas como lidas" / "Mark all as read".
 - Suporte / Support (/support): anyone, signed in or not; also in the account menu and the footer.
 - Termos de uso e privacidade / Terms of use and privacy (/terms): anyone; also in the footer and on the sign-up form.
 - A developer's public profile (/developer/<id>) is open to anyone with the link.

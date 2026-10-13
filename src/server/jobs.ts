@@ -17,7 +17,7 @@ import {
   type JobSummary,
   toSnapshot,
 } from "@/lib/jobs";
-import { type ApplicationNotice, sendApplicationNotices } from "./application-notices";
+import { type ApplicationNotice, queueApplicationNotices } from "./application-notices";
 import type { Db } from "./db";
 import { lockKeys } from "./db/locks";
 import { companyTexts, savedSettings } from "./companies";
@@ -32,6 +32,7 @@ import {
   skills,
 } from "./db/schema";
 import { skillIds, uniqueIds, type Tx } from "./profiles";
+import { deliverQueued } from "./outbox";
 import { developerExists } from "./saved-talents";
 import { loadTranslations, updateTranslations } from "./translations";
 
@@ -156,7 +157,7 @@ export async function listJobs(db: Db, companyId: string): Promise<JobSummary[]>
 }
 
 /** The job, if it belongs to the company. */
-export async function loadJob(db: Db, companyId: string, jobId: string): Promise<Job | null> {
+export async function loadJob(db: Db | Tx, companyId: string, jobId: string): Promise<Job | null> {
   const [row] = await db
     .select()
     .from(jobs)
@@ -235,6 +236,25 @@ export async function lockApplication(tx: Tx, jobId: string, developerId: string
   return row ?? null;
 }
 
+/**
+ * Makes a change that may end developers' applications, and records the notices it returns in the
+ * same transaction; their e-mails go out once it's saved. False when the change returned null (the
+ * job or developer wasn't the company's).
+ */
+async function withNotices(
+  db: Db,
+  appUrl: string,
+  now: number,
+  change: (tx: Tx) => Promise<ApplicationNotice[] | null>,
+) {
+  const queued = await db.transaction(async (tx) => {
+    const notices = await change(tx);
+    return notices && queueApplicationNotices(tx, notices, appUrl, now);
+  });
+  if (queued) await deliverQueued(db, queued);
+  return queued !== null;
+}
+
 /** The job's applications still waiting on the company. */
 const activeApplications = (tx: Tx, jobId: string) =>
   tx
@@ -269,7 +289,7 @@ export async function setJobStatus(
   appUrl: string,
   now = Date.now(),
 ) {
-  const notices = await db.transaction(async (tx) => {
+  const changed = await withNotices(db, appUrl, now, async (tx) => {
     const job = await lockOwnJob(tx, companyId, jobId);
     if (!job) return null;
     if (job.status === status) return [];
@@ -298,9 +318,7 @@ export async function setJobStatus(
         }))
       : [];
   });
-  if (notices === null) return false;
-  await sendApplicationNotices(db, notices, appUrl);
-  return true;
+  return changed;
 }
 
 /**
@@ -315,7 +333,7 @@ export async function deleteJob(
   appUrl: string,
   now = Date.now(),
 ) {
-  const notices = await db.transaction(async (tx) => {
+  await withNotices(db, appUrl, now, async (tx) => {
     const job = await lockOwnJob(tx, companyId, jobId);
     if (!job) return [];
     const active = await activeApplications(tx, jobId);
@@ -345,7 +363,6 @@ export async function deleteJob(
         }))
       : [];
   });
-  await sendApplicationNotices(db, notices, appUrl);
 }
 
 /**
@@ -544,7 +561,7 @@ export async function moveCandidate(
   appUrl: string,
   now = Date.now(),
 ) {
-  const notices = await db.transaction(async (tx) => {
+  const changed = await withNotices(db, appUrl, now, async (tx) => {
     const job = await lockJob(tx, jobId);
     if (job?.companyId !== companyId) return null;
     const [current] = await tx
@@ -595,9 +612,7 @@ export async function moveCandidate(
     ]);
     return notices;
   });
-  if (notices === null) return false;
-  await sendApplicationNotices(db, notices, appUrl);
-  return true;
+  return changed;
 }
 
 /**
@@ -613,7 +628,7 @@ export async function removeCandidate(
   appUrl: string,
   now = Date.now(),
 ) {
-  const notices = await db.transaction(async (tx): Promise<ApplicationNotice[]> => {
+  await withNotices(db, appUrl, now, async (tx): Promise<ApplicationNotice[]> => {
     const job = await lockJob(tx, jobId);
     if (job?.companyId !== companyId) return [];
     const [removed] = await tx
@@ -645,7 +660,6 @@ export async function removeCandidate(
       ? [{ applicationId: application.id, kind: "not_advanced" }]
       : [];
   });
-  await sendApplicationNotices(db, notices, appUrl);
 }
 
 /** The job as developers are told about it, with its translated texts; null if not the company's. */

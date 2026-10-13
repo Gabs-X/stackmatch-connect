@@ -1,5 +1,7 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
+  Bell,
   Bookmark,
   BriefcaseBusiness,
   CalendarDays,
@@ -18,6 +20,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, type Lang } from "@/lib/i18n";
+import { preferencesQuery, savePreferencesFn, unreadCountQuery } from "@/lib/notifications-api";
 import { useSavedDevelopers } from "@/lib/use-saved-developers";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +77,7 @@ export function AppHeader() {
           {/* On phones it moves into the menu, so the header fits narrow screens. */}
           <LanguageSelect className="hidden sm:block" />
           <ThemeToggle />
+          {user?.emailVerified && <NotificationBell accountId={user.id} />}
           <AccountMenu />
           <Button
             size="icon"
@@ -134,13 +138,42 @@ export function AppHeader() {
   );
 }
 
+/** The notification center, with how many are unread. */
+function NotificationBell({ accountId }: { accountId: string }) {
+  const { t } = useI18n();
+  const { data: unread = 0 } = useQuery(unreadCountQuery(accountId));
+  return (
+    <Button asChild size="icon" variant="ghost" className="relative">
+      <Link to="/notifications" aria-label={t.notifications.open(unread)}>
+        <Bell />
+        {unread > 0 && (
+          <span aria-hidden="true" className="count-badge absolute -right-1 -top-1">
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </Link>
+    </Button>
+  );
+}
+
+/** The screen's language; for a signed-in account, also the one its e-mails go out in. */
 function LanguageSelect({ className }: { className?: string }) {
   const { t, lang, setLang } = useI18n();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const choose = (language: Lang) => {
+    setLang(language);
+    if (!user?.emailVerified) return;
+    savePreferencesFn({ data: { accountId: user.id, language } })
+      .then((saved) => queryClient.setQueryData(preferencesQuery(user.id).queryKey, saved))
+      // The screen changed anyway; the account keeps its language until the next change.
+      .catch(() => undefined);
+  };
   return (
     <select
       aria-label={t.nav.language}
       value={lang}
-      onChange={(event) => setLang(event.target.value as Lang)}
+      onChange={(event) => choose(event.target.value as Lang)}
       className={cn(
         "h-9 rounded-md border border-input bg-background px-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
