@@ -4,19 +4,27 @@ import { z } from "zod";
 import {
   createJob,
   deleteJob,
+  listCandidateHistory,
   listCandidates,
   listJobs,
   loadJob,
   moveCandidate,
   removeCandidate,
+  setCandidateNote,
   setJobStatus,
   translateCompanyTexts,
   updateJob,
 } from "@/server/jobs";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { applyToJob, listJobBoard, listOpenJobsFor } from "@/server/job-applications";
+import {
+  applyToJob,
+  listJobBoard,
+  listMyApplications,
+  listOpenJobsFor,
+  withdrawApplication,
+} from "@/server/job-applications";
 import { database, requireAccount } from "@/server/session";
-import { applicationInputSchema, jobInputSchema, jobStages } from "./jobs";
+import { applicationInputSchema, jobInputSchema, jobStages, maxCandidateNote } from "./jobs";
 
 export const jobId = z.string().min(1).max(200);
 const developerId = z.string().min(1).max(200);
@@ -60,7 +68,8 @@ export const setJobStatusFn = createServerFn({ method: "POST" })
   .validator(z.object({ id: jobId, status: z.enum(["open", "closed"]) }))
   .handler(async ({ data }) => {
     const company = await requireAccount("company");
-    if (!(await setJobStatus(await database(), company.id, data.id, data.status)))
+    const appUrl = getRequestUrl().origin;
+    if (!(await setJobStatus(await database(), company.id, data.id, data.status, appUrl)))
       throw new Error("Unknown job.");
   });
 
@@ -70,7 +79,7 @@ export const deleteJobFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const company = await requireAccount("company");
     const db = await database();
-    await deleteJob(db, company.id, data);
+    await deleteJob(db, company.id, data, getRequestUrl().origin);
     // Drops the translations of texts only the job had.
     await translateCompanyTexts(db, company.id);
   });
@@ -88,7 +97,14 @@ export const moveCandidateFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const company = await requireAccount("company");
     if (
-      !(await moveCandidate(await database(), company.id, data.jobId, data.developerId, data.stage))
+      !(await moveCandidate(
+        await database(),
+        company.id,
+        data.jobId,
+        data.developerId,
+        data.stage,
+        getRequestUrl().origin,
+      ))
     )
       throw new Error("Unknown candidate.");
   });
@@ -101,6 +117,39 @@ export const removeCandidateFn = createServerFn({ method: "POST" })
     removeCandidate(
       await database(),
       (await requireAccount("company", data.accountId)).id,
+      data.jobId,
+      data.developerId,
+      getRequestUrl().origin,
+    ),
+  );
+
+/** Stands for `PUT /jobs/:id/candidates/:developerId/note`: the company's private note on them. */
+export const setCandidateNoteFn = createServerFn({ method: "POST" })
+  .validator(z.object({ jobId, developerId, note: z.string().trim().max(maxCandidateNote) }))
+  .handler(async ({ data }) => {
+    const company = await requireAccount("company");
+    if (
+      !(await setCandidateNote(
+        await database(),
+        company.id,
+        data.jobId,
+        data.developerId,
+        data.note,
+      ))
+    )
+      throw new Error("Unknown candidate.");
+  });
+
+/**
+ * Stands for `GET /jobs/:id/candidates/:developerId/history`; null when the company has no such
+ * job.
+ */
+export const fetchCandidateHistory = createServerFn({ method: "GET" })
+  .validator(z.object({ jobId, developerId }))
+  .handler(async ({ data }) =>
+    listCandidateHistory(
+      await database(),
+      (await requireAccount("company")).id,
       data.jobId,
       data.developerId,
     ),
@@ -153,6 +202,32 @@ export const applyToJobFn = createServerFn({ method: "POST" })
 export const fetchJobBoard = createServerFn({ method: "GET" }).handler(async () =>
   listJobBoard(await database(), (await requireAccount("developer")).id),
 );
+
+const applicationId = z.string().min(1).max(200);
+
+/** Stands for `GET /me/applications`: a page of the developer's applications, after `after`. */
+export const fetchMyApplications = createServerFn({ method: "GET" })
+  .validator(z.object({ after: applicationId.optional() }))
+  .handler(async ({ data }) =>
+    listMyApplications(await database(), (await requireAccount("developer")).id, data.after),
+  );
+
+/**
+ * Stands for `POST /me/applications/:id/withdraw`. Expected refusals come back as a code (see
+ * withdrawApplication).
+ */
+export const withdrawApplicationFn = createServerFn({ method: "POST" })
+  .validator(z.object({ id: applicationId }))
+  .handler(async ({ data }) =>
+    withdrawApplication(
+      await database(),
+      (await requireAccount("developer")).id,
+      data.id,
+      getRequestUrl().origin,
+    ),
+  );
+
+export const myApplicationsQueryKey = ["my-applications"];
 
 export const jobBoardQuery = (accountId: string) =>
   queryOptions({ queryKey: ["job-board", accountId], queryFn: () => fetchJobBoard() });

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { jobStages, type JobSummary } from "@/lib/jobs";
+import { finalStages, isFinalStage, jobStages, type JobSummary } from "@/lib/jobs";
 import { myJobsQuery } from "@/lib/jobs-api";
 import { cn } from "@/lib/utils";
 
@@ -144,16 +144,26 @@ function JobCard({ job, index }: { job: JobSummary; index: number }) {
         </ul>
       )}
       <dl className="mt-5 grid grid-cols-4 gap-2 border-t pt-4 text-center">
-        {jobStages.map((stage) => (
-          // Label first for screen readers, number on top on screen.
-          <div key={stage} className="flex flex-col-reverse">
-            <dt className="text-[0.7rem] leading-tight text-muted-foreground">
-              {t.jobs.stages[stage]}
-            </dt>
-            <dd className="font-display text-xl font-extrabold">{job.counts[stage]}</dd>
-          </div>
-        ))}
+        {jobStages
+          .filter((stage) => !isFinalStage(stage))
+          .map((stage) => (
+            // Label first for screen readers, number on top on screen.
+            <div key={stage} className="flex flex-col-reverse">
+              <dt className="text-[0.7rem] leading-tight text-muted-foreground">
+                {t.jobs.stages[stage]}
+              </dt>
+              <dd className="font-display text-xl font-extrabold">{job.counts[stage]}</dd>
+            </div>
+          ))}
       </dl>
+      {finalStages.some((stage) => job.counts[stage] > 0) && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          {finalStages
+            .filter((stage) => job.counts[stage] > 0)
+            .map((stage) => `${t.jobs.stages[stage]}: ${job.counts[stage]}`)
+            .join(" · ")}
+        </p>
+      )}
       {job.applied > 0 && (
         <p className="mt-3 text-center text-xs font-semibold text-primary">
           {t.jobs.appliedCount(job.applied)}

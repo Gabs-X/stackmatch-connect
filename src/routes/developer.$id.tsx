@@ -203,6 +203,8 @@ function JobMembership({ developerId, jobId }: { developerId: string; jobId: str
             stageChangedAt: new Date().toISOString(),
             appliedAt: null,
             applicationMessage: "",
+            withdrawnAt: null,
+            note: "",
           },
         ]);
       }}

@@ -1,9 +1,15 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
-import { dictionaries, type Lang } from "@/lib/i18n";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { dictionaries } from "@/lib/i18n";
 import {
+  applicationPageSize,
+  applicationStatusFor,
+  isActiveApplication,
+  isFinalStage,
   jobTexts,
   toSnapshot,
+  type ApplicationEvent,
   type ApplicationInput,
+  type ApplicationPage,
   type BoardJob,
   type OpenJob,
 } from "@/lib/jobs";
@@ -11,9 +17,10 @@ import type { Translations } from "@/lib/translations";
 import { toAuthUser } from "./auth";
 import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
-import { jobCandidates, jobs, meetingRequests, users } from "./db/schema";
+import { companyLanguage, sendWithdrawalNotice } from "./application-notices";
+import { jobApplications, jobCandidateEvents, jobCandidates, jobs, users } from "./db/schema";
 import { messageEmail, sendEmail } from "./email";
-import { loadJob, lockJob, toJobs } from "./jobs";
+import { loadJob, lockJob, recordEvents, toJobs } from "./jobs";
 import { companyReachedDeveloper } from "./meetings";
 import { developerEmail, jobEmailDetails } from "./notifications";
 import { developerExists } from "./saved-talents";
@@ -22,8 +29,13 @@ import { loadTranslations } from "./translations";
 /**
  * Developers offering themselves for a job. A developer sees the open jobs of a company that
  * reached them, on that company's page, and the open jobs companies put in the job board; they can
- * offer themselves for each one once.
+ * offer themselves for each one once. The application is theirs (job_applications): they follow it
+ * in My applications and can withdraw it, for good, while it waits on the company.
  */
+
+/** The developer's application for each job, joined to a query on jobs. */
+const ownApplication = (developerId: string) =>
+  and(eq(jobApplications.jobId, jobs.id), eq(jobApplications.developerId, developerId));
 
 /** The company's open jobs, newest first, for a developer it reached; null if it never did. */
 export async function listOpenJobsFor(
@@ -33,12 +45,13 @@ export async function listOpenJobsFor(
 ): Promise<{ jobs: OpenJob[]; translations: Translations } | null> {
   if (!(await companyReachedDeveloper(db, companyId, developerId))) return null;
   const rows = await db
-    .select({ job: jobs, appliedAt: jobCandidates.appliedAt })
+    .select({
+      job: jobs,
+      appliedAt: jobApplications.appliedAt,
+      withdrawnAt: jobApplications.withdrawnAt,
+    })
     .from(jobs)
-    .leftJoin(
-      jobCandidates,
-      and(eq(jobCandidates.jobId, jobs.id), eq(jobCandidates.developerId, developerId)),
-    )
+    .leftJoin(jobApplications, ownApplication(developerId))
     .where(and(eq(jobs.companyId, companyId), eq(jobs.status, "open")))
     .orderBy(desc(jobs.createdAt));
   const open: OpenJob[] = (
@@ -50,6 +63,7 @@ export async function listOpenJobsFor(
     ...toSnapshot(job),
     id,
     appliedAt: rows[index]?.appliedAt?.toISOString() ?? null,
+    withdrawnAt: rows[index]?.withdrawnAt?.toISOString() ?? null,
   }));
   return {
     jobs: open,
@@ -73,13 +87,15 @@ export async function listJobBoard(
   developerId: string,
 ): Promise<{ jobs: BoardJob[]; translations: Translations }> {
   const rows = await db
-    .select({ job: jobs, company: users.companyName, appliedAt: jobCandidates.appliedAt })
+    .select({
+      job: jobs,
+      company: users.companyName,
+      appliedAt: jobApplications.appliedAt,
+      withdrawnAt: jobApplications.withdrawnAt,
+    })
     .from(jobs)
     .innerJoin(users, eq(users.id, jobs.companyId))
-    .leftJoin(
-      jobCandidates,
-      and(eq(jobCandidates.jobId, jobs.id), eq(jobCandidates.developerId, developerId)),
-    )
+    .leftJoin(jobApplications, ownApplication(developerId))
     .where(and(eq(jobs.listed, true), eq(jobs.status, "open")))
     .orderBy(desc(jobs.createdAt), desc(jobs.id))
     .limit(jobBoardSize);
@@ -96,6 +112,7 @@ export async function listJobBoard(
       companyId: row?.job.companyId ?? "",
       company: row?.company ?? "",
       appliedAt: row?.appliedAt?.toISOString() ?? null,
+      withdrawnAt: row?.withdrawnAt?.toISOString() ?? null,
     };
   });
   return {
@@ -112,19 +129,20 @@ export type ApplicationResult =
   { appliedAt: string } | { error: "unknown-job" | "no-profile" | "already-applied" };
 
 /**
- * Offers the developer for the job: puts them in it (at "saved" when they weren't there yet, or
- * where the company already had them) with their message, and e-mails the company's contact. Only
- * for an open job in the job board or of a company that reached them, and once per job.
+ * Offers the developer for the job: records their application, with the job as it is now, puts
+ * them in the job (at "saved" when they weren't there yet, or where the company already had them)
+ * and e-mails the company's contact. Only for an open job in the job board or of a company that
+ * reached them, and once per job, also after withdrawing.
  *
- * Offers sent at once are recorded once: one statement records the offer only when there's none
- * yet, so only that call keeps its message and tells the company; the others are "already-applied".
- * The job stays as it was checked until the offer is saved: closing or deleting it waits, and an
- * offer made after that finds it closed or gone.
+ * Offers sent at once are recorded once: the application's unique index lets one in, so only that
+ * call keeps its message and tells the company; the others are "already-applied". The job stays as
+ * it was checked until the offer is saved: closing or deleting it waits, and an offer made after
+ * that finds it closed or gone.
  */
 export async function applyToJob(
   db: Db,
   developerId: string,
-  { jobId, message }: ApplicationInput,
+  { jobId, message, language = "pt" }: ApplicationInput,
   appUrl: string,
   now = Date.now(),
 ): Promise<ApplicationResult> {
@@ -139,25 +157,57 @@ export async function applyToJob(
       (!job.listed && !(await companyReachedDeveloper(tx, job.companyId, developerId)))
     )
       return { error: "unknown-job" };
-    // Already in the job: only the offer is added, at the stage the company gave them.
-    const recorded = await tx
+    const [row] = await tx.select().from(jobs).where(eq(jobs.id, jobId));
+    const [current] = row ? await toJobs(tx, [row]) : [];
+    if (!current) return { error: "unknown-job" };
+    const {
+      id: _id,
+      status: _status,
+      createdAt: _created,
+      updatedAt: _updated,
+      ...input
+    } = current;
+    // Already in the job: they stay at the stage the company gave them.
+    const [added] = await tx
       .insert(jobCandidates)
+      .values({ jobId, developerId, stage: "saved", stageChangedAt: at, createdAt: at })
+      .onConflictDoNothing()
+      .returning({ stage: jobCandidates.stage });
+    const [candidate] = added
+      ? [added]
+      : await tx
+          .select({ stage: jobCandidates.stage })
+          .from(jobCandidates)
+          .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)));
+    const [application] = await tx
+      .insert(jobApplications)
       .values({
         jobId,
+        companyId: job.companyId,
         developerId,
-        stage: "saved",
-        stageChangedAt: at,
-        createdAt: at,
+        job: toSnapshot(input),
+        message,
+        language,
+        status: applicationStatusFor(candidate?.stage ?? "saved"),
         appliedAt: at,
-        applicationMessage: message,
+        updatedAt: at,
       })
-      .onConflictDoUpdate({
-        target: [jobCandidates.jobId, jobCandidates.developerId],
-        set: { appliedAt: at, applicationMessage: message },
-        setWhere: isNull(jobCandidates.appliedAt),
-      })
-      .returning({ developerId: jobCandidates.developerId });
-    return recorded.length ? { companyId: job.companyId } : { error: "already-applied" };
+      .onConflictDoNothing({ target: [jobApplications.jobId, jobApplications.developerId] })
+      .returning({ id: jobApplications.id });
+    if (!application) return { error: "already-applied" };
+    await recordEvents(tx, [
+      {
+        jobId,
+        companyId: job.companyId,
+        developerId,
+        applicationId: application.id,
+        kind: "applied",
+        actor: "developer",
+        visibleToDeveloper: true,
+        createdAt: at,
+      },
+    ]);
+    return { companyId: job.companyId };
   });
   if ("error" in outcome) return { error: outcome.error };
   try {
@@ -167,22 +217,6 @@ export async function applyToJob(
     console.error("Job application not e-mailed:", error);
   }
   return { appliedAt: at.toISOString() };
-}
-
-/**
- * The language the company last wrote to the developer in (its latest proposal), else Portuguese:
- * the company hears back in it.
- */
-async function companyLanguage(db: Db, companyId: string, developerId: string): Promise<Lang> {
-  const [latest] = await db
-    .select({ language: meetingRequests.language })
-    .from(meetingRequests)
-    .where(
-      and(eq(meetingRequests.companyId, companyId), eq(meetingRequests.developerId, developerId)),
-    )
-    .orderBy(desc(meetingRequests.sentAt))
-    .limit(1);
-  return latest?.language ?? "pt";
 }
 
 /** Tells the company's contact the developer offered themselves; replies go to the developer. */
@@ -218,4 +252,145 @@ async function notifyApplication(
       replyTo: await developerEmail(db, developerId),
     }),
   );
+}
+
+export type WithdrawResult = { ok: true } | { error: "unknown-application" | "not-active" };
+
+/**
+ * Withdraws the developer's application, for good, while it waits on the company and the job is
+ * open; the company hears by e-mail and keeps them in the job, marked as withdrawn. Takes turns with
+ * the company's changes to the job and to them in it: whichever comes second sees the first.
+ */
+export async function withdrawApplication(
+  db: Db,
+  developerId: string,
+  applicationId: string,
+  appUrl: string,
+  now = Date.now(),
+): Promise<WithdrawResult> {
+  const own = and(
+    eq(jobApplications.id, applicationId),
+    eq(jobApplications.developerId, developerId),
+  );
+  const [found] = await db
+    .select({ jobId: jobApplications.jobId })
+    .from(jobApplications)
+    .where(own);
+  if (!found) return { error: "unknown-application" };
+  const at = new Date(now);
+  const result = await db.transaction(async (tx): Promise<WithdrawResult> => {
+    // The job first, as the company's changes take it.
+    const job = found.jobId ? await lockJob(tx, found.jobId) : null;
+    const [application] = await tx.select().from(jobApplications).where(own).for("update");
+    if (!application) return { error: "unknown-application" };
+    if (!isActiveApplication(application.status) || job?.status !== "open")
+      return { error: "not-active" };
+    await tx
+      .update(jobApplications)
+      .set({ status: "withdrawn", withdrawnAt: at, updatedAt: at })
+      .where(eq(jobApplications.id, applicationId));
+    await recordEvents(tx, [
+      {
+        jobId: application.jobId,
+        companyId: application.companyId,
+        developerId,
+        applicationId,
+        kind: "withdrawn",
+        actor: "developer",
+        visibleToDeveloper: true,
+        createdAt: at,
+      },
+    ]);
+    return { ok: true };
+  });
+  if ("ok" in result) await sendWithdrawalNotice(db, applicationId, appUrl);
+  return result;
+}
+
+/** What the developer sees of an event of their application; null for those they don't. */
+function toApplicationEvent(row: typeof jobCandidateEvents.$inferSelect): ApplicationEvent | null {
+  const at = row.createdAt.toISOString();
+  switch (row.kind) {
+    case "applied":
+    case "withdrawn":
+    case "job_closed":
+    case "job_reopened":
+    case "job_deleted":
+      return { kind: row.kind, at };
+    case "removed":
+      return { kind: "outcome", outcome: "not_advanced", at };
+    case "stage_changed":
+      return row.toStage && isFinalStage(row.toStage)
+        ? { kind: "outcome", outcome: row.toStage, at }
+        : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The developer's applications, newest first, a page at a time: after the one `after` names, when
+ * given. Each comes with the job as they applied, the company's name, the status they see and the
+ * history they see; never the company's stage or notes.
+ */
+export async function listMyApplications(
+  db: Db,
+  developerId: string,
+  after?: string,
+): Promise<ApplicationPage> {
+  const rows = await db
+    .select({ application: jobApplications, company: users.companyName, jobStatus: jobs.status })
+    .from(jobApplications)
+    .innerJoin(users, eq(users.id, jobApplications.companyId))
+    .leftJoin(jobs, eq(jobs.id, jobApplications.jobId))
+    .where(
+      and(
+        eq(jobApplications.developerId, developerId),
+        after
+          ? sql`(${jobApplications.appliedAt}, ${jobApplications.id}) < (select applied_at, id from job_applications where id = ${after} and developer_id = ${developerId})`
+          : undefined,
+      ),
+    )
+    .orderBy(desc(jobApplications.appliedAt), desc(jobApplications.id))
+    .limit(applicationPageSize + 1);
+  const page = rows.slice(0, applicationPageSize);
+  const ids = page.map((row) => row.application.id);
+  const events = ids.length
+    ? await db
+        .select()
+        .from(jobCandidateEvents)
+        .where(
+          and(
+            inArray(jobCandidateEvents.applicationId, ids),
+            eq(jobCandidateEvents.visibleToDeveloper, true),
+          ),
+        )
+        .orderBy(desc(jobCandidateEvents.createdAt), desc(jobCandidateEvents.id))
+    : [];
+  const applications = page.map(({ application, company, jobStatus }) => ({
+    id: application.id,
+    job: application.job,
+    companyId: application.companyId,
+    company: company ?? "",
+    message: application.message,
+    appliedAt: application.appliedAt.toISOString(),
+    withdrawnAt: application.withdrawnAt?.toISOString() ?? null,
+    // Waiting on a job that closed or went away.
+    status:
+      isActiveApplication(application.status) && jobStatus !== "open"
+        ? ("job_closed" as const)
+        : application.status,
+    history: events
+      .filter((event) => event.applicationId === application.id)
+      .flatMap((event) => toApplicationEvent(event) ?? []),
+  }));
+  return {
+    applications,
+    next: rows.length > applicationPageSize ? (page.at(-1)?.application.id ?? null) : null,
+    translations: await loadTranslations(
+      db,
+      [...new Set(applications.map((application) => application.companyId))],
+      applications.flatMap((application) => jobTexts(application.job)),
+    ),
+  };
 }

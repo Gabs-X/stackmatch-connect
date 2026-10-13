@@ -46,7 +46,7 @@ describe("job applications", () => {
   it("shows the open jobs only to developers the company reached", async () => {
     const open = await newJob();
     const closed = await newJob({ ...frontend, title: "Back-end" });
-    await setJobStatus(db, acme.id, closed.id, "closed");
+    await setJobStatus(db, acme.id, closed.id, "closed", appUrl);
     expect(await listOpenJobsFor(db, acme.id, marina)).toBeNull();
 
     await markInterest(db, acme.id, marina);
@@ -133,7 +133,7 @@ describe("job applications", () => {
     const job = await newJob();
     const [result] = await Promise.all([
       applyToJob(db, marina, { jobId: job.id, message: "Oi!" }, appUrl),
-      setJobStatus(db, acme.id, job.id, "closed"),
+      setJobStatus(db, acme.id, job.id, "closed", appUrl),
     ]);
     const candidates = await listCandidates(db, acme.id, job.id);
     if ("appliedAt" in result) expect(candidates).toHaveLength(1);
@@ -152,7 +152,7 @@ describe("job applications", () => {
     const job = await newJob();
     const [result] = await Promise.all([
       applyToJob(db, marina, { jobId: job.id, message: "Oi!" }, appUrl),
-      deleteJob(db, acme.id, job.id),
+      deleteJob(db, acme.id, job.id, appUrl),
     ]);
     // Recorded before the deletion (and then deleted with the job), or refused after it.
     if (!("appliedAt" in result)) expect(result).toEqual({ error: "unknown-job" });
@@ -162,7 +162,7 @@ describe("job applications", () => {
   it("refuses closed jobs", async () => {
     const job = await newJob();
     await markInterest(db, acme.id, marina);
-    await setJobStatus(db, acme.id, job.id, "closed");
+    await setJobStatus(db, acme.id, job.id, "closed", appUrl);
     expect(await applyToJob(db, marina, { jobId: job.id, message: "" }, appUrl)).toEqual({
       error: "unknown-job",
     });
@@ -173,7 +173,7 @@ describe("job applications", () => {
     const hidden = await newJob();
     const listed = await newJob({ ...frontend, title: "Mobile", listed: true });
     const closed = await newJob({ ...frontend, title: "Antiga", listed: true });
-    await setJobStatus(db, acme.id, closed.id, "closed");
+    await setJobStatus(db, acme.id, closed.id, "closed", appUrl);
     const other = await createJob(db, globex.id, { ...frontend, title: "Dados", listed: true });
     if (!("job" in other)) throw new Error("job not created");
 

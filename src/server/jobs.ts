@@ -1,6 +1,10 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql, type SQL } from "drizzle-orm";
 import type { CompanySettings } from "@/lib/company-settings";
 import {
+  applicationStatusFor,
+  type CandidateEvent,
+  isActiveApplication,
+  isFinalStage,
   jobStages,
   maxJobsPerCompany,
   type Job,
@@ -13,10 +17,20 @@ import {
   type JobSummary,
   toSnapshot,
 } from "@/lib/jobs";
+import { type ApplicationNotice, sendApplicationNotices } from "./application-notices";
 import type { Db } from "./db";
 import { lockKeys } from "./db/locks";
 import { companyTexts, savedSettings } from "./companies";
-import { interests, jobCandidates, jobSkills, jobs, meetingRequests, skills } from "./db/schema";
+import {
+  interests,
+  jobApplications,
+  jobCandidateEvents,
+  jobCandidates,
+  jobSkills,
+  jobs,
+  meetingRequests,
+  skills,
+} from "./db/schema";
 import { skillIds, uniqueIds, type Tx } from "./profiles";
 import { developerExists } from "./saved-talents";
 import { loadTranslations, updateTranslations } from "./translations";
@@ -104,7 +118,6 @@ export async function listJobs(db: Db, companyId: string): Promise<JobSummary[]>
           jobId: jobCandidates.jobId,
           stage: jobCandidates.stage,
           total: count(),
-          applied: count(jobCandidates.appliedAt),
         })
         .from(jobCandidates)
         .where(
@@ -115,17 +128,29 @@ export async function listJobs(db: Db, companyId: string): Promise<JobSummary[]>
         )
         .groupBy(jobCandidates.jobId, jobCandidates.stage)
     : [];
+  // Withdrawn ones don't count.
+  const applications = rows.length
+    ? await db
+        .select({ jobId: jobApplications.jobId, total: count() })
+        .from(jobApplications)
+        .where(
+          and(
+            inArray(
+              jobApplications.jobId,
+              rows.map((row) => row.id),
+            ),
+            ne(jobApplications.status, "withdrawn"),
+          ),
+        )
+        .groupBy(jobApplications.jobId)
+    : [];
   return (await toJobs(db, rows)).map((job) => {
     const counts = Object.fromEntries(jobStages.map((stage) => [stage, 0])) as Record<
       JobStage,
       number
     >;
-    let applied = 0;
-    for (const row of counted)
-      if (row.jobId === job.id) {
-        counts[row.stage] = row.total;
-        applied += row.applied;
-      }
+    for (const row of counted) if (row.jobId === job.id) counts[row.stage] = row.total;
+    const applied = applications.find((row) => row.jobId === job.id)?.total ?? 0;
     return { ...job, counts, applied };
   });
 }
@@ -195,22 +220,138 @@ export async function updateJob(db: Db, companyId: string, jobId: string, input:
   return loadJob(db, companyId, jobId);
 }
 
-/** Closes or reopens the job; false when the company has no such job. */
-export async function setJobStatus(db: Db, companyId: string, jobId: string, status: JobStatus) {
-  const updated = await db
-    .update(jobs)
-    .set({ status, updatedAt: new Date() })
+/** Records what happened to developers in a company's job (see jobCandidateEvents). */
+export async function recordEvents(tx: Tx, events: (typeof jobCandidateEvents.$inferInsert)[]) {
+  if (events.length) await tx.insert(jobCandidateEvents).values(events);
+}
+
+/** The developer's application for the job, held until the transaction ends; null if none. */
+export async function lockApplication(tx: Tx, jobId: string, developerId: string) {
+  const [row] = await tx
+    .select()
+    .from(jobApplications)
+    .where(and(eq(jobApplications.jobId, jobId), eq(jobApplications.developerId, developerId)))
+    .for("update");
+  return row ?? null;
+}
+
+/** The job's applications still waiting on the company. */
+const activeApplications = (tx: Tx, jobId: string) =>
+  tx
+    .select({ id: jobApplications.id, developerId: jobApplications.developerId })
+    .from(jobApplications)
+    .where(
+      and(
+        eq(jobApplications.jobId, jobId),
+        inArray(jobApplications.status, ["submitted", "in_progress"]),
+      ),
+    );
+
+/** The company's job, held against changes until the transaction ends; null if it has none such. */
+async function lockOwnJob(tx: Tx, companyId: string, jobId: string) {
+  const [job] = await tx
+    .select({ status: jobs.status })
+    .from(jobs)
     .where(and(eq(jobs.id, jobId), eq(jobs.companyId, companyId)))
-    .returning({ id: jobs.id });
-  return updated.length > 0;
+    .for("update");
+  return job ?? null;
 }
 
-/** Deletes the job and its stages; the saves, marks and proposals themselves stay. */
-export async function deleteJob(db: Db, companyId: string, jobId: string) {
-  await db.delete(jobs).where(and(eq(jobs.id, jobId), eq(jobs.companyId, companyId)));
+/**
+ * Closes or reopens the job; false when the company has no such job. Developers whose application
+ * is still waiting see the job closed (or open again) and, on closing, hear it by e-mail.
+ */
+export async function setJobStatus(
+  db: Db,
+  companyId: string,
+  jobId: string,
+  status: JobStatus,
+  appUrl: string,
+  now = Date.now(),
+) {
+  const notices = await db.transaction(async (tx) => {
+    const job = await lockOwnJob(tx, companyId, jobId);
+    if (!job) return null;
+    if (job.status === status) return [];
+    await tx
+      .update(jobs)
+      .set({ status, updatedAt: new Date(now) })
+      .where(eq(jobs.id, jobId));
+    const active = await activeApplications(tx, jobId);
+    await recordEvents(
+      tx,
+      active.map((application) => ({
+        jobId,
+        companyId,
+        developerId: application.developerId,
+        applicationId: application.id,
+        kind: status === "closed" ? ("job_closed" as const) : ("job_reopened" as const),
+        actor: "company" as const,
+        visibleToDeveloper: true,
+        createdAt: new Date(now),
+      })),
+    );
+    return status === "closed"
+      ? active.map((application): ApplicationNotice => ({
+          applicationId: application.id,
+          kind: "job_closed",
+        }))
+      : [];
+  });
+  if (notices === null) return false;
+  await sendApplicationNotices(db, notices, appUrl);
+  return true;
 }
 
-/** The developers in the job, in the order they were added; null when it isn't the company's. */
+/**
+ * Deletes the job, its stages, notes and internal history; the saves, marks and proposals
+ * themselves stay, and so do the applications, with the job as they were sent and what their
+ * developers saw happen. Those still waiting hear the job is gone, unless it was already closed.
+ */
+export async function deleteJob(
+  db: Db,
+  companyId: string,
+  jobId: string,
+  appUrl: string,
+  now = Date.now(),
+) {
+  const notices = await db.transaction(async (tx) => {
+    const job = await lockOwnJob(tx, companyId, jobId);
+    if (!job) return [];
+    const active = await activeApplications(tx, jobId);
+    await tx
+      .delete(jobCandidateEvents)
+      .where(
+        and(eq(jobCandidateEvents.jobId, jobId), eq(jobCandidateEvents.visibleToDeveloper, false)),
+      );
+    await recordEvents(
+      tx,
+      active.map((application) => ({
+        jobId,
+        companyId,
+        developerId: application.developerId,
+        applicationId: application.id,
+        kind: "job_deleted" as const,
+        actor: "company" as const,
+        visibleToDeveloper: true,
+        createdAt: new Date(now),
+      })),
+    );
+    await tx.delete(jobs).where(eq(jobs.id, jobId));
+    return job.status === "open"
+      ? active.map((application): ApplicationNotice => ({
+          applicationId: application.id,
+          kind: "job_deleted",
+        }))
+      : [];
+  });
+  await sendApplicationNotices(db, notices, appUrl);
+}
+
+/**
+ * The developers in the job, in the order they were added, with their application and the
+ * company's note; null when it isn't the company's.
+ */
 export async function listCandidates(
   db: Db,
   companyId: string,
@@ -218,16 +359,82 @@ export async function listCandidates(
 ): Promise<JobCandidate[] | null> {
   if (!(await ownsJob(db, companyId, jobId))) return null;
   const rows = await db
-    .select()
+    .select({
+      candidate: jobCandidates,
+      appliedAt: jobApplications.appliedAt,
+      message: jobApplications.message,
+      withdrawnAt: jobApplications.withdrawnAt,
+    })
     .from(jobCandidates)
+    .leftJoin(
+      jobApplications,
+      and(
+        eq(jobApplications.jobId, jobCandidates.jobId),
+        eq(jobApplications.developerId, jobCandidates.developerId),
+      ),
+    )
     .where(eq(jobCandidates.jobId, jobId))
     .orderBy(asc(jobCandidates.createdAt), asc(jobCandidates.developerId));
+  return rows.map(({ candidate, appliedAt, message, withdrawnAt }) => ({
+    developerId: candidate.developerId,
+    stage: candidate.stage,
+    stageChangedAt: candidate.stageChangedAt.toISOString(),
+    appliedAt: appliedAt?.toISOString() ?? null,
+    applicationMessage: message ?? "",
+    withdrawnAt: withdrawnAt?.toISOString() ?? null,
+    note: candidate.note,
+  }));
+}
+
+/** Keeps the company's private note on a developer in the job; false when there's no such one. */
+export async function setCandidateNote(
+  db: Db,
+  companyId: string,
+  jobId: string,
+  developerId: string,
+  note: string,
+) {
+  if (!(await ownsJob(db, companyId, jobId))) return false;
+  const updated = await db
+    .update(jobCandidates)
+    .set({ note })
+    .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
+    .returning({ developerId: jobCandidates.developerId });
+  return updated.length > 0;
+}
+
+/** The most events a developer's history in a job shows: the latest ones. */
+export const candidateHistorySize = 100;
+
+/**
+ * What happened to the developer in the company's job, newest first, also after they left it;
+ * null when the job isn't the company's.
+ */
+export async function listCandidateHistory(
+  db: Db,
+  companyId: string,
+  jobId: string,
+  developerId: string,
+): Promise<CandidateEvent[] | null> {
+  if (!(await ownsJob(db, companyId, jobId))) return null;
+  const rows = await db
+    .select()
+    .from(jobCandidateEvents)
+    .where(
+      and(
+        eq(jobCandidateEvents.jobId, jobId),
+        eq(jobCandidateEvents.companyId, companyId),
+        eq(jobCandidateEvents.developerId, developerId),
+      ),
+    )
+    .orderBy(desc(jobCandidateEvents.createdAt), desc(jobCandidateEvents.id))
+    .limit(candidateHistorySize);
   return rows.map((row) => ({
-    developerId: row.developerId,
-    stage: row.stage,
-    stageChangedAt: row.stageChangedAt.toISOString(),
-    appliedAt: row.appliedAt?.toISOString() ?? null,
-    applicationMessage: row.applicationMessage,
+    kind: row.kind,
+    fromStage: row.fromStage,
+    toStage: row.toStage,
+    actor: row.actor,
+    at: row.createdAt.toISOString(),
   }));
 }
 
@@ -259,7 +466,8 @@ const rankOf = (stage: SQL) =>
  *
  * One statement adds or moves the developer, comparing with the stage they have at that moment, so
  * advances made at once end at the highest of them, and two that both add the developer don't lose
- * one. Moving by hand (moveCandidate) is the only way back.
+ * one. Moving by hand (moveCandidate) is the only way back, and out of a final stage. An
+ * application still waiting follows the stage ("in progress" once contacted).
  */
 export async function advanceCandidate(
   db: Db,
@@ -273,7 +481,12 @@ export async function advanceCandidate(
   return db.transaction(async (tx) => {
     const job = await lockJob(tx, jobId);
     if (job?.companyId !== companyId) return false;
-    await tx
+    const [before] = await tx
+      .select({ stage: jobCandidates.stage })
+      .from(jobCandidates)
+      .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
+      .for("update");
+    const [after] = await tx
       .insert(jobCandidates)
       .values({
         jobId,
@@ -286,39 +499,153 @@ export async function advanceCandidate(
         target: [jobCandidates.jobId, jobCandidates.developerId],
         set: { stage, stageChangedAt: new Date(now) },
         setWhere: sql`${rankOf(sql`${jobCandidates.stage}`)} < ${rankOf(sql`excluded.stage`)}`,
-      });
+      })
+      .returning({ stage: jobCandidates.stage });
+    // Already at that stage or past it.
+    if (!after) return true;
+    const application = await lockApplication(tx, jobId, developerId);
+    if (application && isActiveApplication(application.status)) {
+      const status = applicationStatusFor(after.stage);
+      if (status !== application.status)
+        await tx
+          .update(jobApplications)
+          .set({ status, updatedAt: new Date(now) })
+          .where(eq(jobApplications.id, application.id));
+    }
+    await recordEvents(tx, [
+      {
+        jobId,
+        companyId,
+        developerId,
+        applicationId: application?.id ?? null,
+        kind: before ? "stage_changed" : "added",
+        fromStage: before?.stage ?? null,
+        toStage: after.stage,
+        actor: "system",
+        createdAt: new Date(now),
+      },
+    ]);
     return true;
   });
 }
 
-/** Puts a developer already in the job at any stage, by hand; false when there's no such one. */
+/**
+ * Puts a developer already in the job at any stage, by hand; false when there's no such one. Their
+ * application, unless withdrawn, follows: a final stage is its outcome, which the developer sees,
+ * and hears by e-mail when it ends without them while the job is open. Changes made at once take
+ * turns, and a withdrawal waits for them or they for it.
+ */
 export async function moveCandidate(
   db: Db,
   companyId: string,
   jobId: string,
   developerId: string,
   stage: JobStage,
+  appUrl: string,
+  now = Date.now(),
 ) {
-  if (!(await ownsJob(db, companyId, jobId))) return false;
-  const moved = await db
-    .update(jobCandidates)
-    .set({ stage, stageChangedAt: new Date() })
-    .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
-    .returning({ developerId: jobCandidates.developerId });
-  return moved.length > 0;
+  const notices = await db.transaction(async (tx) => {
+    const job = await lockJob(tx, jobId);
+    if (job?.companyId !== companyId) return null;
+    const [current] = await tx
+      .select({ stage: jobCandidates.stage })
+      .from(jobCandidates)
+      .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
+      .for("update");
+    if (!current) return null;
+    if (current.stage === stage) return [];
+    await tx
+      .update(jobCandidates)
+      .set({ stage, stageChangedAt: new Date(now) })
+      .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)));
+    const application = await lockApplication(tx, jobId, developerId);
+    const notices: ApplicationNotice[] = [];
+    let visible = false;
+    if (application && application.status !== "withdrawn") {
+      const status = applicationStatusFor(stage);
+      if (status !== application.status) {
+        await tx
+          .update(jobApplications)
+          .set({ status, updatedAt: new Date(now) })
+          .where(eq(jobApplications.id, application.id));
+        // An outcome shows in the developer's history; going back into the process only changes
+        // the status.
+        visible = isFinalStage(stage);
+        if (
+          (status === "not_advanced" || status === "closed") &&
+          isActiveApplication(application.status) &&
+          job.status === "open"
+        )
+          notices.push({ applicationId: application.id, kind: status });
+      }
+    }
+    await recordEvents(tx, [
+      {
+        jobId,
+        companyId,
+        developerId,
+        applicationId: application?.id ?? null,
+        kind: "stage_changed",
+        fromStage: current.stage,
+        toStage: stage,
+        actor: "company",
+        visibleToDeveloper: visible,
+        createdAt: new Date(now),
+      },
+    ]);
+    return notices;
+  });
+  if (notices === null) return false;
+  await sendApplicationNotices(db, notices, appUrl);
+  return true;
 }
 
-/** Takes the developer out of the job; their save, mark or proposal stays. */
+/**
+ * Takes the developer out of the job; their save, mark or proposal stays, and so do their
+ * application and history. An application still waiting ends as "not advanced", which the
+ * developer hears by e-mail while the job is open.
+ */
 export async function removeCandidate(
   db: Db,
   companyId: string,
   jobId: string,
   developerId: string,
+  appUrl: string,
+  now = Date.now(),
 ) {
-  if (!(await ownsJob(db, companyId, jobId))) return;
-  await db
-    .delete(jobCandidates)
-    .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)));
+  const notices = await db.transaction(async (tx): Promise<ApplicationNotice[]> => {
+    const job = await lockJob(tx, jobId);
+    if (job?.companyId !== companyId) return [];
+    const [removed] = await tx
+      .delete(jobCandidates)
+      .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
+      .returning({ stage: jobCandidates.stage });
+    if (!removed) return [];
+    const application = await lockApplication(tx, jobId, developerId);
+    const ends = application !== null && isActiveApplication(application.status);
+    if (application && ends)
+      await tx
+        .update(jobApplications)
+        .set({ status: "not_advanced", updatedAt: new Date(now) })
+        .where(eq(jobApplications.id, application.id));
+    await recordEvents(tx, [
+      {
+        jobId,
+        companyId,
+        developerId,
+        applicationId: application?.id ?? null,
+        kind: "removed",
+        fromStage: removed.stage,
+        actor: "company",
+        visibleToDeveloper: ends,
+        createdAt: new Date(now),
+      },
+    ]);
+    return application && ends && job.status === "open"
+      ? [{ applicationId: application.id, kind: "not_advanced" }]
+      : [];
+  });
+  await sendApplicationNotices(db, notices, appUrl);
 }
 
 /** The job as developers are told about it, with its translated texts; null if not the company's. */
@@ -335,7 +662,7 @@ export async function jobSnapshot(db: Db, companyId: string, jobId: string) {
 
 /**
  * Every text of the company that gets translated: its details, its jobs, and the jobs as they were
- * sent to developers with a mark or proposal. Translations are kept per account and the ones of
+ * sent to developers with a mark or proposal, or as developers applied to them. Translations are kept per account and the ones of
  * texts not passed are dropped, so all of them go together.
  */
 export async function companyAccountTexts(
@@ -357,6 +684,10 @@ export async function companyAccountTexts(
       .select({ job: meetingRequests.job })
       .from(meetingRequests)
       .where(and(eq(meetingRequests.companyId, companyId), isNotNull(meetingRequests.job)))),
+    ...(await db
+      .select({ job: jobApplications.job })
+      .from(jobApplications)
+      .where(eq(jobApplications.companyId, companyId))),
   ].flatMap((row) => (row.job ? [row.job] : []));
   return [
     ...(details ? companyTexts(details) : []),

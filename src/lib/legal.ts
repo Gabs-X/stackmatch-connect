@@ -129,7 +129,7 @@ const pt: LegalText = {
       id: "privacy-retention",
       title: "4. Por quanto tempo guardamos",
       items: [
-        "Os dados da conta ficam enquanto ela existir. Excluir a conta apaga perfil, projetos, imagens, dados da empresa, talentos salvos, interesses, propostas e a conversa com a Ada.",
+        "Os dados da conta ficam enquanto ela existir. Excluir a conta apaga perfil, projetos, imagens, dados da empresa, talentos salvos, interesses, propostas, candidaturas e a conversa com a Ada.",
         "Registros de segurança valem por pouco tempo: falhas de login, 15 minutos; envios de e-mail com código e perguntas à Ada, 1 hora; pedidos de tradução automática, 24 horas; o registro das marcações de interesse usado nos limites, 30 dias; sessões, até 30 dias ou até você sair. Passado esse prazo, o registro deixa de contar e é apagado na limpeza automática, que roda uma vez por dia; por isso ele pode ficar guardado até um dia a mais.",
         "Tickets ficam guardados como histórico do atendimento. Depois que a conta é excluída, eles deixam de estar ligados a ela; para apagá-los também, peça pelo Suporte.",
       ],
@@ -259,7 +259,7 @@ const en: LegalText = {
       id: "privacy-retention",
       title: "4. How long we keep it",
       items: [
-        "Account data stays while the account exists. Deleting the account erases the profile, projects, images, company details, saved talent, interests, proposals and the conversation with Ada.",
+        "Account data stays while the account exists. Deleting the account erases the profile, projects, images, company details, saved talent, interests, proposals, applications and the conversation with Ada.",
         "Security records are valid for a short time: sign-in failures, 15 minutes; code e-mails and questions to Ada, 1 hour; automatic translation requests, 24 hours; the record of interest marks used by the limits, 30 days; sessions, up to 30 days or until you sign out. After that, a record no longer counts and is erased by the automatic cleanup, which runs once a day, so it may be kept for up to one more day.",
         "Tickets are kept as the support history. Once the account is deleted, they're no longer linked to it; to erase them too, ask through Support.",
       ],

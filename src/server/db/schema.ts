@@ -15,7 +15,15 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { CompensationPeriod, JobSnapshot, JobStage, JobStatus } from "@/lib/jobs";
+import type {
+  ApplicationStatus,
+  CandidateEvent,
+  CandidateEventKind,
+  CompensationPeriod,
+  JobSnapshot,
+  JobStage,
+  JobStatus,
+} from "@/lib/jobs";
 import type { Lang } from "@/lib/i18n";
 import type { MeetingSide, MeetingStatus } from "@/lib/meeting-requests";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
@@ -499,14 +507,96 @@ export const jobCandidates = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     stage: text("stage").$type<JobStage>().notNull(),
     stageChangedAt: timestamp("stage_changed_at", { withTimezone: true }).notNull().defaultNow(),
-    /** When the developer offered themselves for the job, from the company's page; null if they didn't. */
+    /**
+     * No longer used: applications live in job_applications since migration 0032, which copied
+     * these. Kept for code still running during that deploy; to drop in a later migration.
+     */
     appliedAt: timestamp("applied_at", { withTimezone: true }),
-    /** What the developer wrote to the company when offering themselves, or "". */
     applicationMessage: text("application_message").notNull().default(""),
+    /** The company's private note on the developer, for this job; never shown to the developer. */
+    note: text("note").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     primaryKey({ columns: [table.jobId, table.developerId] }),
     index("job_candidates_developer_id_idx").on(table.developerId),
+  ],
+);
+
+/**
+ * Developers' applications for jobs: the developer's own record, kept with a copy of the job as it
+ * was, so it stays when the company takes them out of the job or deletes it. One per job and
+ * developer; withdrawing is final.
+ */
+export const jobApplications = pgTable(
+  "job_applications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    /** Null once the job is deleted. */
+    jobId: text("job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    job: jsonb("job").$type<JobSnapshot>().notNull(),
+    message: text("message").notNull().default(""),
+    status: text("status").$type<ApplicationStatus>().notNull().default("submitted"),
+    /** The developer's screen language when applying: what they're e-mailed about it in. */
+    language: text("language").$type<Lang>().notNull().default("pt"),
+    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("job_applications_job_developer_idx").on(table.jobId, table.developerId),
+    index("job_applications_developer_applied_idx").on(
+      table.developerId,
+      table.appliedAt,
+      table.id,
+    ),
+    index("job_applications_company_id_idx").on(table.companyId),
+  ],
+);
+
+/**
+ * What happened to each developer in a company's jobs. The company sees a job's events; the
+ * developer only the ones marked visible, through their application.
+ */
+export const jobCandidateEvents = pgTable(
+  "job_candidate_events",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    /** Null once the job is deleted; only events the developer sees are kept then. */
+    jobId: text("job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The application it concerns, if the developer applied. */
+    applicationId: text("application_id").references((): AnyPgColumn => jobApplications.id, {
+      onDelete: "cascade",
+    }),
+    kind: text("kind").$type<CandidateEventKind>().notNull(),
+    fromStage: text("from_stage").$type<JobStage>(),
+    toStage: text("to_stage").$type<JobStage>(),
+    actor: text("actor").$type<CandidateEvent["actor"]>().notNull(),
+    visibleToDeveloper: boolean("visible_to_developer").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("job_candidate_events_job_developer_idx").on(
+      table.jobId,
+      table.developerId,
+      table.createdAt,
+    ),
+    index("job_candidate_events_application_idx").on(table.applicationId),
   ],
 );

@@ -20,6 +20,8 @@ import { sendMeetingRequest } from "./meetings";
 import { saveTalent } from "./saved-talents";
 import { createCompany, createDeveloper, createTestDb } from "./test-db";
 
+const appUrl = "https://stackmatch.example";
+
 let db: Db;
 let acme: AuthUser;
 let marina: string;
@@ -71,10 +73,10 @@ describe("jobs", () => {
     const other = await createCompany(db, "caio@globex.com", "Globex");
     expect(await loadJob(db, other.id, job.id)).toBeNull();
     expect(await updateJob(db, other.id, job.id, { ...frontend, title: "Outra" })).toBeNull();
-    expect(await setJobStatus(db, other.id, job.id, "closed")).toBe(false);
+    expect(await setJobStatus(db, other.id, job.id, "closed", appUrl)).toBe(false);
     expect(await listCandidates(db, other.id, job.id)).toBeNull();
     expect(await advanceCandidate(db, other.id, job.id, marina, "saved")).toBe(false);
-    await deleteJob(db, other.id, job.id);
+    await deleteJob(db, other.id, job.id, appUrl);
     expect(await loadJob(db, acme.id, job.id)).not.toBeNull();
     expect(await listJobs(db, other.id)).toEqual([]);
   });
@@ -88,20 +90,28 @@ describe("jobs", () => {
       desiredSkills: [],
     });
     expect(updated).toMatchObject({ title: "Front-end Sênior", requiredSkills: ["Vue"] });
-    expect(await setJobStatus(db, acme.id, job.id, "closed")).toBe(true);
+    expect(await setJobStatus(db, acme.id, job.id, "closed", appUrl)).toBe(true);
     expect((await loadJob(db, acme.id, job.id))?.status).toBe("closed");
   });
 
   it("lists open jobs first, with how many developers are at each stage", async () => {
     const closed = await newJob({ ...frontend, title: "Antiga" });
-    await setJobStatus(db, acme.id, closed.id, "closed");
+    await setJobStatus(db, acme.id, closed.id, "closed", appUrl);
     const open = await newJob({ ...frontend, title: "Nova" });
     const rafael = await createDeveloper(db, "rafael@example.com", "Rafael Lima");
     await advanceCandidate(db, acme.id, open.id, marina, "interest");
     await advanceCandidate(db, acme.id, open.id, rafael, "saved");
     const jobs = await listJobs(db, acme.id);
     expect(jobs.map((job) => job.title)).toEqual(["Nova", "Antiga"]);
-    expect(jobs[0]?.counts).toEqual({ saved: 1, interest: 1, contacted: 0, meeting: 0 });
+    expect(jobs[0]?.counts).toEqual({
+      saved: 1,
+      interest: 1,
+      contacted: 0,
+      meeting: 0,
+      hired: 0,
+      not_advanced: 0,
+      closed: 0,
+    });
   });
 
   it("refuses a new job past the limit", async () => {
@@ -113,7 +123,7 @@ describe("jobs", () => {
     const job = await newJob();
     await saveTalent(db, acme.id, marina);
     await advanceCandidate(db, acme.id, job.id, marina, "saved");
-    await deleteJob(db, acme.id, job.id);
+    await deleteJob(db, acme.id, job.id, appUrl);
     expect(await listJobs(db, acme.id)).toEqual([]);
     expect(await db.select().from(savedTalents)).toHaveLength(1);
   });
@@ -129,11 +139,11 @@ describe("candidates", () => {
     expect(await stage()).toBe("interest");
     await advanceCandidate(db, acme.id, job.id, marina, "contacted");
     expect(await stage()).toBe("contacted");
-    expect(await moveCandidate(db, acme.id, job.id, marina, "saved")).toBe(true);
+    expect(await moveCandidate(db, acme.id, job.id, marina, "saved", appUrl)).toBe(true);
     expect(await stage()).toBe("saved");
-    await removeCandidate(db, acme.id, job.id, marina);
+    await removeCandidate(db, acme.id, job.id, marina, appUrl);
     expect(await listCandidates(db, acme.id, job.id)).toEqual([]);
-    expect(await moveCandidate(db, acme.id, job.id, marina, "meeting")).toBe(false);
+    expect(await moveCandidate(db, acme.id, job.id, marina, "meeting", appUrl)).toBe(false);
   });
 
   it("are only profiles that exist", async () => {
@@ -183,7 +193,7 @@ describe("changes made at once", () => {
   it("let the company move a developer back by hand, and later advances go on from there", async () => {
     const job = await newJob();
     await advanceCandidate(db, acme.id, job.id, marina, "contacted");
-    await moveCandidate(db, acme.id, job.id, marina, "saved");
+    await moveCandidate(db, acme.id, job.id, marina, "saved", appUrl);
     await advanceCandidate(db, acme.id, job.id, marina, "interest");
     expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("interest");
   });
@@ -192,7 +202,7 @@ describe("changes made at once", () => {
     const job = await newJob();
     const [added] = await Promise.all([
       advanceCandidate(db, acme.id, job.id, marina, "interest"),
-      deleteJob(db, acme.id, job.id),
+      deleteJob(db, acme.id, job.id, appUrl),
     ]);
     expect(typeof added).toBe("boolean");
     expect(await listCandidates(db, acme.id, job.id)).toBeNull();

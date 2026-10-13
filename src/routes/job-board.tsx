@@ -321,10 +321,12 @@ function BoardItem({
         </details>
         <div className="mt-4">
           {job.appliedAt ? (
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-positive">
+            <p
+              className={`flex items-center gap-1.5 text-sm font-semibold ${job.withdrawnAt ? "text-muted-foreground" : "text-positive"}`}
+            >
               <CheckCircle2 className="size-4" aria-hidden="true" />
-              {t.openJobs.applied(
-                format(new Date(job.appliedAt), t.interests.dateFormat, {
+              {(job.withdrawnAt ? t.openJobs.withdrawn : t.openJobs.applied)(
+                format(new Date(job.withdrawnAt ?? job.appliedAt), t.interests.dateFormat, {
                   locale: lang === "pt" ? ptBR : enUS,
                 }),
               )}

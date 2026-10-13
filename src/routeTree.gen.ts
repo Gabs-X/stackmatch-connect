@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as CompanySettingsRouteImport } from './routes/company-settings'
 import { Route as CreateProfileRouteImport } from './routes/create-profile'
 import { Route as DiscoverRouteImport } from './routes/discover'
@@ -46,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplicationsRoute = ApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompanySettingsRoute = CompanySettingsRouteImport.update({
@@ -182,6 +188,7 @@ const JobsIdEditRoute = JobsIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/applications': typeof ApplicationsRoute
   '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/applications': typeof ApplicationsRoute
   '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/applications': typeof ApplicationsRoute
   '/company-settings': typeof CompanySettingsRoute
   '/create-profile': typeof CreateProfileRoute
   '/discover': typeof DiscoverRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/applications'
     | '/company-settings'
     | '/create-profile'
     | '/discover'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/applications'
     | '/company-settings'
     | '/create-profile'
     | '/discover'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/applications'
     | '/company-settings'
     | '/create-profile'
     | '/discover'
@@ -366,6 +378,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  ApplicationsRoute: typeof ApplicationsRoute
   CompanySettingsRoute: typeof CompanySettingsRoute
   CreateProfileRoute: typeof CreateProfileRoute
   DiscoverRoute: typeof DiscoverRoute
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/applications': {
+      id: '/applications'
+      path: '/applications'
+      fullPath: '/applications'
+      preLoaderRoute: typeof ApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/company-settings': {
@@ -598,6 +618,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  ApplicationsRoute: ApplicationsRoute,
   CompanySettingsRoute: CompanySettingsRoute,
   CreateProfileRoute: CreateProfileRoute,
   DiscoverRoute: DiscoverRoute,

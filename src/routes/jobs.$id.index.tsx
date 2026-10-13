@@ -4,15 +4,18 @@ import {
   ArrowLeft,
   Archive,
   ArchiveRestore,
+  History,
+  NotebookPen,
   Pencil,
   Send,
   RotateCcw,
   Search,
   Trash2,
+  Undo2,
   UserMinus,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState, type CSSProperties } from "react";
+import { useId, useState, type CSSProperties } from "react";
 import { enUS, ptBR } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { DeveloperCard } from "@/components/developer-card";
@@ -29,17 +32,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { matchJob } from "@/lib/job-match";
-import { jobStages, type Job, type JobCandidate, type JobStage } from "@/lib/jobs";
+import {
+  finalStages,
+  isFinalStage,
+  jobStages,
+  maxCandidateNote,
+  type CandidateEvent,
+  type Job,
+  type JobCandidate,
+  type JobStage,
+} from "@/lib/jobs";
 import {
   deleteJobFn,
+  fetchCandidateHistory,
   jobCandidatesQuery,
   jobQuery,
   jobsQueryKey,
   moveCandidateFn,
   removeCandidateFn,
+  setCandidateNoteFn,
   setJobStatusFn,
 } from "@/lib/jobs-api";
 import { profilesByIdQuery } from "@/lib/profile-api";
@@ -178,7 +194,7 @@ function JobView({
         <div
           role="group"
           aria-label={t.jobs.stageFilter}
-          className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3"
+          className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-8"
         >
           {(["all", ...jobStages] as const).map((value) => {
             const count = value === "all" ? candidates.length : counts[value];
@@ -345,10 +361,19 @@ function CandidateGrid({
                     aria-label={`${t.jobs.stage}: ${developer.name}`}
                     className="h-8 min-w-0 flex-1 rounded-md border bg-card px-2 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {jobStages.map((stage) => (
-                      <option key={stage} value={stage}>
-                        {t.jobs.stages[stage]}
-                      </option>
+                    {(
+                      [
+                        [t.jobs.processStages, jobStages.filter((stage) => !isFinalStage(stage))],
+                        [t.jobs.finalStages, finalStages],
+                      ] as const
+                    ).map(([label, stages]) => (
+                      <optgroup key={label} label={label}>
+                        {stages.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {t.jobs.stages[stage]}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </label>
@@ -378,13 +403,193 @@ function CandidateGrid({
                       {candidate.applicationMessage}
                     </p>
                   )}
+                  {candidate.withdrawnAt && (
+                    <p className="mt-1.5 flex items-center gap-1.5 font-semibold text-muted-foreground">
+                      <Undo2 className="size-3.5" aria-hidden="true" />
+                      {t.jobs.withdrew(
+                        format(new Date(candidate.withdrawnAt), t.interests.dateFormat, {
+                          locale: lang === "pt" ? ptBR : enUS,
+                        }),
+                      )}
+                    </p>
+                  )}
                 </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <CandidateNote
+                  jobId={job.id}
+                  developerId={candidate.developerId}
+                  name={developer.name}
+                  note={candidate.note}
+                />
+                <CandidateHistory
+                  jobId={job.id}
+                  developerId={candidate.developerId}
+                  name={developer.name}
+                  accountId={accountId}
+                />
+              </div>
+              {candidate.note && (
+                <p className="line-clamp-3 whitespace-pre-line break-words rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                  <span className="sr-only">{t.jobs.note}: </span>
+                  {candidate.note}
+                </p>
               )}
             </div>
           );
         })}
       </div>
     </>
+  );
+}
+
+/** The company's private note on a developer in the job, edited in a dialog. */
+function CandidateNote({
+  jobId,
+  developerId,
+  name,
+  note,
+}: {
+  jobId: string;
+  developerId: string;
+  name: string;
+  note: string;
+}) {
+  const { t } = useI18n();
+  const id = useId();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(note);
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try {
+      await setCandidateNoteFn({ data: { jobId, developerId, note: draft } });
+      await queryClient.invalidateQueries({ queryKey: jobsQueryKey });
+      toast.success(t.jobs.noteSaved);
+      setOpen(false);
+    } catch {
+      toast.error(t.jobs.saveError);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (busy) return;
+        // Starts from the saved note each time.
+        if (value) setDraft(note);
+        setOpen(value);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" aria-label={t.jobs.noteFor(name)}>
+          <NotebookPen />
+          {t.jobs.note}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>{t.jobs.noteFor(name)}</DialogTitle>
+        <DialogDescription>{t.jobs.noteSub}</DialogDescription>
+        <div>
+          <Label htmlFor={`${id}-note`} className="sr-only">
+            {t.jobs.note}
+          </Label>
+          <Textarea
+            id={`${id}-note`}
+            className="min-h-32"
+            value={draft}
+            maxLength={maxCandidateNote}
+            placeholder={t.jobs.notePh}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <p className="mt-1 text-right text-xs text-muted-foreground">
+            {draft.length}/{maxCandidateNote}
+          </p>
+        </div>
+        <DialogFooter className="gap-2">
+          <DialogClose asChild>
+            <Button variant="outline" disabled={busy}>
+              {t.jobs.form.cancel}
+            </Button>
+          </DialogClose>
+          <Button disabled={busy} onClick={() => void save()}>
+            {t.jobs.noteSave}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** What happened to a developer in the job, from its history, loaded when opened. */
+function CandidateHistory({
+  jobId,
+  developerId,
+  name,
+  accountId,
+}: {
+  jobId: string;
+  developerId: string;
+  name: string;
+  accountId: string;
+}) {
+  const { t, lang } = useI18n();
+  const [open, setOpen] = useState(false);
+  const history = useQuery({
+    queryKey: [...jobsQueryKey, accountId, jobId, "history", developerId],
+    queryFn: () => fetchCandidateHistory({ data: { jobId, developerId } }),
+    enabled: open,
+  });
+  const stageName = (stage: JobStage | null) => (stage ? t.jobs.stages[stage] : "");
+  const describe = (event: CandidateEvent) =>
+    event.kind === "added"
+      ? t.jobs.events.added(stageName(event.toStage))
+      : event.kind === "stage_changed"
+        ? t.jobs.events.stage_changed(stageName(event.fromStage), stageName(event.toStage))
+        : t.jobs.events[event.kind];
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" aria-label={t.jobs.historyFor(name)}>
+          <History />
+          {t.jobs.history}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>{t.jobs.historyFor(name)}</DialogTitle>
+        <DialogDescription>{t.jobs.historySub}</DialogDescription>
+        {history.isPending ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t.common.loading}
+          </p>
+        ) : history.isError || !history.data ? (
+          <div role="alert">
+            <p className="text-sm text-muted-foreground">{t.jobs.historyLoadError}</p>
+            <Button className="mt-3" size="sm" onClick={() => void history.refetch()}>
+              <RotateCcw />
+              {t.common.retry}
+            </Button>
+          </div>
+        ) : history.data.length ? (
+          <ol className="max-h-80 space-y-3 overflow-y-auto">
+            {history.data.map((event, index) => (
+              <li key={index} className="border-l-2 pl-3 text-sm">
+                <p className="font-medium">{describe(event)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(event.at), "Pp", { locale: lang === "pt" ? ptBR : enUS })} ·{" "}
+                  {t.jobs.actors[event.actor]}
+                </p>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t.jobs.historyEmpty}</p>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

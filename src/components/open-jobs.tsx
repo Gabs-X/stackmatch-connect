@@ -113,10 +113,12 @@ function OpenJobItem({
       </details>
       <div className="mt-3">
         {job.appliedAt ? (
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-positive">
+          <p
+            className={`flex items-center gap-1.5 text-sm font-semibold ${job.withdrawnAt ? "text-muted-foreground" : "text-positive"}`}
+          >
             <CheckCircle2 className="size-4" aria-hidden="true" />
-            {t.openJobs.applied(
-              format(new Date(job.appliedAt), t.interests.dateFormat, {
+            {(job.withdrawnAt ? t.openJobs.withdrawn : t.openJobs.applied)(
+              format(new Date(job.withdrawnAt ?? job.appliedAt), t.interests.dateFormat, {
                 locale: lang === "pt" ? ptBR : enUS,
               }),
             )}
@@ -148,7 +150,7 @@ export function ApplyDialog({
   onClose: () => void;
   onApplied: (jobId: string, appliedAt: string) => void;
 }) {
-  const { t, tv } = useI18n();
+  const { t, tv, lang } = useI18n();
   const id = useId();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -164,7 +166,7 @@ export function ApplyDialog({
     setBusy(true);
     setError("");
     try {
-      const result = await applyToJobFn({ data: { jobId: job.id, message } });
+      const result = await applyToJobFn({ data: { jobId: job.id, message, language: lang } });
       if ("error" in result) {
         setError(t.openJobs.errors[result.error]);
         // Already sent from another tab: show it as sent.

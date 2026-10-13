@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  ClipboardList,
   Heart,
   LifeBuoy,
   LogOut,
@@ -98,6 +99,12 @@ export function AccountMenu() {
               <Link to="/job-board">
                 <BriefcaseBusiness />
                 {t.auth.menu.jobs}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/applications">
+                <ClipboardList />
+                {t.auth.menu.applications}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

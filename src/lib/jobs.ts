@@ -7,17 +7,124 @@ import {
   workModeOptions,
 } from "./developers";
 import type { Filters } from "./filters";
+import type { Translations } from "./translations";
 
 /**
  * A company's job opening (or project scope): what it looks for, used to search Discover, to keep
  * the developers it reached for it in stages, and to tell them what it's about.
  */
 
-/** Where a developer is in a job: only moves forward on its own (see stageRank). */
-export const jobStages = ["saved", "interest", "contacted", "meeting"] as const;
+/**
+ * Where a developer is in a job. The first four follow what the company did and only move forward
+ * on their own (see stageRank); the last three end the process and are only set by hand, so nothing
+ * the company does later moves a developer out of them.
+ */
+export const jobStages = [
+  "saved",
+  "interest",
+  "contacted",
+  "meeting",
+  "hired",
+  "not_advanced",
+  "closed",
+] as const;
 export type JobStage = (typeof jobStages)[number];
 
+export const finalStages = ["hired", "not_advanced", "closed"] as const;
+export type FinalStage = (typeof finalStages)[number];
+export const isFinalStage = (stage: JobStage): stage is FinalStage =>
+  (finalStages as readonly string[]).includes(stage);
+
 export const stageRank = (stage: JobStage) => jobStages.indexOf(stage);
+
+/**
+ * A developer's application for a job, as stored. It belongs to the developer and outlives the
+ * company's organization of the job: taking them out of it, closing or deleting the job.
+ * "submitted" and "in_progress" are active; the rest are final.
+ */
+export const applicationStatuses = [
+  "submitted",
+  "in_progress",
+  "hired",
+  "not_advanced",
+  "closed",
+  "withdrawn",
+] as const;
+export type ApplicationStatus = (typeof applicationStatuses)[number];
+
+export const isActiveApplication = (status: ApplicationStatus) =>
+  status === "submitted" || status === "in_progress";
+
+/**
+ * What the developer is told of the stage the company gives them: whether the company acted on it
+ * yet (they already heard of contacts and calls by e-mail) and the outcome, never the stage itself.
+ */
+export function applicationStatusFor(stage: JobStage): Exclude<ApplicationStatus, "withdrawn"> {
+  if (isFinalStage(stage)) return stage;
+  return stage === "contacted" || stage === "meeting" ? "in_progress" : "submitted";
+}
+
+/** An application as its developer sees it: "job_closed" when the job closed or went away first. */
+export type ApplicationView = ApplicationStatus | "job_closed";
+
+/** What happened to an application, as its developer sees it. */
+export type ApplicationEvent = {
+  kind: "applied" | "withdrawn" | "outcome" | "job_closed" | "job_reopened" | "job_deleted";
+  /** For "outcome". */
+  outcome?: FinalStage;
+  at: string;
+};
+
+export type MyApplication = {
+  id: string;
+  /** The job as it was when they applied. */
+  job: JobSnapshot;
+  companyId: string;
+  company: string;
+  message: string;
+  appliedAt: string;
+  withdrawnAt: string | null;
+  status: ApplicationView;
+  /** Newest first. */
+  history: ApplicationEvent[];
+};
+
+/**
+ * A page of the developer's applications, with the translations of their jobs; `next` asks for
+ * the following page.
+ */
+export type ApplicationPage = {
+  applications: MyApplication[];
+  next: string | null;
+  translations: Translations;
+};
+
+/** How many applications a page brings. */
+export const applicationPageSize = 20;
+
+/** What happened to a developer in a job, as its company keeps it. */
+export const candidateEventKinds = [
+  "added",
+  "stage_changed",
+  "applied",
+  "withdrawn",
+  "removed",
+  "job_closed",
+  "job_reopened",
+  "job_deleted",
+] as const;
+export type CandidateEventKind = (typeof candidateEventKinds)[number];
+
+export type CandidateEvent = {
+  kind: CandidateEventKind;
+  fromStage: JobStage | null;
+  toStage: JobStage | null;
+  actor: "company" | "developer" | "system";
+  at: string;
+};
+
+/** The longest private note a company keeps on a developer in a job. */
+export const maxCandidateNote = 2000;
 
 /** Whether the pay range is per hour or per month. */
 export const compensationPeriods = ["hour", "month"] as const;
@@ -111,6 +218,10 @@ export type JobCandidate = {
   appliedAt: string | null;
   /** What they wrote when offering themselves, or "". */
   applicationMessage: string;
+  /** When they withdrew that application, or null. */
+  withdrawnAt: string | null;
+  /** The company's private note on them, never shown to the developer. */
+  note: string;
 };
 
 /** The longest message a developer can send with an offer for a job. */
@@ -119,6 +230,8 @@ export const maxApplicationMessage = 1000;
 export const applicationInputSchema = z.object({
   jobId: z.string().min(1).max(200),
   message: text(maxApplicationMessage),
+  /** The screen's language, to tell the developer about the application in; Portuguese if left out. */
+  language: z.enum(["pt", "en"]).optional(),
 });
 export type ApplicationInput = z.infer<typeof applicationInputSchema>;
 
@@ -126,7 +239,12 @@ export type ApplicationInput = z.infer<typeof applicationInputSchema>;
  * An open job of a company that reached the developer, as the developer sees it on the company's
  * page, with when they offered themselves for it.
  */
-export type OpenJob = JobSnapshot & { id: string; appliedAt: string | null };
+export type OpenJob = JobSnapshot & {
+  id: string;
+  appliedAt: string | null;
+  /** When they withdrew that application, or null. */
+  withdrawnAt: string | null;
+};
 
 /** A job of the job board: an open job of any company, with the company's name. */
 export type BoardJob = OpenJob & { companyId: string; company: string };

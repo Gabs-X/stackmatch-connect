@@ -3,6 +3,7 @@ import {
   Bookmark,
   BriefcaseBusiness,
   CalendarDays,
+  ClipboardList,
   Heart,
   LogIn,
   Menu,
@@ -37,6 +38,7 @@ export function AppHeader() {
       ? [
           { to: "/create-profile" as const, label: t.nav.myProfile, icon: UserRound },
           { to: "/job-board" as const, label: t.nav.jobs, icon: BriefcaseBusiness },
+          { to: "/applications" as const, label: t.nav.applications, icon: ClipboardList },
           { to: "/interests" as const, label: t.nav.interests, icon: Heart },
         ]
       : [
