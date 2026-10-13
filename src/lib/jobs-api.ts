@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
@@ -18,13 +18,20 @@ import {
 import { getRequestUrl } from "@tanstack/react-start/server";
 import {
   applyToJob,
-  listJobBoard,
   listMyApplications,
   listOpenJobsFor,
   withdrawApplication,
 } from "@/server/job-applications";
+import { listJobBoard } from "@/server/job-board";
 import { database, requireAccount } from "@/server/session";
-import { applicationInputSchema, jobInputSchema, jobStages, maxCandidateNote } from "./jobs";
+import {
+  applicationInputSchema,
+  jobBoardQuerySchema,
+  jobInputSchema,
+  jobStages,
+  maxCandidateNote,
+  type JobBoardQuery,
+} from "./jobs";
 
 export const jobId = z.string().min(1).max(200);
 const developerId = z.string().min(1).max(200);
@@ -199,9 +206,11 @@ export const applyToJobFn = createServerFn({ method: "POST" })
   );
 
 /** Stands for `GET /job-board`: the open jobs companies listed, for developers. */
-export const fetchJobBoard = createServerFn({ method: "GET" }).handler(async () =>
-  listJobBoard(await database(), (await requireAccount("developer")).id),
-);
+export const fetchJobBoard = createServerFn({ method: "GET" })
+  .validator(jobBoardQuerySchema)
+  .handler(async ({ data }) =>
+    listJobBoard(await database(), (await requireAccount("developer")).id, data),
+  );
 
 const applicationId = z.string().min(1).max(200);
 
@@ -229,8 +238,21 @@ export const withdrawApplicationFn = createServerFn({ method: "POST" })
 
 export const myApplicationsQueryKey = ["my-applications"];
 
-export const jobBoardQuery = (accountId: string) =>
-  queryOptions({ queryKey: ["job-board", accountId], queryFn: () => fetchJobBoard() });
+/** Every query on the job board starts with this key, to refresh them all after a change. */
+export const jobBoardQueryKey = ["job-board"];
+
+/** The job board's pages for one search, loaded one after the other. */
+export const jobBoardQuery = (
+  accountId: string,
+  search: Required<Pick<JobBoardQuery, "search" | "modes" | "sort">>,
+) =>
+  infiniteQueryOptions({
+    queryKey: [...jobBoardQueryKey, accountId, search],
+    queryFn: ({ pageParam }) =>
+      fetchJobBoard({ data: { ...search, ...(pageParam ? { after: pageParam } : {}) } }),
+    initialPageParam: "",
+    getNextPageParam: (page) => page.next ?? undefined,
+  });
 
 export const openJobsQuery = (accountId: string, companyId: string) =>
   queryOptions({

@@ -10,7 +10,6 @@ import {
   type ApplicationEvent,
   type ApplicationInput,
   type ApplicationPage,
-  type BoardJob,
   type OpenJob,
 } from "@/lib/jobs";
 import type { Translations } from "@/lib/translations";
@@ -28,7 +27,8 @@ import { loadTranslations } from "./translations";
 
 /**
  * Developers offering themselves for a job. A developer sees the open jobs of a company that
- * reached them, on that company's page, and the open jobs companies put in the job board; they can
+ * reached them, on that company's page, and the open jobs companies put in the job board (see
+ * job-board.ts); they can
  * offer themselves for each one once. The application is theirs (job_applications): they follow it
  * in My applications and can withdraw it, for good, while it waits on the company.
  */
@@ -71,56 +71,6 @@ export async function listOpenJobsFor(
       db,
       [companyId],
       open.flatMap((job) => jobTexts(job)),
-    ),
-  };
-}
-
-/** The most jobs the job board shows: the newest ones. */
-export const jobBoardSize = 200;
-
-/**
- * The job board: open jobs that their companies listed, newest first, with the company's name and
- * when the developer offered themselves for each.
- */
-export async function listJobBoard(
-  db: Db,
-  developerId: string,
-): Promise<{ jobs: BoardJob[]; translations: Translations }> {
-  const rows = await db
-    .select({
-      job: jobs,
-      company: users.companyName,
-      appliedAt: jobApplications.appliedAt,
-      withdrawnAt: jobApplications.withdrawnAt,
-    })
-    .from(jobs)
-    .innerJoin(users, eq(users.id, jobs.companyId))
-    .leftJoin(jobApplications, ownApplication(developerId))
-    .where(and(eq(jobs.listed, true), eq(jobs.status, "open")))
-    .orderBy(desc(jobs.createdAt), desc(jobs.id))
-    .limit(jobBoardSize);
-  const board: BoardJob[] = (
-    await toJobs(
-      db,
-      rows.map((row) => row.job),
-    )
-  ).map(({ id, status: _status, createdAt: _created, updatedAt: _updated, ...job }, index) => {
-    const row = rows[index];
-    return {
-      ...toSnapshot(job),
-      id,
-      companyId: row?.job.companyId ?? "",
-      company: row?.company ?? "",
-      appliedAt: row?.appliedAt?.toISOString() ?? null,
-      withdrawnAt: row?.withdrawnAt?.toISOString() ?? null,
-    };
-  });
-  return {
-    jobs: board,
-    translations: await loadTranslations(
-      db,
-      [...new Set(board.map((job) => job.companyId))],
-      board.flatMap((job) => jobTexts(job)),
     ),
   };
 }

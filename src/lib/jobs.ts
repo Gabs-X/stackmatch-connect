@@ -249,6 +249,37 @@ export type OpenJob = JobSnapshot & {
 /** A job of the job board: an open job of any company, with the company's name. */
 export type BoardJob = OpenJob & { companyId: string; company: string };
 
+/** How many jobs a page of the job board brings. */
+export const jobBoardPageSize = 20;
+
+/** Best match with the developer's profile first, or newest first. */
+export const jobBoardSorts = ["match", "recent"] as const;
+export type JobBoardSort = (typeof jobBoardSorts)[number];
+
+/**
+ * A search of the job board: words to find in the title (as written or translated), the company
+ * or a skill; work models (a job open to any model fits every choice); the order; and, for the
+ * next page, the `next` the previous one gave.
+ */
+export const jobBoardQuerySchema = z.object({
+  search: z.string().trim().max(100).default(""),
+  modes: z.array(z.enum(workModeOptions)).max(workModeOptions.length).default([]),
+  sort: z.enum(jobBoardSorts).default("match"),
+  after: z.string().max(500).optional(),
+});
+export type JobBoardQuery = z.input<typeof jobBoardQuerySchema>;
+
+export type JobBoardPage = {
+  jobs: BoardJob[];
+  translations: Translations;
+  /** Asks for the following page; null on the last one. */
+  next: string | null;
+  /** Every job the search finds, on all pages. */
+  total: number;
+  /** The order used: by match only with a published profile to compare, else newest first. */
+  sort: JobBoardSort;
+};
+
 /**
  * The Discover filters a job starts with: its whole stack, and the options it accepts. Its city
  * ranks profiles (see matchJob) instead of leaving any out.

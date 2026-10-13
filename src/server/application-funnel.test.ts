@@ -8,11 +8,11 @@ import { jobApplications, jobCandidates } from "./db/schema";
 import { outbox } from "./email";
 import {
   applyToJob,
-  listJobBoard,
   listMyApplications,
   listOpenJobsFor,
   withdrawApplication,
 } from "./job-applications";
+import { listJobBoard } from "./job-board";
 import {
   advanceCandidate,
   createJob,
@@ -165,6 +165,7 @@ describe("withdrawing an application", () => {
     });
   });
 
+  // Builds a database for each order, so it gets more time.
   it("and the company's decision made at once end one way, each telling only its side", async () => {
     for (const order of [0, 1]) {
       db = await createTestDb();
@@ -193,7 +194,7 @@ describe("withdrawing an application", () => {
       // The company's stage is its own either way.
       expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("not_advanced");
     }
-  });
+  }, 20_000);
 });
 
 describe("the company's final stages", () => {

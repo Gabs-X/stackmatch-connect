@@ -5,6 +5,7 @@ import { profileInputSchema } from "@/lib/local-profile";
 import { saveCompanySettings } from "@/server/companies";
 import {
   interests,
+  jobs,
   meetingRequests,
   savedTalents,
   textTranslations,
@@ -50,6 +51,11 @@ const seedSchema = z.object({
   translations: z
     .array(z.object({ ownerId: z.string(), text: z.string(), pt: z.string(), en: z.string() }))
     .default([]),
+  /**
+   * Jobs of the test company (teste.emp) in the job board, past its per-company limit: "Vaga de
+   * teste 1" (the oldest) to "Vaga de teste N", a minute apart.
+   */
+  boardJobs: z.number().int().min(0).max(500).default(0),
   /** Uses up the e-mails this client's IP address may cause, as if it had sent them just now. */
   emailLimitReached: z.boolean().default(false),
 });
@@ -116,6 +122,16 @@ export const Route = createFileRoute("/api/test-seed")({
             { ownerId, hash, language: "en", text: en },
           ]);
         }
+
+        if (seed.boardJobs)
+          await db.insert(jobs).values(
+            Array.from({ length: seed.boardJobs }, (_, index) => ({
+              companyId: "demo-company",
+              title: `Vaga de teste ${index + 1}`,
+              listed: true,
+              createdAt: new Date(Date.now() - (seed.boardJobs - index) * 60_000),
+            })),
+          );
 
         if (seed.emailLimitReached)
           for (let sent = 0; sent < maxEmailsPerIp; sent++) await recordEmailSend(db, clientIp());

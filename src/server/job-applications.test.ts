@@ -3,7 +3,8 @@ import type { AuthUser } from "@/lib/auth";
 import { emptyJob, type JobInput } from "@/lib/jobs";
 import type { Db } from "./db";
 import { outbox } from "./email";
-import { applyToJob, listJobBoard, listOpenJobsFor } from "./job-applications";
+import { applyToJob, listOpenJobsFor } from "./job-applications";
+import { listJobBoard } from "./job-board";
 import {
   advanceCandidate,
   createJob,

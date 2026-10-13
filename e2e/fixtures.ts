@@ -84,6 +84,9 @@ export const seedDevelopers = (page: Page, developers: object[]) => seed(page, {
 /** Uses up the code e-mails this machine's IP address may cause (see src/server/email-throttle.ts). */
 export const seedEmailLimitReached = (page: Page) => seed(page, { emailLimitReached: true });
 
+/** Publishes `count` jobs of the test company in the job board (see /api/test-seed). */
+export const seedBoardJobs = (page: Page, count: number) => seed(page, { boardJobs: count });
+
 /** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
 export const seedSavedTalents = (page: Page, developerIds: string[]) =>
   seed(page, { savedTalents: { companyId: "demo-company", developerIds } });

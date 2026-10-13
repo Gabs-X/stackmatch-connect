@@ -1,7 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { enUS, ptBR } from "react-day-picker/locale";
 import {
   BriefcaseBusiness,
@@ -24,7 +29,7 @@ import { useAuth } from "@/lib/auth-context";
 import { workModeOptions } from "@/lib/developers";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { matchJob, type JobMatch } from "@/lib/job-match";
-import type { BoardJob } from "@/lib/jobs";
+import type { BoardJob, JobBoardSort } from "@/lib/jobs";
 import { jobBoardQuery } from "@/lib/jobs-api";
 import { myProfileQuery } from "@/lib/profile-api";
 import type { Translations } from "@/lib/translations";
@@ -53,49 +58,42 @@ function JobBoardPage() {
   return user ? <JobBoard user={user} /> : null;
 }
 
-type Sort = "match" | "recent";
+type WorkMode = (typeof workModeOptions)[number];
+
+/** How long typing waits before searching, so each key doesn't make a request. */
+const searchDelayMs = 300;
 
 /**
- * The open jobs companies listed, with how much of each the developer's profile meets. Filters and
- * order apply here: the server sends the newest jobs (see listJobBoard).
+ * The open jobs companies listed, with how much of each the developer's profile meets. The server
+ * searches, filters, orders and pages them (see listJobBoard); a page loads at a time.
  */
 function JobBoard({ user }: { user: AuthUser }) {
   const { t, tv } = useI18n();
-  const query = jobBoardQuery(user.id);
-  const { data, isPending, isError, refetch } = useQuery(query);
   // Assume a profile until the server says otherwise, so the notice never flashes.
   const { data: profile } = useQuery(myProfileQuery(user.id));
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [modes, setModes] = useState<string[]>([]);
-  const [sort, setSort] = useState<Sort>("match");
+  const [term, setTerm] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => setTerm(search.trim()), searchDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+  const [modes, setModes] = useState<WorkMode[]>([]);
+  const [sort, setSort] = useState<JobBoardSort>("match");
   const [applying, setApplying] = useState<BoardJob | null>(null);
-
-  const translations = data?.translations ?? {};
-  const term = search.trim().toLocaleLowerCase();
-  const entries = (data?.jobs ?? [])
-    .filter(
-      (job) =>
-        !term ||
-        [
-          job.title,
-          tv(job.title, translations),
-          job.company,
-          ...job.requiredSkills,
-          ...job.desiredSkills,
-        ].some((text) => text.toLocaleLowerCase().includes(term)),
-    )
-    // A job that accepts any work model fits every choice.
-    .filter(
-      (job) =>
-        !modes.length ||
-        !job.workModes.length ||
-        job.workModes.some((mode) => modes.includes(mode)),
-    )
+  const query = jobBoardQuery(user.id, { search: term, modes, sort });
+  // The previous results stay while a new search loads.
+  const board = useInfiniteQuery({ ...query, placeholderData: keepPreviousData });
+  const { isPending, isError, refetch } = board;
+  const pages = board.data?.pages ?? [];
+  const translations = Object.assign({}, ...pages.map((page) => page.translations)) as Translations;
+  const total = pages[0]?.total ?? 0;
+  // A job whose score changed between pages could come twice; it shows once.
+  const seen = new Set<string>();
+  const entries = pages
+    .flatMap((page) => page.jobs)
+    .filter((job) => !seen.has(job.id) && Boolean(seen.add(job.id)))
     .map((job) => ({ job, match: profile ? matchJob(job, profile) : null }));
-  // Array.sort is stable: equal scores stay newest first.
-  if (sort === "match" && profile)
-    entries.sort((a, b) => (b.match?.score ?? -1) - (a.match?.score ?? -1));
   const filtered = Boolean(term || modes.length);
 
   return (
@@ -157,7 +155,7 @@ function JobBoard({ user }: { user: AuthUser }) {
             {t.jobBoard.sort}
             <select
               value={sort}
-              onChange={(event) => setSort(event.target.value as Sort)}
+              onChange={(event) => setSort(event.target.value as JobBoardSort)}
               className="mt-2 block h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="match">{t.jobBoard.sortMatch}</option>
@@ -175,7 +173,7 @@ function JobBoard({ user }: { user: AuthUser }) {
           <Skeleton className="h-36 w-full rounded-lg" />
           <Skeleton className="h-36 w-full rounded-lg" />
         </div>
-      ) : isError ? (
+      ) : isError && !entries.length ? (
         <div role="alert" className="mt-6 rounded-lg border border-dashed bg-card p-8 text-center">
           <p className="font-semibold">{t.jobBoard.loadError}</p>
           <Button className="mt-4" onClick={() => void refetch()}>
@@ -212,7 +210,7 @@ function JobBoard({ user }: { user: AuthUser }) {
       ) : (
         <>
           <p className="mt-6 text-xs font-semibold text-muted-foreground" role="status">
-            {t.jobBoard.count(entries.length)}
+            {t.jobBoard.count(total)}
           </p>
           <ul className="mt-3 space-y-4">
             {entries.map(({ job, match }, index) => (
@@ -227,6 +225,22 @@ function JobBoard({ user }: { user: AuthUser }) {
               />
             ))}
           </ul>
+          {board.isFetchNextPageError && (
+            <p role="alert" className="mt-6 text-center text-sm text-muted-foreground">
+              {t.jobBoard.loadError}
+            </p>
+          )}
+          {board.hasNextPage && (
+            <div className="mt-6 text-center">
+              <Button
+                variant="outline"
+                disabled={board.isFetchingNextPage}
+                onClick={() => void board.fetchNextPage()}
+              >
+                {board.isFetchingNextPage ? t.common.loading : t.jobBoard.loadMore}
+              </Button>
+            </div>
+          )}
         </>
       )}
 
@@ -239,7 +253,10 @@ function JobBoard({ user }: { user: AuthUser }) {
             current
               ? {
                   ...current,
-                  jobs: current.jobs.map((job) => (job.id === jobId ? { ...job, appliedAt } : job)),
+                  pages: current.pages.map((page) => ({
+                    ...page,
+                    jobs: page.jobs.map((job) => (job.id === jobId ? { ...job, appliedAt } : job)),
+                  })),
                 }
               : current,
           )
