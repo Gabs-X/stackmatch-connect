@@ -7,6 +7,7 @@ import { codeEmail, sendEmail, type EmailLanguage } from "./email";
 import { releaseEmailSend, reserveEmailSend } from "./email-throttle";
 import { clearLoginFailures } from "./login-throttle";
 import { codeLifetimeMinutes, consumeCodeIn, issueCode, type CodeCheck } from "./email-codes";
+import { log } from "./log";
 
 /** Sent, or how long to wait before asking for another code. */
 export type SendResult = { sent: true } | { retryInSeconds: number };
@@ -101,7 +102,7 @@ export async function requestPasswordReset(
   if ("code" in issued)
     await sendEmail(
       codeEmail(user.email, "reset", issued.code, codeLifetimeMinutes, language),
-    ).catch((error: unknown) => console.error("Password reset code not sent:", error));
+    ).catch((error: unknown) => log("error", "email.code_not_sent", { purpose: "reset", error }));
   return { sent: true };
 }
 

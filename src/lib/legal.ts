@@ -85,7 +85,7 @@ const pt: LegalText = {
       id: "terms-end",
       title: "7. Encerramento e mudanças",
       paragraphs: [
-        "Você pode excluir sua conta a qualquer momento em Conta. Podemos suspender ou excluir contas que violem estes termos. Se os termos mudarem de forma relevante, avisaremos no site, e a data no topo desta página será atualizada.",
+        "Você pode excluir sua conta a qualquer momento em Conta. Podemos suspender ou excluir contas que violem estes termos. Qualquer conta pode denunciar vagas, perfis e empresas; a equipe analisa cada denúncia. Uma conta suspensa não consegue entrar, e o perfil, a página e as vagas dela deixam de aparecer para os outros; os dados ficam guardados e voltam se a suspensão for revogada. Para contestar, abra um ticket no Suporte. Se os termos mudarem de forma relevante, avisaremos no site, e a data no topo desta página será atualizada.",
       ],
     },
   ],
@@ -102,6 +102,7 @@ const pt: LegalText = {
         "Ada: as perguntas e respostas da conversa, que fica guardada na sua conta (a Ada só conversa com quem entrou em uma conta).",
         "Notificações: o que aconteceu com seus interesses, propostas e candidaturas, se você já as leu, o idioma da conta e quais avisos por e-mail você desligou, além do registro de envio desses e-mails (endereço, conteúdo, situação e tentativas).",
         "Suporte: os tickets que você abre e, se você escolher, a conversa com a Ada anexada a eles.",
+        "Moderação: as denúncias que você faz (o que foi denunciado, o motivo e os detalhes) e, se sua conta for denunciada ou suspensa, as denúncias sobre ela e o histórico de suspensões, com o motivo. Quem foi denunciado não sabe quem denunciou.",
         "Dados técnicos: endereço IP, usado para limites de segurança (tentativas de login, e-mails, perguntas e tickets), e o cookie da sessão.",
       ],
     },
@@ -132,6 +133,7 @@ const pt: LegalText = {
       items: [
         "Os dados da conta ficam enquanto ela existir. Excluir a conta apaga perfil, projetos, imagens, dados da empresa, talentos salvos, interesses, propostas, candidaturas e a conversa com a Ada.",
         "Registros de segurança valem por pouco tempo: falhas de login, 15 minutos; envios de e-mail com código e perguntas à Ada, 1 hora; pedidos de tradução automática, 24 horas; o registro das marcações de interesse usado nos limites, 30 dias; sessões, até 30 dias ou até você sair; notificações, 180 dias; o registro de um e-mail de notificação, 30 dias depois de enviado ou abandonado. Passado esse prazo, o registro deixa de contar e é apagado na limpeza automática, que roda uma vez por dia; por isso ele pode ficar guardado até um dia a mais.",
+        "Denúncias e o histórico de suspensões ficam guardados enquanto a conta denunciada existir; se você excluir sua conta, suas denúncias deixam de estar ligadas a ela.",
         "Tickets ficam guardados como histórico do atendimento. Depois que a conta é excluída, eles deixam de estar ligados a ela; para apagá-los também, peça pelo Suporte.",
       ],
     },
@@ -216,7 +218,7 @@ const en: LegalText = {
       id: "terms-end",
       title: "7. Closing accounts and changes",
       paragraphs: [
-        "You can delete your account at any time in Account. We may suspend or delete accounts that break these terms. If the terms change in a meaningful way, we'll say so on the site and update the date at the top of this page.",
+        "You can delete your account at any time in Account. We may suspend or delete accounts that break these terms. Any account can report jobs, profiles and companies; the team reviews every report. A suspended account can't sign in, and its profile, page and jobs stop showing to others; its data is kept and comes back if the suspension is lifted. To appeal, open a ticket in Support. If the terms change in a meaningful way, we'll say so on the site and update the date at the top of this page.",
       ],
     },
   ],
@@ -233,6 +235,7 @@ const en: LegalText = {
         "Ada: the questions and answers of the conversation, kept in your account (Ada only chats with people signed in to an account).",
         "Notifications: what happened to your interests, proposals and applications, whether you read it, the account's language and which e-mail updates you turned off, plus the record of sending those e-mails (address, content, status and tries).",
         "Support: the tickets you open and, if you choose, the conversation with Ada attached to them.",
+        "Moderation: the reports you file (what was reported, the reason and the details) and, if your account is reported or suspended, the reports about it and its suspension history, with the reason. Whoever was reported doesn't learn who reported them.",
         "Technical data: IP address, used for security limits (sign-in attempts, e-mails, questions and tickets), and the session cookie.",
       ],
     },
@@ -263,6 +266,7 @@ const en: LegalText = {
       items: [
         "Account data stays while the account exists. Deleting the account erases the profile, projects, images, company details, saved talent, interests, proposals, applications and the conversation with Ada.",
         "Security records are valid for a short time: sign-in failures, 15 minutes; code e-mails and questions to Ada, 1 hour; automatic translation requests, 24 hours; the record of interest marks used by the limits, 30 days; sessions, up to 30 days or until you sign out; notifications, 180 days; the record of a notification e-mail, 30 days after it was sent or given up. After that, a record no longer counts and is erased by the automatic cleanup, which runs once a day, so it may be kept for up to one more day.",
+        "Reports and the suspension history are kept while the reported account exists; if you delete your account, your reports are no longer linked to it.",
         "Tickets are kept as the support history. Once the account is deleted, they're no longer linked to it; to erase them too, ask through Support.",
       ],
     },

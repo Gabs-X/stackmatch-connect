@@ -15,6 +15,7 @@ import {
 import type { Db } from "./db";
 import { jobApplications, jobSkills, jobs, skills, textTranslations, users } from "./db/schema";
 import { toJobs } from "./jobs";
+import { notSuspended } from "./moderation";
 import { loadPublishedProfile } from "./profiles";
 import { loadTranslations } from "./translations";
 
@@ -133,6 +134,7 @@ export async function listJobBoard(
   const filters = and(
     eq(jobs.listed, true),
     eq(jobs.status, "open"),
+    notSuspended(jobs.companyId),
     search
       ? sql`(${jobs.title} ilike ${pattern} or ${users.companyName} ilike ${pattern} or exists (select 1 from ${jobSkills} inner join ${skills} on ${skills.id} = ${jobSkills.skillId} where ${jobSkills.jobId} = ${jobs.id} and ${skills.name} ilike ${pattern}) or exists (select 1 from ${textTranslations} where ${textTranslations.ownerId} = ${jobs.companyId} and ${textTranslations.hash} = encode(sha256(convert_to(${jobs.title}, 'UTF8')), 'hex') and ${textTranslations.text} ilike ${pattern}))`
       : undefined,

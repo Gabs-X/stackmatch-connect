@@ -13,6 +13,7 @@ import type { Db } from "./db";
 import { emailOutbox, notifications, users } from "./db/schema";
 import { sendEmail, type Email } from "./email";
 import type { Tx } from "./profiles";
+import { log } from "./log";
 
 /**
  * Notifications and their e-mails. An event records its notification and queues its e-mail in the
@@ -152,11 +153,11 @@ export async function deliverEmails(
         .set({ lockedUntil: null, ...fields })
         .where(and(eq(emailOutbox.id, row.id), eq(emailOutbox.status, "sending")));
     const [account] = await db
-      .select({ emailOff: users.emailOff })
+      .select({ emailOff: users.emailOff, suspendedAt: users.suspendedAt })
       .from(users)
       .where(eq(users.id, row.userId))
       .limit(1);
-    if (!account || account.emailOff.includes(row.category)) {
+    if (!account || account.suspendedAt || account.emailOff.includes(row.category)) {
       await finish({ status: "skipped" });
       delivery.skipped += 1;
       continue;
@@ -168,9 +169,14 @@ export async function deliverEmails(
     } catch (error) {
       const lastError = (error instanceof Error ? error.message : String(error)).slice(0, 500);
       const giveUp = row.attempts >= maxAttempts;
-      console.error(
-        `[outbox] e-mail ${row.id} (${row.category}) failed, try ${row.attempts}/${maxAttempts}${giveUp ? ", giving up" : ""}: ${lastError}`,
-      );
+      log(giveUp ? "error" : "warn", "email.send_failed", {
+        emailId: row.id,
+        category: row.category,
+        attempt: row.attempts,
+        maxAttempts,
+        givingUp: giveUp,
+        error: lastError,
+      });
       await finish(
         giveUp
           ? { status: "failed", lastError }
@@ -199,7 +205,7 @@ export async function deliverQueued(db: Db, ids: (string | null)[]) {
       others: extraPerRequest,
     });
   } catch (error) {
-    console.error("[outbox] delivery failed:", error);
+    log("error", "email.delivery_failed", { error });
   }
 }
 

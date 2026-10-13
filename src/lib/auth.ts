@@ -27,7 +27,7 @@ export type AuthUser = {
  * the IP address caused too many e-mails lately (src/server/email-throttle.ts).
  */
 export type AuthErrorCode =
-  "email-taken" | "invalid-credentials" | "login-locked" | "too-many-emails";
+  "email-taken" | "invalid-credentials" | "login-locked" | "too-many-emails" | "account-suspended";
 
 /** Why a code from an e-mail wasn't accepted. */
 export type CodeErrorCode = "invalid-code" | "expired-code" | "too-many-attempts";

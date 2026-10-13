@@ -21,6 +21,7 @@ import { JobDetails } from "@/components/job-details";
 import { MatchBreakdown } from "@/components/job-match";
 import { ApplyDialog } from "@/components/open-jobs";
 import { RequireAccount } from "@/components/require-account";
+import { ReportButton } from "@/components/report-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -336,7 +337,7 @@ function BoardItem({
             {match && <MatchBreakdown match={match} />}
           </div>
         </details>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           {job.appliedAt ? (
             <p
               className={`flex items-center gap-1.5 text-sm font-semibold ${job.withdrawnAt ? "text-muted-foreground" : "text-positive"}`}
@@ -359,6 +360,7 @@ function BoardItem({
               {t.openJobs.apply}
             </Button>
           )}
+          <ReportButton targetType="job" targetId={job.id} ownerId={job.companyId} label={title} />
         </div>
       </article>
     </li>

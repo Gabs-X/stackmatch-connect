@@ -17,6 +17,7 @@ import { loadTranslations, updateTranslations } from "@/server/translations";
 import { currentUser, database, requireAccount } from "@/server/session";
 import { filtersSchema, type Filters } from "./filters";
 import { profileInputSchema, type LocalProfile } from "./local-profile";
+import { log } from "@/server/log";
 
 /** Stands for `GET /me/profile`: the signed-in developer's profile, or null before the first save. */
 export const fetchMyProfile = createServerFn({ method: "GET" }).handler(async () => {
@@ -64,7 +65,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       saved = await saveProfile(db, user.id, data.profile, data.version);
     } catch (error) {
       // The form only says it couldn't save; the reason goes to the server logs.
-      console.error("Profile not saved:", error);
+      log("error", "profile.save_failed", { error });
       throw error;
     }
     if ("error" in saved) return { conflict: await loadProfile(db, user.id) };

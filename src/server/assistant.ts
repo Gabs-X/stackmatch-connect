@@ -4,6 +4,7 @@ import type { AccountType } from "@/lib/auth";
 import type { AssistantRequest } from "@/lib/assistant";
 import { assistantPaths } from "@/lib/assistant-markdown";
 import type { AssistantUsage } from "./assistant-budget";
+import { log } from "./log";
 
 /**
  * The support assistant: answers questions about StackMatch with Claude, streaming the reply. It
@@ -93,6 +94,7 @@ Screens (pt-BR name / en name, path):
 - Conta / Account (/account): any account, in the account menu (top right). It also has the account's language and which e-mail updates to get (Notificações e idioma / Notifications and language); codes and security e-mails can't be turned off.
 - Notificações / Notifications (/notifications, the bell in the header): any confirmed account; what happened to its interests, proposals and applications, with "Marcar todas como lidas" / "Mark all as read".
 - Suporte / Support (/support): anyone, signed in or not; also in the account menu and the footer.
+- Denunciar / Report: a button on each job in the job board, on profile pages and on company pages, for signed-in accounts (not on their own content). The StackMatch team reviews reports and may suspend accounts that break the terms; a suspended account can't sign in and should open a ticket in Support to appeal.
 - Termos de uso e privacidade / Terms of use and privacy (/terms): anyone; also in the footer and on the sign-up form.
 - A developer's public profile (/developer/<id>) is open to anyone with the link.
 - A company's page (/company/<id>) is visible only to developers that company contacted. It shows the company's open jobs; the developer can offer themselves for each one once ("Quero participar" / "I'm interested"), with an optional message (up to 1000 characters).
@@ -228,7 +230,7 @@ export async function* assistantReply(
     try {
       await onUsage?.(usage);
     } catch (error) {
-      console.error("Assistant usage not recorded:", error);
+      log("error", "assistant.usage_not_recorded", { error });
     }
   }
 }

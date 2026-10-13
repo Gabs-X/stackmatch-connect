@@ -4,6 +4,7 @@ import { z } from "zod";
 import { loadCompanyProfile, loadCompanySettings, saveCompanySettings } from "@/server/companies";
 import { translateCompanyTexts } from "@/server/jobs";
 import { companyReachedDeveloper } from "@/server/meetings";
+import { isSuspended } from "@/server/moderation";
 import { database, requireAccount } from "@/server/session";
 import { companySettingsSchema, type CompanySettingsInput } from "./company-settings";
 
@@ -32,7 +33,8 @@ export const fetchCompanyProfile = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const developer = await requireAccount("developer");
     const db = await database();
-    if (!(await companyReachedDeveloper(db, data, developer.id))) return null;
+    if (!(await companyReachedDeveloper(db, data, developer.id)) || (await isSuspended(db, data)))
+      return null;
     return loadCompanyProfile(db, data);
   });
 

@@ -2,6 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import type { Db } from "./db";
 import { assistantSpend } from "./db/schema";
 import { messageEmail, sendEmail } from "./email";
+import { log } from "./log";
 
 /**
  * A monthly spending cap for the assistant. Each reply adds what its tokens cost to the month's
@@ -109,7 +110,10 @@ async function alertSupport(month: string, percent: number, spentMicros: number)
       : `A Ada já gastou ${percent}% do teto de ${month}: ${usd(spentMicros)} de ${budget}.`;
   const team = process.env["SUPPORT_EMAIL"]?.trim();
   if (!team) {
-    console.warn(`${summary} Set SUPPORT_EMAIL to get this by e-mail.`);
+    log("warn", "assistant.budget_alert", {
+      summary,
+      note: "Set SUPPORT_EMAIL to get this by e-mail.",
+    });
     return;
   }
   try {
@@ -129,6 +133,6 @@ async function alertSupport(month: string, percent: number, spentMicros: number)
     );
   } catch (error) {
     // The spend is recorded; the cap still holds without the e-mail.
-    console.error("Assistant budget alert not e-mailed:", error);
+    log("error", "assistant.budget_alert_not_sent", { error });
   }
 }

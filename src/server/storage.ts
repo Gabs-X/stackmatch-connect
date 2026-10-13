@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { profilePhotoSize, projectCoverSize } from "@/lib/local-profile";
 import { jpegSize } from "./jpeg";
+import { log } from "./log";
 
 /**
  * Where profile photos and project covers live: Vercel Blob when BLOB_READ_WRITE_TOKEN is set
@@ -120,7 +121,7 @@ export async function removeImages(urls: string[]) {
     urls.map((url) =>
       storage()
         .remove(url)
-        .catch((error: unknown) => console.error("Image not removed:", url, error)),
+        .catch((error: unknown) => log("error", "storage.remove_failed", { url, error })),
     ),
   );
 }

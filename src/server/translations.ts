@@ -9,6 +9,7 @@ import type { Db } from "./db";
 import { textTranslations } from "./db/schema";
 import type { Tx } from "./profiles";
 import { canTranslate, recordTranslationRequest } from "./translation-throttle";
+import { log } from "./log";
 
 /**
  * Translates the free text people write (bio, role, project descriptions, a company's description)
@@ -188,10 +189,10 @@ export function withBackup(primary: Translator, backup: Translator): Translator 
     try {
       const result = await primary(texts, signal);
       if (result) return result;
-      console.warn("Primary translator gave nothing usable; using the backup.");
+      log("warn", "translation.backup_used", { reason: "empty" });
     } catch (error) {
       if (signal.aborted) throw error;
-      console.warn("Primary translator failed; using the backup:", error);
+      log("warn", "translation.backup_used", { reason: "failed", error });
     }
     return backup(texts, signal);
   };
@@ -263,7 +264,7 @@ export async function updateTranslations(
     if (!missing.length) return;
     if (limited) {
       if (!(await canTranslate(db, ownerId))) {
-        console.warn(`Translations for ${ownerId}: the account reached its translation limit.`);
+        log("warn", "translation.limit_reached", { accountId: ownerId });
         return;
       }
       // Counted before the request, so failed ones count too.
@@ -272,7 +273,7 @@ export async function updateTranslations(
 
     const results = await translator(missing, signal);
     if (!results) {
-      console.warn(`Translations for ${ownerId}: the translator returned nothing usable.`);
+      log("warn", "translation.empty", { accountId: ownerId });
       return;
     }
     const rows = missing.flatMap((text, index) => {
@@ -287,6 +288,6 @@ export async function updateTranslations(
     if (rows.length)
       await whileCurrent((tx) => tx.insert(textTranslations).values(rows).onConflictDoNothing());
   } catch (error) {
-    console.error(`Translations for ${ownerId} not updated:`, error);
+    log("error", "translation.failed", { accountId: ownerId, error });
   }
 }

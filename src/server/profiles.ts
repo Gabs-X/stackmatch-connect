@@ -20,6 +20,7 @@ import { locationApplies, matchWeights } from "@/lib/job-match";
 import type { JobInput } from "@/lib/jobs";
 import { localProfileToDeveloper, type LocalProfile } from "@/lib/local-profile";
 import type { Db } from "./db";
+import { notSuspended, suspendedAmong } from "./moderation";
 import { lockKeys } from "./db/locks";
 import { isDataUrl, isStorableImage, removeImages, storeImage, type ImageFolder } from "./storage";
 import { loadTranslations } from "./translations";
@@ -338,6 +339,8 @@ export const profileTexts = (profile: Pick<LocalProfile, "role" | "bio" | "proje
 /** Every developer profile companies can find, as catalog entries, with their translations. */
 export async function loadPublishedProfiles(db: Db, userIds?: string[]): Promise<Developer[]> {
   const profiles = await loadProfiles(db, userIds);
+  // A suspended account's profile isn't shown (see src/lib/moderation.ts).
+  for (const id of await suspendedAmong(db, [...profiles.keys()])) profiles.delete(id);
   const translations = await loadTranslations(
     db,
     [...profiles.keys()],
@@ -384,6 +387,7 @@ function inPlaces(places: string[]) {
  */
 function matchingFilters(db: Db, filters: Filters) {
   return and(
+    notSuspended(developerProfiles.userId),
     filters.skills.length
       ? inArray(
           developerProfiles.userId,

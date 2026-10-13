@@ -104,7 +104,9 @@ describe("updateTranslations", () => {
     await updateTranslations(db, ana, ["Bio nova demais em ação"], { translator: fakeTranslate });
     expect(fakeTranslate).toHaveBeenCalledTimes(maxTranslationsPerAccount);
     expect(await loadTranslations(db, [ana], ["Bio nova demais em ação"])).toEqual({});
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("translation limit"));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('"event":"translation.limit_reached"'),
+    );
 
     // Another account has its own limit, and the backfill script skips it.
     const bia = await createDeveloper(db, "bia@example.com");

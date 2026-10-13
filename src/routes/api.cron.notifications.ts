@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { cronAuthorized } from "@/server/cron";
 import { deliverEmails } from "@/server/outbox";
 import { database } from "@/server/session";
+import { log } from "@/server/log";
 
 /** E-mails sent per run; the rest wait for the next one, or for the next requests. */
 const perRun = 200;
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/api/cron/notifications")({
         if (!cronAuthorized(request.headers.get("authorization")))
           return new Response("Unauthorized", { status: 401 });
         const delivery = await deliverEmails(await database(), { others: perRun });
-        console.info("Notification e-mails:", delivery);
+        log("info", "cron.notifications", { delivery });
         return Response.json({ delivery });
       },
     },

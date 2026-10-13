@@ -9,6 +9,7 @@ import { releaseEmailSend, reserveEmailSend } from "./email-throttle";
 import { releaseLoginAttempt, reserveLoginAttempt } from "./login-throttle";
 import { lockProfile, storedImages, type Tx } from "./profiles";
 import { removeImages } from "./storage";
+import { log } from "./log";
 
 /**
  * What a signed-in account changes about itself: its password, its e-mail and the account itself.
@@ -130,7 +131,7 @@ export async function confirmEmailChange(
     });
   if ("error" in outcome) return outcome;
   await sendEmail(emailChangedNotice(user.email, outcome.targetEmail, language)).catch(
-    (error: unknown) => console.error("E-mail change notice not sent:", error),
+    (error: unknown) => log("error", "email.change_notice_not_sent", { error }),
   );
   return { user: toAuthUser(outcome.row) };
 }

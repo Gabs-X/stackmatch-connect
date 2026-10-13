@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { DeveloperProfileView } from "@/components/developer-profile";
 import { MatchBreakdown } from "@/components/job-match";
 import { ScheduleDialog } from "@/components/schedule-dialog";
+import { ReportButton } from "@/components/report-button";
 import { Button } from "@/components/ui/button";
 import type { Developer } from "@/lib/developers";
 import { fetchPublishedProfile } from "@/lib/profile-api";
@@ -87,6 +88,7 @@ function DeveloperProfile({ d }: { d: Developer }) {
               <SaveTalent developerId={d.id} />
             )}
             <ScheduleDialog developerId={d.id} developerName={d.name} jobId={jobId} />
+            <ReportButton targetType="profile" targetId={d.id} ownerId={d.id} label={d.name} />
           </>
         }
       />

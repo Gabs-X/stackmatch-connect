@@ -113,7 +113,8 @@ export async function userForSession(
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(eq(sessions.id, hashToken(token)))
     .limit(1);
-  if (!found) return null;
+  // A suspended account's sessions were ended; one created meanwhile doesn't count either.
+  if (!found || found.user.suspendedAt) return null;
   if (found.expiresAt.getTime() <= now) {
     await db.delete(sessions).where(lte(sessions.expiresAt, new Date(now)));
     return null;

@@ -27,6 +27,7 @@ import type {
 import type { Lang } from "@/lib/i18n";
 import type { MeetingSide, MeetingStatus } from "@/lib/meeting-requests";
 import type { EmailCategory, NotificationData, NotificationKind } from "@/lib/notifications";
+import type { ReportReason, ReportStatus, ReportTarget } from "@/lib/moderation";
 import type { TicketCategory, TicketStatus } from "@/lib/support";
 
 export const accountType = pgEnum("account_type", ["DEVELOPER", "COMPANY"]);
@@ -57,6 +58,8 @@ export const users = pgTable("users", {
     .$type<EmailCategory[]>()
     .notNull()
     .default(sql`'{}'`),
+  /** Set while the team has the account suspended (see src/lib/moderation.ts). */
+  suspendedAt: timestamp("suspended_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -676,4 +679,63 @@ export const emailOutbox = pgTable(
     sentAt: timestamp("sent_at", { withTimezone: true }),
   },
   (table) => [index("email_outbox_status_next_idx").on(table.status, table.nextAttemptAt)],
+);
+
+/** What accounts reported about a job, a profile or a company, and how the team reviewed it. */
+export const reports = pgTable(
+  "reports",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    /** Null once the reporter's account is deleted; the report stays for the history. */
+    reporterId: text("reporter_id").references(() => users.id, { onDelete: "set null" }),
+    targetType: text("target_type").$type<ReportTarget>().notNull(),
+    /** The job's id, or the account's for a profile or a company. */
+    targetId: text("target_id").notNull(),
+    /** The account the content belongs to; null once it's deleted. */
+    targetAccountId: text("target_account_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /** The job's title or the name, as it was reported. */
+    targetLabel: text("target_label").notNull(),
+    reason: text("reason").$type<ReportReason>().notNull(),
+    details: text("details").notNull().default(""),
+    status: text("status").$type<ReportStatus>().notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** The admin's e-mail. */
+    reviewedBy: text("reviewed_by"),
+    reviewNote: text("review_note").notNull().default(""),
+  },
+  (table) => [
+    index("reports_status_created_idx").on(table.status, table.createdAt),
+    index("reports_reporter_created_idx").on(table.reporterId, table.createdAt),
+    index("reports_target_account_idx").on(table.targetAccountId),
+    // One open report per reporter and target: reporting again changes nothing.
+    uniqueIndex("reports_open_reporter_target_idx")
+      .on(table.reporterId, table.targetType, table.targetId)
+      .where(sql`${table.status} = 'open'`),
+  ],
+);
+
+/** Every suspension and lifting of an account, with who did it and why. */
+export const accountSuspensions = pgTable(
+  "account_suspensions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    action: text("action").$type<"suspended" | "lifted">().notNull(),
+    reason: text("reason").notNull(),
+    /** The report that led to it, if any. */
+    reportId: text("report_id").references(() => reports.id, { onDelete: "set null" }),
+    /** The admin's e-mail. */
+    by: text("by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("account_suspensions_user_idx").on(table.userId, table.createdAt)],
 );

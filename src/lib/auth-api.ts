@@ -26,6 +26,7 @@ import {
   readSessionToken,
   writeSessionToken,
 } from "@/server/session";
+import { isSuspended } from "@/server/moderation";
 import {
   newPasswordSchema,
   passwordResetSchema,
@@ -36,6 +37,7 @@ import {
   type AuthUser,
   type CodeErrorCode,
 } from "./auth";
+import { log } from "@/server/log";
 
 /**
  * Account endpoints. The session lives in an httpOnly cookie the browser sends along; the screens
@@ -56,7 +58,7 @@ export const fetchCurrentUser = createServerFn({ method: "GET" }).handler(() => 
 async function sendCodeAfterSignIn(db: Db, user: AuthUser, lang: EmailLanguage, ip: string | null) {
   if (user.emailVerified) return;
   await sendVerificationCode(db, user, lang, ip).catch((error: unknown) =>
-    console.error("Confirmation code not sent:", error),
+    log("error", "email.code_not_sent", { purpose: "verify", error }),
   );
 }
 
@@ -94,6 +96,8 @@ export const signInFn = createServerFn({ method: "POST" })
     if (!user) return { error: "invalid-credentials" };
     await releaseLoginAttempt(db, attempt.reserved);
     await clearLoginFailures(db, data.email);
+    // Only told with the right password, so it doesn't reveal which accounts are suspended.
+    if (await isSuspended(db, user.id)) return { error: "account-suspended" };
     writeSessionToken(await createSession(db, user.id));
     await sendCodeAfterSignIn(db, user, data.language, ip);
     return { user };

@@ -21,6 +21,7 @@ import { jobApplications, jobCandidateEvents, jobCandidates, jobs, users } from 
 import { messageEmail } from "./email";
 import { loadJob, lockJob, recordEvents, toJobs } from "./jobs";
 import { companyReachedDeveloper } from "./meetings";
+import { isSuspended } from "./moderation";
 import { developerEmail, jobEmailDetails } from "./notifications";
 import { deliverQueued, notify, recipient, type Conn } from "./outbox";
 import { developerExists } from "./saved-talents";
@@ -44,7 +45,11 @@ export async function listOpenJobsFor(
   companyId: string,
   developerId: string,
 ): Promise<{ jobs: OpenJob[]; translations: Translations } | null> {
-  if (!(await companyReachedDeveloper(db, companyId, developerId))) return null;
+  if (
+    !(await companyReachedDeveloper(db, companyId, developerId)) ||
+    (await isSuspended(db, companyId))
+  )
+    return null;
   const rows = await db
     .select({
       job: jobs,
@@ -105,6 +110,7 @@ export async function applyToJob(
     if (
       !job ||
       job.status !== "open" ||
+      (await isSuspended(tx, job.companyId)) ||
       (!job.listed && !(await companyReachedDeveloper(tx, job.companyId, developerId)))
     )
       return { error: "unknown-job" };

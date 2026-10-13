@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "./db";
 import { developerProfiles, savedTalents } from "./db/schema";
+import { notSuspended } from "./moderation";
 
 /** The company's shortlist: developer ids, in the order they were saved. */
 export async function listSavedTalents(db: Db, companyId: string): Promise<string[]> {
@@ -12,12 +13,12 @@ export async function listSavedTalents(db: Db, companyId: string): Promise<strin
   return rows.map((row) => row.developerId);
 }
 
-/** A profile companies can find: a developer account that published its profile. */
+/** A profile companies can find: a developer account that published its profile, not suspended. */
 export async function developerExists(db: Db, developerId: string) {
   const [row] = await db
     .select({ userId: developerProfiles.userId })
     .from(developerProfiles)
-    .where(eq(developerProfiles.userId, developerId))
+    .where(and(eq(developerProfiles.userId, developerId), notSuspended(developerProfiles.userId)))
     .limit(1);
   return row !== undefined;
 }

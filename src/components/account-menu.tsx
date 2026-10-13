@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   LogOut,
   Search,
+  Flag,
   ShieldCheck,
   UserCog,
   UserRound,
@@ -165,6 +166,14 @@ export function AccountMenu() {
             <Link to="/admin/tickets">
               <ShieldCheck />
               {t.auth.menu.admin}
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {admin.data && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin/reports">
+              <Flag />
+              {t.auth.menu.reports}
             </Link>
           </DropdownMenuItem>
         )}

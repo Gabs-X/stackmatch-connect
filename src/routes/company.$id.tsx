@@ -18,6 +18,7 @@ import {
 import { ProfileLink } from "@/components/profile-link";
 import { MeetingProposal } from "@/components/meeting-proposal";
 import { OpenJobs } from "@/components/open-jobs";
+import { ReportButton } from "@/components/report-button";
 import { RequireAccount } from "@/components/require-account";
 import { TranslationNote } from "@/components/translation-note";
 import { isTranslated } from "@/lib/translations";
@@ -146,6 +147,13 @@ function CompanyDetails({ user }: { user: AuthUser }) {
               {website && <ProfileLink url={website} label={t.company.website} icon={Globe} />}
             </div>
           </div>
+          <ReportButton
+            targetType="company"
+            targetId={id}
+            ownerId={id}
+            label={company.company}
+            className="self-start"
+          />
         </div>
       </section>
 

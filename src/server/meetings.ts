@@ -20,6 +20,7 @@ import { advanceCandidate, jobSnapshot } from "./jobs";
 import type { Tx } from "./profiles";
 import { meetingNotice, type MeetingUpdate } from "./notifications";
 import { deliverQueued, notify } from "./outbox";
+import { notSuspended } from "./moderation";
 import { meetingLimit } from "./outreach";
 import { loadTranslations } from "./translations";
 
@@ -51,7 +52,7 @@ async function developerName(db: Db, developerId: string) {
   const [row] = await db
     .select({ name: developerProfiles.name })
     .from(developerProfiles)
-    .where(eq(developerProfiles.userId, developerId))
+    .where(and(eq(developerProfiles.userId, developerId), notSuspended(developerProfiles.userId)))
     .limit(1);
   return row?.name ?? null;
 }

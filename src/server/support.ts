@@ -14,6 +14,7 @@ import { loadConversation } from "./assistant-conversations";
 import type { Db } from "./db";
 import { supportTickets, users } from "./db/schema";
 import { messageEmail, sendEmail, type Email } from "./email";
+import { log } from "./log";
 
 /**
  * Support tickets: a person who needs a human (Ada couldn't help, a bug, a locked account) writes
@@ -153,10 +154,13 @@ export async function createTicket(
     try {
       await sendEmail(ticketEmail(team, row, user));
     } catch (error) {
-      console.error(`Ticket #${row.id} stored, but its e-mail to the team failed:`, error);
+      log("error", "support.team_email_failed", { ticketId: row.id, error });
     }
   } else {
-    console.warn(`Ticket #${row.id} stored; set SUPPORT_EMAIL so the team receives tickets.`);
+    log("warn", "support.no_team_address", {
+      ticketId: row.id,
+      note: "Set SUPPORT_EMAIL so the team receives tickets.",
+    });
   }
 
   if (user?.emailVerified) {
@@ -172,7 +176,7 @@ export async function createTicket(
         }),
       );
     } catch (error) {
-      console.error(`Ticket #${row.id}: the receipt to its author failed:`, error);
+      log("error", "support.receipt_failed", { ticketId: row.id, error });
     }
   }
   return { ticket: summary(row) };
@@ -299,7 +303,7 @@ export async function setTicketStatus(
     await sendEmail(ticketResolvedEmail(resolved, appUrl));
     return { found: true, notified: "sent" };
   } catch (error) {
-    console.error(`Ticket #${id} resolved, but the e-mail to its author failed:`, error);
+    log("error", "support.resolved_email_failed", { ticketId: id, error });
     return { found: true, notified: "failed" };
   }
 }

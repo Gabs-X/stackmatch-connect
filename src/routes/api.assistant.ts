@@ -8,6 +8,7 @@ import {
 import { assistantBudgetWait, recordAssistantSpend } from "@/server/assistant-budget";
 import { assistantLimitFor, recordAssistantRequest } from "@/server/assistant-throttle";
 import { clientIp, currentUser, database } from "@/server/session";
+import { log } from "@/server/log";
 
 /**
  * Turns the reply into a text stream. The first chunk is already read, so failures before any
@@ -24,7 +25,7 @@ function textStream(reply: AsyncGenerator<string>, first: IteratorResult<string>
         if (result.done) controller.close();
         else controller.enqueue(encoder.encode(result.value));
       } catch (error) {
-        console.error("Assistant reply failed mid-stream:", error);
+        log("error", "assistant.stream_failed", { error });
         controller.error(error);
       }
     },
@@ -82,7 +83,7 @@ export const Route = createFileRoute("/api/assistant")({
           first = await reply.next();
         } catch (error) {
           if (request.signal.aborted) return new Response(null, { status: 499 });
-          console.error("Assistant reply failed:", error);
+          log("error", "assistant.reply_failed", { error });
           return new Response("Assistant unavailable", { status: 502 });
         }
         return new Response(textStream(reply, first), {
