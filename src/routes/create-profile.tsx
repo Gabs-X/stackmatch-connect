@@ -1,7 +1,9 @@
 import { useAuth } from "@/lib/auth-context";
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
+import { format } from "date-fns";
+import { enUS, ptBR } from "date-fns/locale";
 import {
   Check,
   ChevronDown,
@@ -18,7 +20,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ProfilePhotoField } from "@/components/profile-photo-field";
 import { LocationField } from "@/components/location-field";
@@ -28,6 +30,15 @@ import { ProjectCover } from "@/components/project-cover";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
 import { RequireAccount } from "@/components/require-account";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { setLeaveGuard } from "@/lib/leave-guard";
+import { useProfileDraft, type DraftOffer } from "@/lib/use-profile-draft";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,10 +86,17 @@ export const Route = createFileRoute("/create-profile")({
   }),
   component: () => (
     <RequireAccount type="developer">
-      <CreateProfile />
+      <CreateProfilePage />
     </RequireAccount>
   ),
 });
+
+/** The form starts over for each account, so one account's changes never show to another. */
+function CreateProfilePage() {
+  const { user } = useAuth();
+  return <CreateProfile key={user?.id ?? ""} />;
+}
+
 function CreateProfile() {
   const { t, tv } = useI18n();
   useLocalizedMeta(t.create.title + " — Stack Match", t.create.sub);
@@ -113,10 +131,13 @@ function CreateProfile() {
    * profile, or null if there's none. The form keeps what was typed until the developer chooses.
    */
   const [conflict, setConflict] = useState<{ latest: SavedProfile | null } | null>(null);
+  /** The saved profile the form started from, to tell unpublished changes (see useProfileDraft). */
+  const [pristine, setPristine] = useState<LocalProfile>(emptyProfile);
   useEffect(() => {
     // Each account edits its own profile; the demo developer starts from its ready-made one.
     if (stored.data) {
       setProfile(stored.data);
+      setPristine(stored.data);
       setBaseVersion(stored.data.version);
       setCompleted(true);
       setPreview(true);
@@ -125,10 +146,92 @@ function CreateProfile() {
   // A developer account starts its first profile with the name and title from sign-up.
   useEffect(() => {
     if (user?.accountType !== "developer" || !stored.isSuccess || stored.data) return;
-    setProfile((current) =>
-      current.name || current.role ? current : { ...current, name: user.name, role: user.jobTitle },
-    );
+    const prefilled = { ...emptyProfile, name: user.name, role: user.jobTitle };
+    setProfile((current) => (current.name || current.role ? current : prefilled));
+    setPristine(prefilled);
   }, [user, stored.isSuccess, stored.data]);
+  const draft = useProfileDraft({
+    accountId,
+    profile,
+    pristine,
+    baseVersion,
+    savedVersion: stored.data?.version ?? 0,
+    ready: stored.isSuccess,
+  });
+  /** Shows the recovered draft in the form; it's published only by finishing the profile. */
+  const recoverDraft = () => {
+    const recovered = draft.recover();
+    if (!recovered) return;
+    setProfile(recovered.profile);
+    // An outdated draft keeps its version: finishing then asks which one stays (see conflict).
+    setBaseVersion(recovered.baseVersion);
+    setCompleted(false);
+    setPreview(false);
+    toast.success(t.create.draftRecovered);
+  };
+  const discardDraft = async () => {
+    await draft.discard();
+    toast(t.create.draftDiscarded);
+  };
+  // Leaving with unpublished changes asks first: in the app (the router's blocker), when closing or
+  // reloading the page (the browser's own question) and when signing out (setLeaveGuard).
+  const dirtyRef = useRef(false);
+  dirtyRef.current = draft.dirty;
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirtyRef.current,
+    enableBeforeUnload: () => dirtyRef.current,
+    withResolver: true,
+  });
+  const [signOutAsk, setSignOutAsk] = useState<((leave: boolean) => void) | null>(null);
+  useEffect(() => {
+    if (!draft.dirty) return;
+    setLeaveGuard(() => new Promise<boolean>((resolve) => setSignOutAsk(() => resolve)));
+    return () => setLeaveGuard(null);
+  }, [draft.dirty]);
+  const stay = () => {
+    if (blocker.status === "blocked") blocker.reset();
+    signOutAsk?.(false);
+    setSignOutAsk(null);
+  };
+  const leave = async () => {
+    if (signOutAsk) {
+      // Signing out deletes the account's drafts: nothing writes one again.
+      draft.close();
+      signOutAsk(true);
+      setSignOutAsk(null);
+      return;
+    }
+    await draft.flush();
+    if (blocker.status === "blocked") blocker.proceed();
+  };
+  const leaveDialog = (
+    <Dialog
+      open={blocker.status === "blocked" || signOutAsk !== null}
+      onOpenChange={(open) => !open && stay()}
+    >
+      <DialogContent>
+        <DialogTitle>{t.create.leaveTitle}</DialogTitle>
+        <DialogDescription>
+          {signOutAsk ? t.create.leaveSignOutSub : t.create.leaveSub}
+        </DialogDescription>
+        <DialogFooter>
+          <Button variant="outline" onClick={stay}>
+            {t.create.leaveStay}
+          </Button>
+          <Button variant={signOutAsk ? "destructive" : "default"} onClick={() => void leave()}>
+            {signOutAsk ? t.create.leaveSignOut : t.create.leaveGo}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+  const draftBanner = draft.offer && (
+    <DraftBanner
+      offer={draft.offer}
+      onRecover={recoverDraft}
+      onDiscard={() => void discardDraft()}
+    />
+  );
   const [saving, setSaving] = useState(false);
   // Suggestions while typing a skill; the form works without them if they fail to load.
   const { data: skillCatalog = [] } = useQuery(skillCatalogQuery);
@@ -189,6 +292,7 @@ function CreateProfile() {
       // New skills from this profile become suggestions for everyone.
       void queryClient.invalidateQueries({ queryKey: skillCatalogQuery.queryKey });
       setProfile(saved);
+      setPristine(saved);
       setBaseVersion(saved.version);
       setCompleted(true);
       setPreview(true);
@@ -259,6 +363,10 @@ function CreateProfile() {
   if (preview)
     return (
       <main className="pb-20">
+        {draftBanner && (
+          <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8">{draftBanner}</div>
+        )}
+        {leaveDialog}
         <ProfilePreview
           profile={profile}
           accountId={accountId}
@@ -312,6 +420,8 @@ function CreateProfile() {
           {t.create.preview}
         </Button>
       </div>
+      {leaveDialog}
+      {draftBanner && <div className="mt-6">{draftBanner}</div>}
       {conflict && (
         <div role="alert" className="mt-6 rounded-xl border border-destructive/40 bg-card p-5">
           <h2 className="font-bold">{t.create.conflictTitle}</h2>
@@ -617,6 +727,11 @@ function CreateProfile() {
               />
             </div>
           )}
+          {draft.dirty && (
+            <p role="status" className="mt-8 text-sm text-muted-foreground">
+              {t.create.unsaved}
+            </p>
+          )}
           <div className="mt-10 flex justify-between border-t pt-6">
             <Button variant="ghost" disabled={step === 1} onClick={() => setStep(step - 1)}>
               <ChevronLeft />
@@ -639,6 +754,41 @@ function CreateProfile() {
     </main>
   );
 }
+/** The draft this browser kept from an earlier visit, to recover or discard. */
+function DraftBanner({
+  offer,
+  onRecover,
+  onDiscard,
+}: {
+  offer: DraftOffer;
+  onRecover: () => void;
+  onDiscard: () => void;
+}) {
+  const { t, lang } = useI18n();
+  const when = format(offer.savedAt, t.notifications.dateFormat, {
+    locale: lang === "pt" ? ptBR : enUS,
+  });
+  return (
+    <section
+      aria-label={t.create.draftTitle}
+      className="rounded-xl border border-primary/40 bg-card p-5 shadow-sm"
+    >
+      <h2 className="font-bold">{t.create.draftTitle}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{t.create.draftSub(when)}</p>
+      {offer.outdated && <p className="mt-2 text-sm font-medium">{t.create.draftOutdated}</p>}
+      {offer.imagesMissing && (
+        <p className="mt-2 text-sm text-muted-foreground">{t.create.draftImagesMissing}</p>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button onClick={onRecover}>{t.create.draftRecover}</Button>
+        <Button variant="outline" onClick={onDiscard}>
+          {t.create.draftDiscard}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function SelectField({
   label,
   value,

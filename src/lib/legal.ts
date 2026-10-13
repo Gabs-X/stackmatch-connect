@@ -146,7 +146,7 @@ const pt: LegalText = {
       id: "privacy-security",
       title: "6. Segurança e cookies",
       paragraphs: [
-        "O site usa HTTPS, guarda senhas com hash, limita tentativas de login e mantém a sessão em um cookie protegido, que o JavaScript da página não lê. Esse é o único cookie, e ele é necessário para o login funcionar. O idioma e o tema escolhidos ficam salvos no seu navegador; com a conta aberta, o idioma também fica salvo nela, para os e-mails.",
+        "O site usa HTTPS, guarda senhas com hash, limita tentativas de login e mantém a sessão em um cookie protegido, que o JavaScript da página não lê. Esse é o único cookie, e ele é necessário para o login funcionar. O idioma e o tema escolhidos ficam salvos no seu navegador; com a conta aberta, o idioma também fica salvo nela, para os e-mails. Alterações no perfil ainda não publicadas ficam como rascunho só no seu navegador, até você publicar, descartar ou sair da conta, por no máximo 30 dias.",
       ],
     },
   ],
@@ -277,7 +277,7 @@ const en: LegalText = {
       id: "privacy-security",
       title: "6. Security and cookies",
       paragraphs: [
-        "The site uses HTTPS, stores passwords as hashes, limits sign-in attempts and keeps the session in a protected cookie that the page's JavaScript can't read. That is the only cookie, and sign-in needs it. Your language and theme choices are saved in your browser; while signed in, the language is also saved in your account, for the e-mails.",
+        "The site uses HTTPS, stores passwords as hashes, limits sign-in attempts and keeps the session in a protected cookie that the page's JavaScript can't read. That is the only cookie, and sign-in needs it. Your language and theme choices are saved in your browser; while signed in, the language is also saved in your account, for the e-mails. Profile changes not published yet stay as a draft only in your browser, until you publish, discard or sign out, for 30 days at most.",
       ],
     },
   ],

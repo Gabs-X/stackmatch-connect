@@ -59,7 +59,8 @@ export function isProfileImage(value: string) {
 
 const profileImage = z.string().max(1_000_000).refine(isProfileImage);
 
-const profileSchema = z.object({
+/** The form's shape, before checking the required fields (see profileInputSchema). */
+export const profileSchema = z.object({
   name: text(120),
   role: text(120),
   location: text(120),

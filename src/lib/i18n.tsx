@@ -288,6 +288,27 @@ const pt = {
       "Nada foi substituído e o que você digitou continua aqui. Salve as suas alterações por cima da versão salva, ou descarte-as e carregue a versão salva.",
     conflictKeepMine: "Salvar minhas alterações",
     conflictUseSaved: "Carregar a versão salva",
+    draftTitle: "Você tem um rascunho não publicado",
+    draftSub: (when: string) =>
+      `Alterações feitas neste navegador em ${when} e ainda não publicadas. Recupere para continuar de onde parou ou descarte.`,
+    draftOutdated:
+      "Seu perfil foi salvo depois deste rascunho, em outra aba ou dispositivo. Se você recuperar e concluir, vai poder escolher qual versão fica.",
+    draftImagesMissing: "Algumas imagens novas não couberam no rascunho: escolha-as de novo.",
+    draftRecover: "Recuperar rascunho",
+    draftDiscard: "Descartar rascunho",
+    draftRecovered:
+      "Rascunho recuperado. Ele só aparece para as empresas quando você concluir o perfil.",
+    draftDiscarded: "Rascunho descartado.",
+    unsaved:
+      "Alterações não publicadas. Elas ficam guardadas como rascunho neste navegador até você concluir o perfil.",
+    leaveTitle: "Sair sem publicar?",
+    leaveSub:
+      "Suas alterações ainda não foram publicadas. Elas ficam guardadas como rascunho neste navegador, e você pode recuperá-las ao voltar.",
+    leaveSignOutSub:
+      "Suas alterações ainda não foram publicadas. Ao sair da conta, o rascunho é apagado deste navegador.",
+    leaveStay: "Continuar editando",
+    leaveGo: "Sair sem publicar",
+    leaveSignOut: "Sair e descartar",
   },
   schedule: {
     trigger: "Propor reunião",
@@ -1505,6 +1526,26 @@ const en: Dict = {
       "Nothing was replaced and what you typed is still here. Save your changes over the saved version, or discard them and load the saved version.",
     conflictKeepMine: "Save my changes",
     conflictUseSaved: "Load the saved version",
+    draftTitle: "You have an unpublished draft",
+    draftSub: (when: string) =>
+      `Changes made in this browser on ${when} and not published yet. Recover it to pick up where you left off, or discard it.`,
+    draftOutdated:
+      "Your profile was saved after this draft, in another tab or device. If you recover it and finish, you'll choose which version stays.",
+    draftImagesMissing: "Some new images didn't fit in the draft: pick them again.",
+    draftRecover: "Recover draft",
+    draftDiscard: "Discard draft",
+    draftRecovered: "Draft recovered. Companies only see it once you finish your profile.",
+    draftDiscarded: "Draft discarded.",
+    unsaved:
+      "Unpublished changes. They're kept as a draft in this browser until you finish your profile.",
+    leaveTitle: "Leave without publishing?",
+    leaveSub:
+      "Your changes aren't published yet. They're kept as a draft in this browser, and you can recover them when you come back.",
+    leaveSignOutSub:
+      "Your changes aren't published yet. Signing out deletes the draft from this browser.",
+    leaveStay: "Keep editing",
+    leaveGo: "Leave without publishing",
+    leaveSignOut: "Sign out and discard",
   },
   schedule: {
     trigger: "Propose a meeting",

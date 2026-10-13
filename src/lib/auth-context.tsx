@@ -10,6 +10,8 @@ import {
 } from "./auth";
 import { fetchCurrentUser, signInFn, signOutFn, signUpFn } from "./auth-api";
 import { useI18n } from "./i18n";
+import { confirmSignOut } from "./leave-guard";
+import { forgetDrafts } from "./profile-draft";
 
 type AuthState = {
   user: AuthUser | null;
@@ -17,7 +19,10 @@ type AuthState = {
   ready: boolean;
   signIn: (input: SignInInput) => Promise<AuthUser>;
   signUp: (input: SignUpInput) => Promise<AuthUser>;
-  /** Ends the session and takes the user to the home page. */
+  /**
+   * Ends the session, deletes the account's drafts from this browser and takes the user to the home
+   * page; a page with unpublished changes asks first, and staying cancels it.
+   */
   signOut: () => Promise<void>;
   /** Shows the account as the server returned it after a change, such as confirming the e-mail. */
   updateUser: (user: AuthUser) => void;
@@ -47,10 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Every sign-out lands on the home page. Navigate before clearing the account, so account-only
-   * pages leave instead of sending the user to the login.
+   * pages leave instead of sending the user to the login. The session is already over, so a page
+   * with unpublished changes can't hold it (they stay as its draft when it ended elsewhere).
    */
   const leave = async () => {
-    await router.navigate({ to: "/" });
+    await router.navigate({ to: "/", ignoreBlocker: true });
     setUser(null);
   };
 
@@ -97,7 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       announceSessionChange();
     },
     signOut: async () => {
+      if (!(await confirmSignOut())) return;
       await signOutFn();
+      if (user) await forgetDrafts(user.id);
       announceSessionChange();
       await leave();
     },
