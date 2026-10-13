@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
+  atLeast,
   confirmEmail,
+  passwordResetResponseMs,
   requestPasswordReset,
   resetPassword,
   sendVerificationCode,
@@ -11,7 +13,11 @@ import { authenticate, createAccount, createSession, deleteSession } from "@/ser
 import type { Db } from "@/server/db";
 import type { EmailLanguage } from "@/server/email";
 import { emailLimitFor } from "@/server/email-throttle";
-import { clearLoginFailures, loginLockedFor, recordLoginFailure } from "@/server/login-throttle";
+import {
+  clearLoginFailures,
+  releaseLoginAttempt,
+  reserveLoginAttempt,
+} from "@/server/login-throttle";
 import {
   clearSessionToken,
   clientIp,
@@ -81,13 +87,12 @@ export const signInFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<AuthResult> => {
     const db = await database();
     const ip = clientIp();
-    const retryInSeconds = await loginLockedFor(db, data.email, ip);
-    if (retryInSeconds) return { error: "login-locked", retryInSeconds };
+    const attempt = await reserveLoginAttempt(db, data.email, ip);
+    if ("retryInSeconds" in attempt)
+      return { error: "login-locked", retryInSeconds: attempt.retryInSeconds };
     const user = await authenticate(db, data.email, data.password);
-    if (!user) {
-      await recordLoginFailure(db, data.email, ip);
-      return { error: "invalid-credentials" };
-    }
+    if (!user) return { error: "invalid-credentials" };
+    await releaseLoginAttempt(db, attempt.reserved);
     await clearLoginFailures(db, data.email);
     writeSessionToken(await createSession(db, user.id));
     await sendCodeAfterSignIn(db, user, data.language, ip);
@@ -121,18 +126,25 @@ export const resendVerificationFn = createServerFn({ method: "POST" })
   });
 
 /**
- * Step 1 of password recovery. Answers the same whether or not the address has an account; only
- * the IP address's e-mail limit comes back.
+ * Step 1 of password recovery. Answers the same, and in about the same time, whether or not the
+ * address has an account; only the IP address's e-mail limit comes back.
  */
 export const requestPasswordResetFn = createServerFn({ method: "POST" })
   .validator(passwordResetSchema.extend({ language }))
   .handler(async ({ data }) =>
-    requestPasswordReset(await database(), data.email, data.language, clientIp()),
+    atLeast(passwordResetResponseMs, async () =>
+      requestPasswordReset(await database(), data.email, data.language, clientIp()),
+    ),
   );
 
-/** Step 2: sets the new password. The account signs in again with it afterwards. */
+/**
+ * Step 2: sets the new password. The account signs in again with it afterwards. Takes about the
+ * same time whether or not the address has an account.
+ */
 export const resetPasswordFn = createServerFn({ method: "POST" })
   .validator(newPasswordSchema.extend({ email: z.string().trim().min(1) }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: CodeErrorCode }> =>
-    resetPassword(await database(), data.email, data.code, data.password),
+    atLeast(passwordResetResponseMs, async () =>
+      resetPassword(await database(), data.email, data.code, data.password),
+    ),
   );

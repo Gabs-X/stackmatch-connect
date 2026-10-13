@@ -14,6 +14,7 @@ import { jobTexts, type JobSnapshot } from "@/lib/jobs";
 import type { OutreachLimitError } from "@/lib/outreach";
 import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
+import { lockKeys } from "./db/locks";
 import { developerProfiles, interests, meetingRequests, users } from "./db/schema";
 import { sendEmail } from "./email";
 import { advanceCandidate, jobSnapshot } from "./jobs";
@@ -81,30 +82,38 @@ export async function sendMeetingRequest(
   if (!isProposedTimeValid(input.date, input.time, now)) return { error: "time-passed" };
   const name = await developerName(db, input.developerId);
   if (name === null) return { error: "unknown-developer" };
-  const limit = await meetingLimit(db, company.id, input.developerId, now);
-  if (limit) return limit;
   const contact = await loadCompanySettings(db, company);
   // A job that isn't the company's is ignored, not an error: the proposal goes out without it.
   const job = input.jobId ? await jobSnapshot(db, company.id, input.jobId) : null;
-  const [row] = await db
-    .insert(meetingRequests)
-    .values({
-      jobId: job ? (input.jobId ?? null) : null,
-      job: job?.snapshot ?? null,
-      language,
-      companyId: company.id,
-      developerId: input.developerId,
-      developerName: name,
-      date: input.date,
-      time: input.time,
-      message: input.message,
-      companyName: company.company,
-      contactName: contact.contactName,
-      replyToEmail: contact.contactEmail,
-      sentAt: new Date(now),
-    })
-    .returning();
-  if (!row) throw new Error("Meeting request not saved.");
+  // Checking the limits and recording the proposal are one step under the company's lock, so
+  // proposals sent at once can't all take the last one the limits allow.
+  const saved = await db.transaction(async (tx) => {
+    await lockKeys(tx, [`meeting-requests:${company.id}`]);
+    const limit = await meetingLimit(tx, company.id, input.developerId, now);
+    if (limit) return limit;
+    const [row] = await tx
+      .insert(meetingRequests)
+      .values({
+        jobId: job ? (input.jobId ?? null) : null,
+        job: job?.snapshot ?? null,
+        language,
+        companyId: company.id,
+        developerId: input.developerId,
+        developerName: name,
+        date: input.date,
+        time: input.time,
+        message: input.message,
+        companyName: company.company,
+        contactName: contact.contactName,
+        replyToEmail: contact.contactEmail,
+        sentAt: new Date(now),
+      })
+      .returning();
+    if (!row) throw new Error("Meeting request not saved.");
+    return { row };
+  });
+  if (!("row" in saved)) return saved;
+  const { row } = saved;
   const request = toMeetingRequest(row);
   try {
     await sendEmail(

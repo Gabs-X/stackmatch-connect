@@ -3,6 +3,7 @@ import { and, eq, lte, ne } from "drizzle-orm";
 import { onlyDigits, type AccountType, type AuthUser, type SignUpInput } from "@/lib/auth";
 import type { Db } from "./db";
 import { sessions, users, type UserRow } from "./db/schema";
+import type { Tx } from "./profiles";
 
 // Passwords: scrypt with a random salt per password, stored as "scrypt$<salt>$<key>" in base64.
 const keyLength = 64;
@@ -117,7 +118,11 @@ export async function deleteSession(db: Db, token: string) {
 }
 
 /** Ends every session of the account except the one with `keepToken`, the one making the change. */
-export async function deleteOtherSessions(db: Db, userId: string, keepToken: string | undefined) {
+export async function deleteOtherSessions(
+  db: Db | Tx,
+  userId: string,
+  keepToken: string | undefined,
+) {
   await db
     .delete(sessions)
     .where(

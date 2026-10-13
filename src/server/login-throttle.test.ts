@@ -7,6 +7,8 @@ import {
   maxFailuresPerAccount,
   maxFailuresPerIp,
   recordLoginFailure,
+  releaseLoginAttempt,
+  reserveLoginAttempt,
 } from "./login-throttle";
 import { createTestDb } from "./test-db";
 
@@ -66,5 +68,36 @@ describe("per IP address", () => {
     for (let index = 0; index < maxFailuresPerIp; index++)
       await fail(`pessoa${index}@example.com`, null, 1);
     expect(await loginLockedFor(db, "nova@example.com", null, now + 30_000)).toBe(0);
+  });
+});
+
+describe("reserveLoginAttempt", () => {
+  it("counts every one of many password checks made at once", async () => {
+    const attempts = await Promise.all(
+      Array.from({ length: maxFailuresPerAccount + 2 }, () =>
+        reserveLoginAttempt(db, "ana@example.com", "5.5.5.5", now),
+      ),
+    );
+    expect(attempts.filter((attempt) => "reserved" in attempt)).toHaveLength(maxFailuresPerAccount);
+    expect(attempts.filter((attempt) => "retryInSeconds" in attempt)).toHaveLength(2);
+    expect(await loginLockedFor(db, "ana@example.com", "5.5.5.5", now)).toBeGreaterThan(0);
+  });
+
+  it("lets only one of the checks racing for the last attempt through", async () => {
+    await fail("ana@example.com", null, maxFailuresPerAccount - 1);
+    const attempts = await Promise.all([
+      reserveLoginAttempt(db, "ana@example.com", null, now + 5000),
+      reserveLoginAttempt(db, "ana@example.com", null, now + 5000),
+    ]);
+    expect(attempts.filter((attempt) => "reserved" in attempt)).toHaveLength(1);
+  });
+
+  it("gives the attempt back when the password was right", async () => {
+    await fail("ana@example.com", null, maxFailuresPerAccount - 1);
+    const attempt = await reserveLoginAttempt(db, "ana@example.com", null, now + 5000);
+    if (!("reserved" in attempt)) throw new Error("not reserved");
+    expect(await loginLockedFor(db, "ana@example.com", null, now + 5000)).toBeGreaterThan(0);
+    await releaseLoginAttempt(db, attempt.reserved);
+    expect(await loginLockedFor(db, "ana@example.com", null, now + 5000)).toBe(0);
   });
 });

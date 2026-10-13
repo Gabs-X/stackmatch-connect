@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 import type { AuthUser, CodeErrorCode } from "@/lib/auth";
 import { deleteOtherSessions, hashPassword, toAuthUser, verifyPassword } from "./auth";
 import type { Db } from "./db";
-import { users } from "./db/schema";
+import { users, type UserRow } from "./db/schema";
 import { codeEmail, emailChangedNotice, sendEmail, type EmailLanguage } from "./email";
-import { codeLifetimeMinutes, consumeCodeFor, issueCode } from "./email-codes";
-import { emailLimitFor, recordEmailSend } from "./email-throttle";
-import { loginLockedFor, recordLoginFailure } from "./login-throttle";
-import { storedImages } from "./profiles";
+import { codeLifetimeMinutes, consumeCodeIn, issueCode } from "./email-codes";
+import { releaseEmailSend, reserveEmailSend } from "./email-throttle";
+import { releaseLoginAttempt, reserveLoginAttempt } from "./login-throttle";
+import { storedImages, type Tx } from "./profiles";
 import { removeImages } from "./storage";
 
 /**
@@ -25,15 +25,20 @@ async function checkPassword(
   ip: string | null,
   now: number,
 ): Promise<PasswordCheck | null> {
-  const retryInSeconds = await loginLockedFor(db, user.email, ip, now);
-  if (retryInSeconds) return { error: "login-locked", retryInSeconds };
+  const attempt = await reserveLoginAttempt(db, user.email, ip, now);
+  if ("retryInSeconds" in attempt)
+    return { error: "login-locked", retryInSeconds: attempt.retryInSeconds };
   const [row] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
-  if (row && (await verifyPassword(password, row.passwordHash))) return null;
-  await recordLoginFailure(db, user.email, ip, now);
-  return { error: "wrong-password" };
+  if (!row || !(await verifyPassword(password, row.passwordHash)))
+    return { error: "wrong-password" };
+  await releaseLoginAttempt(db, attempt.reserved);
+  return null;
 }
 
-/** Sets a new password and ends the account's other sessions; the current one stays. */
+/**
+ * Sets a new password and ends the account's other sessions; the current one stays. Both are saved
+ * together, so a failure never leaves a new password with the old sessions still open.
+ */
 export async function changePassword(
   db: Db,
   user: AuthUser,
@@ -44,17 +49,17 @@ export async function changePassword(
 ): Promise<{ ok: true } | PasswordCheck> {
   const refused = await checkPassword(db, user, input.currentPassword, ip, now);
   if (refused) return refused;
-  await db
-    .update(users)
-    .set({ passwordHash: await hashPassword(input.password) })
-    .where(eq(users.id, user.id));
-  await deleteOtherSessions(db, user.id, sessionToken);
+  const passwordHash = await hashPassword(input.password);
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ passwordHash }).where(eq(users.id, user.id));
+    await deleteOtherSessions(tx, user.id, sessionToken);
+  });
   return { ok: true };
 }
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
-const emailTaken = async (db: Db, email: string) =>
+const emailTaken = async (db: Db | Tx, email: string) =>
   (await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)).length > 0;
 
 export type EmailChangeRequest =
@@ -77,14 +82,18 @@ export async function requestEmailChange(
   const refused = await checkPassword(db, user, input.password, ip, now);
   if (refused) return refused;
   if (await emailTaken(db, email)) return { error: "email-taken" };
-  const wait = await emailLimitFor(db, ip, now);
-  if (wait) return { retryInSeconds: wait };
+  const reservation = await reserveEmailSend(db, ip, now);
+  if ("retryInSeconds" in reservation) return reservation;
   const issued = await issueCode(db, user.id, "CHANGE_EMAIL", now, email);
-  if (!("code" in issued)) return issued;
-  await recordEmailSend(db, ip, now);
+  if (!("code" in issued)) {
+    await releaseEmailSend(db, reservation.reserved);
+    return issued;
+  }
   await sendEmail(codeEmail(email, "change", issued.code, codeLifetimeMinutes, language));
   return { sent: true };
 }
+
+type ChangeError = { error: CodeErrorCode | "email-taken" };
 
 /**
  * Step 2: with the code from the new address, the account switches to it (confirmed, since the
@@ -96,23 +105,41 @@ export async function confirmEmailChange(
   code: string,
   language: EmailLanguage,
   now = Date.now(),
-): Promise<{ user: AuthUser } | { error: CodeErrorCode | "email-taken" }> {
-  const { check, targetEmail } = await consumeCodeFor(db, user.id, "CHANGE_EMAIL", code, now);
-  if (check === "expired") return { error: "expired-code" };
-  if (check === "too-many-attempts") return { error: "too-many-attempts" };
-  if (check !== "ok" || !targetEmail) return { error: "invalid-code" };
-  // Someone may have signed up with it since the code was sent.
-  if (await emailTaken(db, targetEmail)) return { error: "email-taken" };
-  const [row] = await db
-    .update(users)
-    .set({ email: targetEmail, emailVerifiedAt: new Date(now) })
-    .where(eq(users.id, user.id))
-    .returning();
-  if (!row) throw new Error("Account not found.");
-  await sendEmail(emailChangedNotice(user.email, targetEmail, language)).catch((error: unknown) =>
-    console.error("E-mail change notice not sent:", error),
+): Promise<{ user: AuthUser } | ChangeError> {
+  // The use of the code and the new address are saved together or not at all.
+  const outcome = await db
+    .transaction(async (tx): Promise<{ row: UserRow; targetEmail: string } | ChangeError> => {
+      const { check, targetEmail } = await consumeCodeIn(tx, user.id, "CHANGE_EMAIL", code, now);
+      if (check === "expired") return { error: "expired-code" };
+      if (check === "too-many-attempts") return { error: "too-many-attempts" };
+      if (check !== "ok" || !targetEmail) return { error: "invalid-code" };
+      // Someone may have signed up with it since the code was sent.
+      if (await emailTaken(tx, targetEmail)) return { error: "email-taken" };
+      const [row] = await tx
+        .update(users)
+        .set({ email: targetEmail, emailVerifiedAt: new Date(now) })
+        .where(eq(users.id, user.id))
+        .returning();
+      if (!row) throw new Error("Account not found.");
+      return { row, targetEmail };
+    })
+    // Or in the instant between that check and the update: the unique address refuses it.
+    .catch((error: unknown): ChangeError => {
+      if (isUniqueViolation(error)) return { error: "email-taken" };
+      throw error;
+    });
+  if ("error" in outcome) return outcome;
+  await sendEmail(emailChangedNotice(user.email, outcome.targetEmail, language)).catch(
+    (error: unknown) => console.error("E-mail change notice not sent:", error),
   );
-  return { user: toAuthUser(row) };
+  return { user: toAuthUser(outcome.row) };
+}
+
+/** Whether the database refused a write for repeating a unique value (Postgres code 23505). */
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, cause } = error as { code?: unknown; cause?: unknown };
+  return code === "23505" || isUniqueViolation(cause);
 }
 
 /**

@@ -6,6 +6,7 @@ import { interestEvents, interests, meetingRequests } from "./db/schema";
 import { markInterest, setInterestJob } from "./interests";
 import { advanceCandidate, jobSnapshot } from "./jobs";
 import { notifyInterest } from "./notifications";
+import type { Tx } from "./profiles";
 
 const hourMs = 60 * 60_000;
 const dayMs = 24 * hourMs;
@@ -44,7 +45,7 @@ export async function interestLimitWait(db: Db, companyId: string, now = Date.no
 
 /** The limit a new meeting proposal would break, or null when it can be sent. */
 export async function meetingLimit(
-  db: Db,
+  db: Db | Tx,
   companyId: string,
   developerId: string,
   now = Date.now(),

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { emptyProfile } from "@/lib/local-profile";
@@ -13,6 +14,23 @@ export async function createTestDb(): Promise<Db> {
   const db = drizzle({ client: new PGlite(), schema });
   await migrate(db, { migrationsFolder: path.resolve("drizzle") });
   return db as unknown as Db;
+}
+
+/**
+ * Makes every deletion of sessions fail, to see that a change saved together with the end of the
+ * sessions is undone as a whole. allowSessionDeletes lifts it.
+ */
+export async function failSessionDeletes(db: Db) {
+  await db.execute(sql`
+    create or replace function fail_session_delete() returns trigger as $$
+    begin raise exception 'session delete failed'; end $$ language plpgsql`);
+  await db.execute(sql`
+    create trigger fail_session_delete before delete on sessions
+    for each statement execute function fail_session_delete()`);
+}
+
+export async function allowSessionDeletes(db: Db) {
+  await db.execute(sql`drop trigger fail_session_delete on sessions`);
 }
 
 /** A developer account with a published profile, the only kind companies can reach. */

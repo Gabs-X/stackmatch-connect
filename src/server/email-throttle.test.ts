@@ -9,6 +9,8 @@ import {
   emailWindowMinutes,
   maxEmailsPerIp,
   recordEmailSend,
+  releaseEmailSend,
+  reserveEmailSend,
 } from "./email-throttle";
 import { createTestDb } from "./test-db";
 
@@ -65,9 +67,8 @@ describe("e-mails with a code", () => {
     expect(outbox()).toHaveLength(0);
   });
 
-  it("count only when one is actually sent", async () => {
+  it("count confirmation codes only when one is actually sent", async () => {
     const now = Date.now();
-    await requestPasswordReset(db, "ninguem@example.com", "pt", ip, now);
     expect(await sendVerificationCode(db, ana, "pt", ip, now)).toEqual({ sent: true });
     // Within the account's cooldown no e-mail goes out, so it doesn't count either.
     await sendVerificationCode(db, ana, "pt", ip, now + 1000);
@@ -75,5 +76,38 @@ describe("e-mails with a code", () => {
     expect(await emailLimitFor(db, ip, now + 3000)).toBe(0);
     await recordEmailSend(db, ip, now + 3000);
     expect(await emailLimitFor(db, ip, now + 4000)).toBeGreaterThan(0);
+  });
+
+  it("count every password reset request, so the limit says nothing about the address", async () => {
+    const now = Date.now();
+    for (let sent = 0; sent < maxEmailsPerIp - 1; sent++)
+      await requestPasswordReset(db, "ninguem@example.com", "pt", ip, now);
+    expect(await emailLimitFor(db, ip, now)).toBe(0);
+    await requestPasswordReset(db, "ana@example.com", "pt", ip, now);
+    expect(await emailLimitFor(db, ip, now)).toBeGreaterThan(0);
+  });
+});
+
+describe("reserveEmailSend", () => {
+  it("lets only one of the requests racing for the last e-mail through", async () => {
+    const now = Date.now();
+    for (let sent = 0; sent < maxEmailsPerIp - 1; sent++) await recordEmailSend(db, ip, now);
+    const results = await Promise.all([
+      reserveEmailSend(db, ip, now),
+      reserveEmailSend(db, ip, now),
+      reserveEmailSend(db, ip, now),
+    ]);
+    expect(results.filter((result) => "reserved" in result)).toHaveLength(1);
+    expect(results.filter((result) => "retryInSeconds" in result)).toHaveLength(2);
+  });
+
+  it("gives back an e-mail that wasn't sent", async () => {
+    const now = Date.now();
+    for (let sent = 0; sent < maxEmailsPerIp - 1; sent++) await recordEmailSend(db, ip, now);
+    const reservation = await reserveEmailSend(db, ip, now);
+    if (!("reserved" in reservation)) throw new Error("not reserved");
+    expect(await emailLimitFor(db, ip, now)).toBeGreaterThan(0);
+    await releaseEmailSend(db, reservation.reserved);
+    expect(await emailLimitFor(db, ip, now)).toBe(0);
   });
 });

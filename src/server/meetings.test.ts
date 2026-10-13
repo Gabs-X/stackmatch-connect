@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { AuthUser } from "@/lib/auth";
 import { defaultCompanySettings } from "@/lib/company-settings";
+import { outreachLimits } from "@/lib/outreach";
 import { createAccount } from "./auth";
 import { saveCompanySettings } from "./companies";
 import type { Db } from "./db";
@@ -84,6 +85,23 @@ describe("sendMeetingRequest", () => {
       await sendMeetingRequest(db, acme, { ...proposal, developerId: "ninguem" }, now),
     ).toEqual({ error: "unknown-developer" });
     expect(await listSentBy(db, acme.id)).toEqual([]);
+  });
+
+  it("lets only one of the proposals racing for the last one allowed through", async () => {
+    const acme = await company("bia@acme.com");
+    for (let sent = 1; sent < outreachLimits.meetingsPerDeveloper; sent++)
+      expect(await sendMeetingRequest(db, acme, proposal, now)).toHaveProperty("request");
+    const results = await Promise.all([
+      sendMeetingRequest(db, acme, proposal, now),
+      sendMeetingRequest(db, acme, proposal, now),
+      sendMeetingRequest(db, acme, proposal, now),
+    ]);
+    expect(results.filter((result) => "request" in result)).toHaveLength(1);
+    expect(results.filter((result) => "error" in result)).toEqual([
+      { error: "developer-meeting-limit", retryInSeconds: expect.any(Number) },
+      { error: "developer-meeting-limit", retryInSeconds: expect.any(Number) },
+    ]);
+    expect(await listSentBy(db, acme.id)).toHaveLength(outreachLimits.meetingsPerDeveloper);
   });
 });
 

@@ -15,7 +15,7 @@ import { loginLockedFor } from "./login-throttle";
 import { loadProfile, saveProfile } from "./profiles";
 import { localImagePath, readLocalImage } from "./storage";
 import { testJpeg } from "./jpeg";
-import { createTestDb } from "./test-db";
+import { createTestDb, failSessionDeletes } from "./test-db";
 
 let db: Db;
 let ana: AuthUser;
@@ -70,6 +70,18 @@ describe("changePassword", () => {
     expect(await authenticate(db, "ana@example.com", "novasenha1")).not.toBeNull();
     expect(await userForSession(db, current)).not.toBeNull();
     expect(await userForSession(db, other)).toBeNull();
+  });
+
+  it("keeps the old password and sessions when ending the sessions fails", async () => {
+    const current = await createSession(db, ana.id);
+    const other = await createSession(db, ana.id);
+    await failSessionDeletes(db);
+    await expect(
+      changePassword(db, ana, { currentPassword: "segredo123", password: "novasenha1" }, current),
+    ).rejects.toThrow();
+    expect(await authenticate(db, "ana@example.com", "segredo123")).not.toBeNull();
+    expect(await authenticate(db, "ana@example.com", "novasenha1")).toBeNull();
+    expect(await userForSession(db, other)).not.toBeNull();
   });
 });
 
@@ -134,6 +146,20 @@ describe("changing the e-mail", () => {
       acceptTerms: true,
     });
     expect(await confirmEmailChange(db, ana, code, "pt")).toEqual({ error: "email-taken" });
+  });
+
+  it("switches once when the code is used twice at once", async () => {
+    await requestEmailChange(db, ana, { email: "nova@example.com", password: "segredo123" }, "pt");
+    const code = lastCode("nova@example.com");
+    outbox().length = 0;
+    const results = await Promise.all([
+      confirmEmailChange(db, ana, code, "pt"),
+      confirmEmailChange(db, ana, code, "pt"),
+    ]);
+    expect(results.filter((result) => "user" in result)).toHaveLength(1);
+    expect(results.filter((result) => "error" in result)).toEqual([{ error: "invalid-code" }]);
+    // The old address is told once.
+    expect(outbox()).toHaveLength(1);
   });
 });
 
