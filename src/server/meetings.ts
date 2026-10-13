@@ -18,6 +18,7 @@ import { lockKeys } from "./db/locks";
 import { developerProfiles, interests, meetingRequests, users } from "./db/schema";
 import { sendEmail } from "./email";
 import { advanceCandidate, jobSnapshot } from "./jobs";
+import type { Tx } from "./profiles";
 import {
   developerEmail,
   meetingAnswerEmail,
@@ -166,7 +167,7 @@ export async function listReceivedBy(db: Db, developerId: string) {
 }
 
 /** Whether the company marked interest in the developer or sent them a proposal. */
-export async function companyReachedDeveloper(db: Db, companyId: string, developerId: string) {
+export async function companyReachedDeveloper(db: Db | Tx, companyId: string, developerId: string) {
   const [interest] = await db
     .select({ id: interests.id })
     .from(interests)

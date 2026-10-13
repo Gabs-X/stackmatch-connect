@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { dictionaries, type Lang } from "@/lib/i18n";
 import {
   jobTexts,
@@ -13,7 +13,7 @@ import { loadCompanySettings } from "./companies";
 import type { Db } from "./db";
 import { jobCandidates, jobs, meetingRequests, users } from "./db/schema";
 import { messageEmail, sendEmail } from "./email";
-import { loadJob, toJobs } from "./jobs";
+import { loadJob, lockJob, toJobs } from "./jobs";
 import { companyReachedDeveloper } from "./meetings";
 import { developerEmail, jobEmailDetails } from "./notifications";
 import { developerExists } from "./saved-talents";
@@ -115,6 +115,11 @@ export type ApplicationResult =
  * Offers the developer for the job: puts them in it (at "saved" when they weren't there yet, or
  * where the company already had them) with their message, and e-mails the company's contact. Only
  * for an open job in the job board or of a company that reached them, and once per job.
+ *
+ * Offers sent at once are recorded once: one statement records the offer only when there's none
+ * yet, so only that call keeps its message and tells the company; the others are "already-applied".
+ * The job stays as it was checked until the offer is saved: closing or deleting it waits, and an
+ * offer made after that finds it closed or gone.
  */
 export async function applyToJob(
   db: Db,
@@ -123,42 +128,40 @@ export async function applyToJob(
   appUrl: string,
   now = Date.now(),
 ): Promise<ApplicationResult> {
-  const [job] = await db
-    .select({ companyId: jobs.companyId, status: jobs.status, listed: jobs.listed })
-    .from(jobs)
-    .where(eq(jobs.id, jobId))
-    .limit(1);
-  if (
-    !job ||
-    job.status !== "open" ||
-    (!job.listed && !(await companyReachedDeveloper(db, job.companyId, developerId)))
-  )
-    return { error: "unknown-job" };
   if (!(await developerExists(db, developerId))) return { error: "no-profile" };
   const at = new Date(now);
-  const [current] = await db
-    .select({ appliedAt: jobCandidates.appliedAt })
-    .from(jobCandidates)
-    .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
-    .limit(1);
-  if (current?.appliedAt) return { error: "already-applied" };
-  if (current)
-    await db
-      .update(jobCandidates)
-      .set({ appliedAt: at, applicationMessage: message })
-      .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)));
-  else
-    await db.insert(jobCandidates).values({
-      jobId,
-      developerId,
-      stage: "saved",
-      stageChangedAt: at,
-      createdAt: at,
-      appliedAt: at,
-      applicationMessage: message,
-    });
+  type Outcome = { companyId: string } | { error: "unknown-job" | "already-applied" };
+  const outcome = await db.transaction(async (tx): Promise<Outcome> => {
+    const job = await lockJob(tx, jobId);
+    if (
+      !job ||
+      job.status !== "open" ||
+      (!job.listed && !(await companyReachedDeveloper(tx, job.companyId, developerId)))
+    )
+      return { error: "unknown-job" };
+    // Already in the job: only the offer is added, at the stage the company gave them.
+    const recorded = await tx
+      .insert(jobCandidates)
+      .values({
+        jobId,
+        developerId,
+        stage: "saved",
+        stageChangedAt: at,
+        createdAt: at,
+        appliedAt: at,
+        applicationMessage: message,
+      })
+      .onConflictDoUpdate({
+        target: [jobCandidates.jobId, jobCandidates.developerId],
+        set: { appliedAt: at, applicationMessage: message },
+        setWhere: isNull(jobCandidates.appliedAt),
+      })
+      .returning({ developerId: jobCandidates.developerId });
+    return recorded.length ? { companyId: job.companyId } : { error: "already-applied" };
+  });
+  if ("error" in outcome) return { error: outcome.error };
   try {
-    await notifyApplication(db, job.companyId, developerId, jobId, message, appUrl);
+    await notifyApplication(db, outcome.companyId, developerId, jobId, message, appUrl);
   } catch (error) {
     // The offer stands; the company still sees it on the job's page.
     console.error("Job application not e-mailed:", error);

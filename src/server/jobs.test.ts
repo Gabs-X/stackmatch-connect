@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { AuthUser } from "@/lib/auth";
-import { emptyJob, jobFilters, maxJobsPerCompany, type JobInput } from "@/lib/jobs";
+import { emptyJob, jobFilters, maxJobsPerCompany, type JobInput, type JobStage } from "@/lib/jobs";
 import { cleanup } from "./cleanup";
 import type { Db } from "./db";
 import { savedTalents, skills } from "./db/schema";
@@ -152,6 +152,61 @@ describe("candidates", () => {
     );
     expect("request" in result).toBe(true);
     expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("contacted");
+  });
+});
+
+describe("changes made at once", () => {
+  it("end at the highest stage reached, whatever order the advances run in", async () => {
+    const orders: JobStage[][] = [
+      ["interest", "contacted", "meeting"],
+      ["meeting", "contacted", "interest"],
+      ["contacted", "meeting", "interest"],
+    ];
+    for (const order of orders) {
+      const job = await newJob({ ...frontend, title: order.join(", ") });
+      await advanceCandidate(db, acme.id, job.id, marina, "saved");
+      await Promise.all(order.map((stage) => advanceCandidate(db, acme.id, job.id, marina, stage)));
+      expect((await listCandidates(db, acme.id, job.id))?.map((c) => c.stage)).toEqual(["meeting"]);
+    }
+  });
+
+  it("add a developer not yet in the job once, at the higher stage", async () => {
+    const job = await newJob();
+    const added = await Promise.all([
+      advanceCandidate(db, acme.id, job.id, marina, "saved"),
+      advanceCandidate(db, acme.id, job.id, marina, "interest"),
+    ]);
+    expect(added).toEqual([true, true]);
+    expect((await listCandidates(db, acme.id, job.id))?.map((c) => c.stage)).toEqual(["interest"]);
+  });
+
+  it("let the company move a developer back by hand, and later advances go on from there", async () => {
+    const job = await newJob();
+    await advanceCandidate(db, acme.id, job.id, marina, "contacted");
+    await moveCandidate(db, acme.id, job.id, marina, "saved");
+    await advanceCandidate(db, acme.id, job.id, marina, "interest");
+    expect((await listCandidates(db, acme.id, job.id))?.[0]?.stage).toBe("interest");
+  });
+
+  it("don't add anyone to a job deleted meanwhile", async () => {
+    const job = await newJob();
+    const [added] = await Promise.all([
+      advanceCandidate(db, acme.id, job.id, marina, "interest"),
+      deleteJob(db, acme.id, job.id),
+    ]);
+    expect(typeof added).toBe("boolean");
+    expect(await listCandidates(db, acme.id, job.id)).toBeNull();
+  });
+
+  it("create only one job in the last place the limit allows", async () => {
+    for (let i = 0; i < maxJobsPerCompany - 1; i++)
+      await newJob({ ...emptyJob, title: `Vaga ${i}` });
+    const results = await Promise.all(
+      [1, 2, 3].map((i) => createJob(db, acme.id, { ...emptyJob, title: `Última ${i}` })),
+    );
+    expect(results.filter((result) => "job" in result)).toHaveLength(1);
+    expect(results.filter((result) => "error" in result)).toHaveLength(2);
+    expect(await listJobs(db, acme.id)).toHaveLength(maxJobsPerCompany);
   });
 });
 

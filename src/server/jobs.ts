@@ -1,9 +1,8 @@
-import { and, asc, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, sql, type SQL } from "drizzle-orm";
 import type { CompanySettings } from "@/lib/company-settings";
 import {
   jobStages,
   maxJobsPerCompany,
-  stageRank,
   type Job,
   type JobCandidate,
   jobTexts,
@@ -15,6 +14,7 @@ import {
   toSnapshot,
 } from "@/lib/jobs";
 import type { Db } from "./db";
+import { lockKeys } from "./db/locks";
 import { companyTexts, savedSettings } from "./companies";
 import { interests, jobCandidates, jobSkills, jobs, meetingRequests, skills } from "./db/schema";
 import { skillIds, uniqueIds, type Tx } from "./profiles";
@@ -151,18 +151,23 @@ export async function ownsJob(db: Db, companyId: string, jobId: string) {
 
 export type CreateJobResult = { job: Job } | { error: "job-limit" };
 
-/** Creates a job, unless the company already has as many as it may. Expects validated input. */
+/**
+ * Creates a job, unless the company already has as many as it may. Expects validated input.
+ * Counting and creating are one step under the company's lock, so jobs created at once can't all
+ * take the last one allowed.
+ */
 export async function createJob(
   db: Db,
   companyId: string,
   input: JobInput,
 ): Promise<CreateJobResult> {
-  const [existing] = await db
-    .select({ total: count() })
-    .from(jobs)
-    .where(eq(jobs.companyId, companyId));
-  if ((existing?.total ?? 0) >= maxJobsPerCompany) return { error: "job-limit" };
   const id = await db.transaction(async (tx) => {
+    await lockKeys(tx, [`jobs:${companyId}`]);
+    const [existing] = await tx
+      .select({ total: count() })
+      .from(jobs)
+      .where(eq(jobs.companyId, companyId));
+    if ((existing?.total ?? 0) >= maxJobsPerCompany) return null;
     const [row] = await tx
       .insert(jobs)
       .values({ companyId, ...jobFields(input) })
@@ -171,6 +176,7 @@ export async function createJob(
     await writeSkills(tx, row.id, input);
     return row.id;
   });
+  if (id === null) return { error: "job-limit" };
   const job = await loadJob(db, companyId, id);
   if (!job) throw new Error("Job not saved.");
   return { job };
@@ -226,9 +232,34 @@ export async function listCandidates(
 }
 
 /**
+ * Holds the job's row until the transaction ends, so it can't be closed or deleted while a
+ * developer is being put in it; the job's `status`, `listed` and company, or nothing when there's
+ * no such job. Closing and deleting wait for the transaction, and it waits for them.
+ */
+export async function lockJob(tx: Tx, jobId: string) {
+  const [job] = await tx
+    .select({ companyId: jobs.companyId, status: jobs.status, listed: jobs.listed })
+    .from(jobs)
+    .where(eq(jobs.id, jobId))
+    .for("share");
+  return job ?? null;
+}
+
+/** The stage's place in jobStages, in SQL, to compare stages inside the database (see stageRank). */
+const rankOf = (stage: SQL) =>
+  sql`array_position(array[${sql.join(
+    jobStages.map((name) => sql`${name}`),
+    sql`, `,
+  )}]::text[], ${stage})`;
+
+/**
  * Adds the developer to the company's job at `stage`, or moves them up to it. Never moves anyone
  * back: proposing a call to someone already "contacted" keeps them there, not at "saved". False
  * when the job isn't the company's or the profile doesn't exist.
+ *
+ * One statement adds or moves the developer, comparing with the stage they have at that moment, so
+ * advances made at once end at the highest of them, and two that both add the developer don't lose
+ * one. Moving by hand (moveCandidate) is the only way back.
  */
 export async function advanceCandidate(
   db: Db,
@@ -238,15 +269,11 @@ export async function advanceCandidate(
   stage: JobStage,
   now = Date.now(),
 ) {
-  if (!(await ownsJob(db, companyId, jobId)) || !(await developerExists(db, developerId)))
-    return false;
-  const [current] = await db
-    .select({ stage: jobCandidates.stage })
-    .from(jobCandidates)
-    .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)))
-    .limit(1);
-  if (!current)
-    await db
+  if (!(await developerExists(db, developerId))) return false;
+  return db.transaction(async (tx) => {
+    const job = await lockJob(tx, jobId);
+    if (job?.companyId !== companyId) return false;
+    await tx
       .insert(jobCandidates)
       .values({
         jobId,
@@ -255,13 +282,13 @@ export async function advanceCandidate(
         stageChangedAt: new Date(now),
         createdAt: new Date(now),
       })
-      .onConflictDoNothing();
-  else if (stageRank(stage) > stageRank(current.stage))
-    await db
-      .update(jobCandidates)
-      .set({ stage, stageChangedAt: new Date(now) })
-      .where(and(eq(jobCandidates.jobId, jobId), eq(jobCandidates.developerId, developerId)));
-  return true;
+      .onConflictDoUpdate({
+        target: [jobCandidates.jobId, jobCandidates.developerId],
+        set: { stage, stageChangedAt: new Date(now) },
+        setWhere: sql`${rankOf(sql`${jobCandidates.stage}`)} < ${rankOf(sql`excluded.stage`)}`,
+      });
+    return true;
+  });
 }
 
 /** Puts a developer already in the job at any stage, by hand; false when there's no such one. */

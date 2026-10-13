@@ -4,7 +4,14 @@ import { emptyJob, type JobInput } from "@/lib/jobs";
 import type { Db } from "./db";
 import { outbox } from "./email";
 import { applyToJob, listJobBoard, listOpenJobsFor } from "./job-applications";
-import { advanceCandidate, createJob, listCandidates, listJobs, setJobStatus } from "./jobs";
+import {
+  advanceCandidate,
+  createJob,
+  deleteJob,
+  listCandidates,
+  listJobs,
+  setJobStatus,
+} from "./jobs";
 import { markInterest } from "./interests";
 import { createCompany, createDeveloper, createTestDb } from "./test-db";
 
@@ -95,6 +102,61 @@ describe("job applications", () => {
       stage: "contacted",
       applicationMessage: "",
     });
+  });
+
+  it("records one of two offers sent at once, keeps its message and tells the company once", async () => {
+    await markInterest(db, acme.id, marina);
+    // Without the developer in the job yet, and with them already in it at "contacted".
+    for (const alreadyIn of [false, true]) {
+      const job = await newJob({ ...frontend, title: alreadyIn ? "Já na vaga" : "Nova" });
+      if (alreadyIn) await advanceCandidate(db, acme.id, job.id, marina, "contacted");
+      const sent = outbox().length;
+      const messages = ["Primeira", "Segunda"];
+      const results = await Promise.all(
+        messages.map((message) => applyToJob(db, marina, { jobId: job.id, message }, appUrl)),
+      );
+      const winner = results.findIndex((result) => "appliedAt" in result);
+      expect(winner).not.toBe(-1);
+      expect(results.filter((result) => "error" in result)).toEqual([{ error: "already-applied" }]);
+      expect(await listCandidates(db, acme.id, job.id)).toEqual([
+        expect.objectContaining({
+          stage: alreadyIn ? "contacted" : "saved",
+          applicationMessage: messages[winner],
+        }),
+      ]);
+      expect(outbox()).toHaveLength(sent + 1);
+    }
+  });
+
+  it("records an offer made while the job closes, or finds it closed, never half of it", async () => {
+    await markInterest(db, acme.id, marina);
+    const job = await newJob();
+    const [result] = await Promise.all([
+      applyToJob(db, marina, { jobId: job.id, message: "Oi!" }, appUrl),
+      setJobStatus(db, acme.id, job.id, "closed"),
+    ]);
+    const candidates = await listCandidates(db, acme.id, job.id);
+    if ("appliedAt" in result) expect(candidates).toHaveLength(1);
+    else {
+      expect(result).toEqual({ error: "unknown-job" });
+      expect(candidates).toEqual([]);
+    }
+    // Closed from then on.
+    expect(await applyToJob(db, marina, { jobId: job.id, message: "" }, appUrl)).toEqual({
+      error: "unknown-job",
+    });
+  });
+
+  it("doesn't fail when the job is deleted during the offer", async () => {
+    await markInterest(db, acme.id, marina);
+    const job = await newJob();
+    const [result] = await Promise.all([
+      applyToJob(db, marina, { jobId: job.id, message: "Oi!" }, appUrl),
+      deleteJob(db, acme.id, job.id),
+    ]);
+    // Recorded before the deletion (and then deleted with the job), or refused after it.
+    if (!("appliedAt" in result)) expect(result).toEqual({ error: "unknown-job" });
+    expect(await listCandidates(db, acme.id, job.id)).toBeNull();
   });
 
   it("refuses closed jobs", async () => {
