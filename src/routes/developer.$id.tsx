@@ -1,5 +1,5 @@
 import { useI18n, useLocalizedMeta } from "@/lib/i18n";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Bookmark, BriefcaseBusiness } from "lucide-react";
 import { toast } from "sonner";
@@ -51,8 +51,6 @@ function DeveloperProfile({ d }: { d: Developer }) {
   const { t, tv } = useI18n();
   useLocalizedMeta(d.name + " — Stack Match", tv(d.bio, d.translations));
   const { job: jobId } = Route.useSearch();
-  const { saved, addSaved, removeSaved } = useApp();
-  const isSaved = saved.includes(d.id);
   return (
     <main className="pb-20">
       <DeveloperProfileView
@@ -86,23 +84,67 @@ function DeveloperProfile({ d }: { d: Developer }) {
             {jobId ? (
               <JobMembership developerId={d.id} jobId={jobId} />
             ) : (
-              <Button
-                variant={isSaved ? "secondary" : "outline"}
-                onClick={() => {
-                  if (isSaved) removeSaved(d.id);
-                  else addSaved(d.id);
-                  toast(isSaved ? t.profile.toastRemoved : t.profile.toastSaved);
-                }}
-              >
-                <Bookmark />
-                {isSaved ? t.profile.saved : t.profile.save}
-              </Button>
+              <SaveTalent developerId={d.id} />
             )}
             <ScheduleDialog developerId={d.id} developerName={d.name} jobId={jobId} />
           </>
         }
       />
     </main>
+  );
+}
+
+/**
+ * Adds the profile to the company's shortlist or takes it out. The button changes right away; the
+ * confirmation shows once the server kept the change (a failure says so and puts the list back,
+ * see AppProvider). Only confirmed companies have a shortlist: visitors go to the login and
+ * unconfirmed accounts to the confirmation, both coming back here, and developers are told why not.
+ */
+function SaveTalent({ developerId }: { developerId: string }) {
+  const { t } = useI18n();
+  const { user, ready } = useAuth();
+  const { pathname } = useLocation();
+  const { hydrated, saved, addSaved, removeSaved } = useApp();
+  const isSaved = saved.includes(developerId);
+  const label = (
+    <>
+      <Bookmark />
+      {isSaved ? t.profile.saved : t.profile.save}
+    </>
+  );
+  if (!ready)
+    return (
+      <Button variant="outline" disabled>
+        {label}
+      </Button>
+    );
+  if (!user || !user.emailVerified)
+    return (
+      <Button asChild variant="outline">
+        <Link to={user ? "/verify-email" : "/login"} search={{ redirect: pathname }}>
+          {label}
+        </Link>
+      </Button>
+    );
+  if (user.accountType !== "company")
+    return (
+      <Button variant="outline" onClick={() => toast.info(t.profile.companyOnly)}>
+        {label}
+      </Button>
+    );
+  return (
+    <Button
+      variant={isSaved ? "secondary" : "outline"}
+      // The shortlist must be known first: a failed load would show every profile as not saved.
+      disabled={!hydrated}
+      onClick={() => {
+        void (isSaved ? removeSaved(developerId) : addSaved(developerId)).then((kept) => {
+          if (kept) toast(isSaved ? t.profile.toastRemoved : t.profile.toastSaved);
+        });
+      }}
+    >
+      {label}
+    </Button>
   );
 }
 
@@ -129,7 +171,7 @@ function ProfileNotFound() {
 function JobMembership({ developerId, jobId }: { developerId: string; jobId: string }) {
   const { t } = useI18n();
   const { user } = useAuth();
-  const { addSaved } = useApp();
+  const { hydrated, addSaved } = useApp();
   const queryClient = useQueryClient();
   const candidatesQuery = jobCandidatesQuery(user?.id ?? "", jobId);
   const { data: candidates } = useQuery({ ...candidatesQuery, enabled: Boolean(user) });
@@ -146,9 +188,13 @@ function JobMembership({ developerId, jobId }: { developerId: string; jobId: str
   return (
     <Button
       variant="outline"
-      disabled={!candidates}
+      disabled={!candidates || !hydrated}
       onClick={() => {
-        addSaved(developerId, jobId);
+        void addSaved(developerId, jobId).then((kept) => {
+          if (kept) toast(t.jobs.addedToJob);
+          // Not added after all: show the job's candidates as the server has them.
+          else void queryClient.invalidateQueries({ queryKey: candidatesQuery.queryKey });
+        });
         queryClient.setQueryData(candidatesQuery.queryKey, (current) => [
           ...(current ?? []),
           {
@@ -159,7 +205,6 @@ function JobMembership({ developerId, jobId }: { developerId: string; jobId: str
             applicationMessage: "",
           },
         ]);
-        toast(t.jobs.addedToJob);
       }}
     >
       <Bookmark />

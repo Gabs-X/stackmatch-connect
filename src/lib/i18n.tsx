@@ -149,6 +149,8 @@ const pt = {
     sortAvailability: "Disponibilidade",
     sortExperience: "Mais experiência",
     count: (n: number) => (n === 1 ? "1 talento" : `${n} talentos`),
+    changeError: "Não foi possível salvar a alteração. A lista mostra o que está salvo.",
+    listLoadError: "Não foi possível carregar seus talentos salvos",
   },
   profile: {
     back: "Voltar ao Discover",
@@ -156,6 +158,7 @@ const pt = {
     save: "Salvar",
     toastRemoved: "Removido dos salvos",
     toastSaved: "Talento salvo",
+    companyOnly: "Somente contas de empresa salvam talentos.",
     about: "Sobre mim",
     skills: "Skills",
     experience: "Experiência",
@@ -275,6 +278,9 @@ const pt = {
       "Projetos são opcionais. Você pode concluir o perfil agora e adicioná-los depois, editando o perfil.",
     skipProjects: "Continuar sem projetos",
     saveError: "Não foi possível salvar o perfil. Seus dados continuam no formulário.",
+    loadError: "Não foi possível carregar seu perfil",
+    loadErrorSub:
+      "Para não substituir o que já está salvo, a edição fica bloqueada até o perfil carregar.",
   },
   schedule: {
     trigger: "Propor reunião",
@@ -1197,6 +1203,8 @@ const en: Dict = {
     sortAvailability: "Availability",
     sortExperience: "Most experience",
     count: (n: number) => (n === 1 ? "1 profile" : `${n} profiles`),
+    changeError: "Couldn't save the change. The list shows what is saved.",
+    listLoadError: "Couldn't load your saved talent",
   },
   profile: {
     back: "Back to Discover",
@@ -1204,6 +1212,7 @@ const en: Dict = {
     save: "Save",
     toastRemoved: "Removed from saved",
     toastSaved: "Talent saved",
+    companyOnly: "Only company accounts can save talent.",
     about: "About me",
     skills: "Skills",
     experience: "Experience",
@@ -1324,6 +1333,8 @@ const en: Dict = {
       "Projects are optional. You can finish your profile now and add them later by editing it.",
     skipProjects: "Continue without projects",
     saveError: "Couldn't save the profile. Your data is still in the form.",
+    loadError: "Couldn't load your profile",
+    loadErrorSub: "So nothing saved gets replaced, editing waits until the profile loads.",
   },
   schedule: {
     trigger: "Propose a meeting",

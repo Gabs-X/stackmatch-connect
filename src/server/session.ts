@@ -47,9 +47,14 @@ export class AccessError extends Error {
   }
 }
 
-/** The signed-in account, which must be of `type` and have confirmed its e-mail; else refused. */
-export async function requireAccount(type: AccountType) {
+/**
+ * The signed-in account, which must be of `type` and have confirmed its e-mail; else refused.
+ * With `accountId`, the account the screen was showing, also refused when the session now belongs
+ * to another account: another tab signed out or switched accounts since.
+ */
+export async function requireAccount(type: AccountType, accountId?: string) {
   const user = await currentUser();
   if (user?.accountType !== type || !user.emailVerified) throw new AccessError();
+  if (accountId !== undefined && user.id !== accountId) throw new AccessError();
   return user;
 }

@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type Page, type Route } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { testCompanies, testDevelopers } from "./test-data";
 
@@ -87,6 +87,40 @@ export const seedEmailLimitReached = (page: Page) => seed(page, { emailLimitReac
 /** Puts profiles in the shortlist of the test company (teste.emp), straight in the database. */
 export const seedSavedTalents = (page: Page, developerIds: string[]) =>
   seed(page, { savedTalents: { companyId: "demo-company", developerIds } });
+
+/**
+ * Takes over the page's calls to one server function, by its export name in src/lib (such as
+ * "saveTalentFn"): `fail` answers them with a server error, `hold` keeps them waiting until
+ * release(). Relies on the dev server the e2e runs on, whose function ids are the base64url of a
+ * JSON naming the export. `calls()` counts the calls the page made.
+ */
+export async function interceptServerFn(page: Page, name: string, mode: "fail" | "hold") {
+  let calls = 0;
+  let release = () => {};
+  const released = new Promise<void>((resolve) => (release = resolve));
+  const exportName = (url: string) => {
+    try {
+      const id = new URL(url).pathname.split("/").pop() ?? "";
+      return String(
+        (JSON.parse(Buffer.from(id, "base64url").toString("utf8")) as { export?: unknown }).export,
+      );
+    } catch {
+      return "";
+    }
+  };
+  const handler = async (route: Route) => {
+    // The export is named after the function, with a suffix such as "_createServerFn_handler".
+    const called = exportName(route.request().url());
+    if (called !== name && !called.startsWith(`${name}_`)) return route.fallback();
+    calls += 1;
+    if (mode === "fail") return route.fulfill({ status: 500, body: "Simulated failure" });
+    await released;
+    return route.continue();
+  };
+  await page.route("**/_serverFn/**", handler);
+  // stop() lets later calls through again.
+  return { calls: () => calls, release, stop: () => page.unroute("**/_serverFn/**", handler) };
+}
 
 /** Signs in with a seed account through the login form and waits for its home page. */
 export async function signInAs(page: Page, type: "developer" | "company") {

@@ -118,6 +118,8 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
   const [index, setIndex] = useState(0);
   const {
     hydrated,
+    loadFailed,
+    reloadLists,
     saved,
     interests,
     addSaved,
@@ -167,8 +169,10 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
   }, [hasNextPage, isFetchingNextPage, index, loaded.length, fetchNextPage]);
   const current = loaded[index];
   const currentMatch = job && current ? matchJob(job, current) : null;
+  // Without the shortlist the round can't tell which profiles to leave out, so it doesn't start.
   const loading =
-    (isPending && !isError) || hiddenIds === null || (!current && index < total && !isError);
+    !loadFailed &&
+    ((isPending && !isError) || hiddenIds === null || (!current && index < total && !isError));
   const startRound = () => {
     setHiddenIds(alreadyIn);
     setIndex(0);
@@ -289,7 +293,7 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
             <div className="mb-3 flex items-center justify-between text-xs font-semibold text-muted-foreground">
               <span className="flex flex-wrap items-center gap-x-2">
                 <span>
-                  {loading ? (
+                  {loadFailed ? null : loading ? (
                     <Skeleton className="h-4 w-24" />
                   ) : total ? (
                     `${Math.min(index + 1, total)} ${t.discover.of} ${total} ${t.discover.profiles(total)}`
@@ -354,12 +358,15 @@ function DiscoverPage({ job, members: initialMembers }: { job?: Job; members?: s
                   </span>
                   <DeveloperCardSkeleton showProfile />
                 </>
-              ) : isError ? (
+              ) : isError || loadFailed ? (
                 <div className="grid min-h-[500px] place-items-center rounded-lg border border-dashed bg-card p-8 text-center">
                   <div role="alert">
                     <h2 className="text-xl font-bold">{t.discover.loadError}</h2>
                     <p className="mt-2 text-sm text-muted-foreground">{t.discover.loadErrorSub}</p>
-                    <Button className="mt-5" onClick={() => void refetch()}>
+                    <Button
+                      className="mt-5"
+                      onClick={() => (loadFailed ? reloadLists() : void refetch())}
+                    >
                       <RotateCcw />
                       {t.common.retry}
                     </Button>

@@ -12,6 +12,7 @@ import {
   IdCard,
   Pencil,
   Plus,
+  RotateCcw,
   Trash2,
   Upload,
   UserRound,
@@ -155,6 +156,8 @@ function CreateProfile() {
     if (target <= step || requiredFilledBefore(target)) setStep(target);
   };
   const finishProfile = async () => {
+    // A form that didn't start from the saved profile would replace it with what's on screen.
+    if (!stored.isSuccess) return;
     if (!requiredFilledBefore(steps.length + 1)) return;
     setSaving(true);
     try {
@@ -218,6 +221,20 @@ function CreateProfile() {
         <p role="status" className="text-sm text-muted-foreground">
           {t.common.loading}
         </p>
+      </main>
+    );
+  // Unknown, not blank: an empty form here could overwrite the saved profile.
+  if (stored.isError && !stored.data)
+    return (
+      <main className="grid min-h-[calc(100vh-4rem)] place-items-center px-4 text-center">
+        <div role="alert" className="max-w-md">
+          <h1 className="text-xl font-bold">{t.create.loadError}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t.create.loadErrorSub}</p>
+          <Button className="mt-5" onClick={() => void stored.refetch()}>
+            <RotateCcw />
+            {t.common.retry}
+          </Button>
+        </div>
       </main>
     );
   if (preview)

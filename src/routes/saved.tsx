@@ -48,7 +48,7 @@ const sorters: Record<Sort, (a: Developer, b: Developer) => number> = {
 function SavedPage() {
   const { t } = useI18n();
   useLocalizedMeta(t.saved.title + " — Stack Match", t.saved.sub);
-  const { hydrated, saved, addSaved, removeSaved } = useApp();
+  const { hydrated, loadFailed, reloadLists, saved, addSaved, removeSaved } = useApp();
   const { developers, isPending, isError, refetch } = useSavedDevelopers();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("availability");
@@ -61,7 +61,8 @@ function SavedPage() {
     // Array.sort is stable, so ties keep the order the profiles came in.
     .sort(sorters[sort]);
   // Before storage is read the count is unknown, so show one row; after, match the saved count.
-  const loading = !hydrated || (saved.length > 0 && isPending && !isError);
+  // A shortlist that failed to load is unknown, not empty: it shows the error, never "no talents".
+  const loading = !loadFailed && (!hydrated || (saved.length > 0 && isPending && !isError));
   const skeletonCount = hydrated ? Math.min(saved.length, 8) : 4;
   const grid = "grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
   const filters = [
@@ -133,12 +134,17 @@ function SavedPage() {
               <DeveloperCardSkeleton key={i} compact />
             ))}
           </div>
-        ) : isError && saved.length > 0 ? (
+        ) : loadFailed || (isError && saved.length > 0) ? (
           <div className="mt-10 grid min-h-80 place-items-center rounded-xl border border-dashed bg-card p-8 text-center">
             <div role="alert">
-              <h2 className="text-xl font-bold">{t.discover.loadError}</h2>
+              <h2 className="text-xl font-bold">
+                {loadFailed ? t.saved.listLoadError : t.discover.loadError}
+              </h2>
               <p className="mt-2 text-sm text-muted-foreground">{t.discover.loadErrorSub}</p>
-              <Button className="mt-5" onClick={() => void refetch()}>
+              <Button
+                className="mt-5"
+                onClick={() => (loadFailed ? reloadLists() : void refetch())}
+              >
                 <RotateCcw />
                 {t.common.retry}
               </Button>

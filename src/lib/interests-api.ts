@@ -7,11 +7,15 @@ import { markInterestAndNotify, type MarkResult } from "@/server/outreach";
 import { database, requireAccount } from "@/server/session";
 
 const developerId = z.string().min(1).max(200);
+// The account the screen shows; the server refuses the call when the session is now another's.
+const accountId = z.string().min(1).max(200);
 
 /** Stands for `GET /me/interests`: developer ids the signed-in company marked. */
-export const fetchMyInterests = createServerFn({ method: "GET" }).handler(async () =>
-  listInterestsBy(await database(), (await requireAccount("company")).id),
-);
+export const fetchMyInterests = createServerFn({ method: "GET" })
+  .validator(z.object({ accountId }))
+  .handler(async ({ data }) =>
+    listInterestsBy(await database(), (await requireAccount("company", data.accountId)).id),
+  );
 
 /**
  * Stands for `POST /interests`. Within the daily limit, marks interest and e-mails the developer in
@@ -21,13 +25,14 @@ export const fetchMyInterests = createServerFn({ method: "GET" }).handler(async 
 export const markInterestFn = createServerFn({ method: "POST" })
   .validator(
     z.object({
+      accountId,
       developerId,
       language: z.enum(["pt", "en"]).default("pt"),
       jobId: z.string().min(1).max(200).optional(),
     }),
   )
   .handler(async ({ data }): Promise<MarkResult> => {
-    const company = await requireAccount("company");
+    const company = await requireAccount("company", data.accountId);
     return markInterestAndNotify(
       await database(),
       company.id,
@@ -41,10 +46,10 @@ export const markInterestFn = createServerFn({ method: "POST" })
 
 /** Stands for `DELETE /interests/:developerId`, used to undo a mark. */
 export const removeInterestFn = createServerFn({ method: "POST" })
-  .validator(developerId)
+  .validator(z.object({ accountId, developerId }))
   .handler(async ({ data }) => {
-    const company = await requireAccount("company");
-    await removeInterest(await database(), company.id, data);
+    const company = await requireAccount("company", data.accountId);
+    await removeInterest(await database(), company.id, data.developerId);
   });
 
 /** Stands for `GET /me/interested-companies` (interest marks part): who marked the developer. */

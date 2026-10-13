@@ -95,11 +95,12 @@ export const moveCandidateFn = createServerFn({ method: "POST" })
 
 /** Stands for `DELETE /jobs/:id/candidates/:developerId`. */
 export const removeCandidateFn = createServerFn({ method: "POST" })
-  .validator(z.object({ jobId, developerId }))
+  // accountId: see requireAccount; sent by queued changes that may outlive the session.
+  .validator(z.object({ jobId, developerId, accountId: z.string().min(1).max(200).optional() }))
   .handler(async ({ data }) =>
     removeCandidate(
       await database(),
-      (await requireAccount("company")).id,
+      (await requireAccount("company", data.accountId)).id,
       data.jobId,
       data.developerId,
     ),
